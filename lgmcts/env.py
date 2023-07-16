@@ -14,6 +14,7 @@ import os
 from PIL import Image
 import pybullet_utils
 from cameras import get_agent_cam_config
+from encyclopedia import ObjPedia, TexturePedia, ObjEntry, TextureEntry
 
 UR5_WORKSPACE_URDF_PATH = "ur5/workspace.urdf"
 PLANE_URDF_PATH = "plane/plane.urdf"
@@ -34,9 +35,14 @@ class TableSceneBase:
         display_debug_window: bool = False, 
         hide_arm_rgb: bool = False,
         ):
-        # Path
         self.assets_root = assets_root
-        
+        self.obj_ids = {"fixed": [], "rigid": []}
+        self.add_object_id_reverse_mapping_info = {}
+        # obj_id_reverse_mapping: a reverse mapping dict that maps object unique id to:
+        # 1. object_name appended with color name
+        # 2. object_texture entry in TexturePedia
+        # 3. object_description entry in ObjPedia
+
         # Configure pybullet
         self.dt = 1 / 480
         self.sim_step = 0
@@ -100,6 +106,7 @@ class TableSceneBase:
 
     def reset(self):
         self.obj_ids = {"fixed": [], "rigid": []}
+        self.add_object_id_reverse_mapping_info = {}
 
         self.step_counter = 0
         p.resetSimulation(physicsClientId=self.client_id)
@@ -261,6 +268,77 @@ class TableSceneBase:
         # assert self.observation_space.contains(obs)
         return obs
 
+    # Add objects related
+    def add_object_to_env(
+        self,
+        env,
+        obj_entry: ObjEntry,
+        color: TextureEntry,
+        size: tuple[float, float, float],
+        scalar: float | list[float] = 1.0,
+        pose: tuple[tuple, tuple] = None,
+        category: str = "rigid",
+        retain_temp: bool = True,
+        **kwargs,
+    ):
+        """helper function for adding object to env."""
+        scaled_size = self._scale_size(size, scalar)
+        if pose is None:
+            pose = self.get_random_pose(env, scaled_size)
+        if pose[0] is None or pose[1] is None:
+            # reject sample because of no extra space to use (obj type & size) sampled outside this helper function
+            return None, None, None
+        obj_id, urdf_full_path = pybullet_utils.add_any_object(
+            env=env,
+            obj_entry=obj_entry,
+            pose=pose,
+            size=scaled_size,
+            scaling=scalar,
+            retain_temp=retain_temp,
+            category=category,
+            **kwargs,
+        )
+        if obj_id is None:  # pybullet loaded error.
+            return None, urdf_full_path, pose
+        # change texture
+        pybullet_utils.p_change_texture(obj_id, color, env.client_id)
+        # add mapping info
+        pybullet_utils.add_object_id_reverse_mapping_info(
+            mapping_dict=env.obj_id_reverse_mapping,
+            obj_id=obj_id,
+            object_entry=obj_entry,
+            texture_entry=color,
+        )
+
+        return obj_id, urdf_full_path, pose
+
+    def add_random_object_to_env(
+        self, 
+        env,
+        obj_lists: list[ObjEntry],
+        color_lists: list[TextureEntry],
+        **kwargs,
+    ):
+        """Add random an object from list, with a random texture and random size"""
+        sampled_obj = self.rng.choice(obj_lists).value
+        sampled_obj_size = self.rng.uniform(
+            low=sampled_obj.size_range.low,
+            high=sampled_obj.size_range.high,
+        )
+        if len(color_lists) > 1:
+            sampled_obj_color = self.rng.choice(color_lists).value
+        elif len(color_lists) == 1:
+            sampled_obj_color = color_lists[0].value
+        else:
+            sampled_obj_color = None
+        
+        obj_id, urdf, pose = self.add_object_to_env(
+            env,
+            sampled_obj,
+            sampled_obj_color,
+            sampled_obj_size,
+            category="rigid",
+        )
 
 if __name__ == '__main__':
     assets_root = os.path.join(os.path.dirname(__file__), 'assets')
@@ -273,5 +351,13 @@ if __name__ == '__main__':
     # color = obs['rgb']['top'].transpose(1, 2, 0)
     # cv2.imshow('color', color)
     # cv2.waitKey(0)
+
+    # Test object adding 
+    obj_lists = [ObjPedia.BOWL, ObjPedia.BLOCK, ObjPedia.CAPITAL_LETTER_A]
+    color_lists = [TexturePedia.RED, TexturePedia.GREEN, TexturePedia.BLUE]
+    for i in range(2):
+        scene.add_random_object_to_env(scene, obj_lists, color_lists)
+        for i in range(1000):
+            scene.step_simulation()
 
     scene.close()
