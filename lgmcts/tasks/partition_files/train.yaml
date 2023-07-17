@@ -1,0 +1,41 @@
+color_set_1:
+  - red
+  - green
+  - yellow
+  - granite
+  - polka dot
+  - tiger
+  - rainbow
+  - red and yellow stripe
+  - yellow and green stripe
+  - red and yellow polka dot
+  - red and green polka dot
+  - red and blue polka dot
+  - yellow and blue polka dot
+  - green and blue polka dot
+  - red swirl
+  - green swirl
+  - red paisley
+  - yellow paisley
+  - green paisley
+
+dragged_obj:
+  - letter A
+  - letter E
+  - letter G
+  - letter M
+  - letter T
+  - letter V
+  - block
+  - cross
+  - triangle
+  - flower
+  - heart
+  - ring
+  - pentagon
+  - L-shaped block
+
+# ==== structure rearrange ====
+structure_rearrange:
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}

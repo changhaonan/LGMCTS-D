@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pybullet as p
 
-from lgmcts.env.base import EnvBase
+from lgmcts.env.base import BaseEnv
 
 
-class GUIRecorder(EnvBase):
+class GUIRecorder(BaseEnv):
     def __init__(
         self,
         video_name: str,

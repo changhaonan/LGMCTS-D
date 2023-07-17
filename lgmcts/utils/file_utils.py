@@ -1,5 +1,5 @@
 import os
-import tree
+import tree  # pip install dm-tree
 import numpy as np
 import torch
 

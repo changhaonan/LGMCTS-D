@@ -1,3 +1,12 @@
+from __future__ import annotations
+from typing import Literal
+from lgmcts.env.base import BaseEnv
+from lgmcts.env.wrappers.prompt_renderer import PromptRenderer
+from lgmcts.env.wrappers.recorder import GUIRecorder
+
+from lgmcts.tasks import ALL_TASKS, ALL_PARTITIONS, PARTITION_TO_SPECS
+
+
 def make(
     task_name: str | None,
     *,
@@ -12,7 +21,7 @@ def make(
     record_gui: bool = False,
     record_kwargs: dict | None = None,
     hide_arm_rgb: bool = True,
-) -> VIMAEnvBase:
+) -> BaseEnv:
     if record_gui:
         record_kwargs = record_kwargs or dict(video_name="gui_record.mp4")
         env = GUIRecorder(
@@ -26,9 +35,9 @@ def make(
             **record_kwargs,
         )
     else:
-        env = VIMAEnvBase(
-            modalities=modalities,
+        env = BaseEnv(
             task=task_name,
+            modalities=modalities,
             task_kwargs=task_kwargs,
             seed=seed,
             debug=debug,

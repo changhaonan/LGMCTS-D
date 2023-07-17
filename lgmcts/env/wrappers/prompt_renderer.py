@@ -7,13 +7,13 @@ import gym
 import numpy as np
 from einops import rearrange
 
-from lgmcts.env.base import EnvBase
+from lgmcts.env.base import BaseEnv
 
 
 class PromptRenderer(gym.Wrapper):
     def __init__(
         self,
-        env: EnvBase,
+        env: BaseEnv,
         render_img_height: int = 128,
         font_scale: float = 0.8,
         font_weight: int = 1,

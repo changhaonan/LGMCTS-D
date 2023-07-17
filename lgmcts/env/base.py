@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
 import tempfile
+import importlib_resources
 import pybullet as p
 import pybullet_data
 import threading
@@ -9,25 +10,29 @@ import os
 import cv2
 import math
 import traceback
-from typing import Dict, Any, Tuple, Union, List
+from typing import Dict, Any, Tuple, Union, List, Literal
 import os
+import gym
 from PIL import Image
+from lgmcts.tasks.base import BaseTask
+from lgmcts.tasks import ALL_TASKS as _ALL_TASKS
 import lgmcts.utils.pybullet_utils as pybullet_utils
 import lgmcts.utils.misc_utils as misc_utils
 from lgmcts.utils.cameras import get_agent_cam_config, Oracle
-from encyclopedia import ObjPedia, TexturePedia, ObjEntry, TextureEntry
+from lgmcts.encyclopedia import ObjPedia, TexturePedia, ObjEntry, TextureEntry
 
 UR5_WORKSPACE_URDF_PATH = "ur5/workspace.urdf"
 PLANE_URDF_PATH = "plane/plane.urdf"
 UR5_URDF_PATH = "ur5/ur5.urdf"
 
-class EnvBase:
+class BaseEnv:
     """A simple table top scene"""
 
     def __init__(
-        self, 
-        assets_root: str, 
-        modalities,
+        self,
+        modalities: Literal["rgb", "depth", "segm"] | list[Literal["rgb", "depth", "segm"]] | None = None,
+        task: BaseTask | str | None = None,
+        task_kwargs: dict | None = None,
         obs_img_size: Tuple[int, int] = (128, 256),
         obs_img_views: List[str] = ["front", "top"],
         seed:int = 0,
@@ -37,7 +42,8 @@ class EnvBase:
         display_debug_window: bool = False, 
         hide_arm_rgb: bool = False,
         ):
-        self.assets_root = assets_root
+        with importlib_resources.files("lgmcts.assets") as _path:
+            self.assets_root = str(_path)
         self.obj_ids = {"fixed": [], "rigid": []}
         self.obj_id_reverse_mapping = {}
         # obj_id_reverse_mapping: a reverse mapping dict that maps object unique id to:
@@ -80,14 +86,14 @@ class EnvBase:
         if file_io >= 0:
             p.executePluginCommand(
                 file_io,
-                textArgument=assets_root,
+                textArgument=self.assets_root,
                 intArgs=[p.AddFileIOAction],
                 physicsClientId=client,
             )
 
         p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0, physicsClientId=self.client_id)
         p.setPhysicsEngineParameter(enableFileCaching=0, physicsClientId=self.client_id)
-        p.setAdditionalSearchPath(assets_root, physicsClientId=self.client_id)
+        p.setAdditionalSearchPath(self.assets_root, physicsClientId=self.client_id)
         p.setAdditionalSearchPath(tempfile.gettempdir(), physicsClientId=self.client_id)
         p.setTimeStep(1.0 / hz, physicsClientId=self.client_id)
 
@@ -105,17 +111,20 @@ class EnvBase:
         assert max_sim_steps_to_static > 0
         self._max_sim_steps_to_static = max_sim_steps_to_static
 
-        self.seed(seed)
+        self.set_seed(seed)
+        self.meta_info = {}
+        self._debug = debug
         self._display_debug_window = display_debug_window
         self._hide_arm_rgb = hide_arm_rgb
-
+        self.set_task(task, task_kwargs)
+    
     def connect_pybullet_hook(self, display_debug_window: bool):
         return p.connect(p.DIRECT if not display_debug_window else p.GUI)
 
     def reset(self):
         self.obj_ids = {"fixed": [], "rigid": []}
         self.obj_id_reverse_mapping = {}
-
+        self.meta_info = {}
         self.step_counter = 0
         p.resetSimulation(physicsClientId=self.client_id)
         p.setGravity(0, 0, -9.8, physicsClientId=self.client_id)
@@ -125,6 +134,9 @@ class EnvBase:
             p.configureDebugVisualizer(
                 p.COV_ENABLE_RENDERING, 0, physicsClientId=self.client_id
             )
+        
+        # generate prompt and corresponding assets
+        self.prompt, self.prompt_assets = self.task.generate_prompt()
 
         pybullet_utils.load_urdf(
             p,
@@ -156,7 +168,24 @@ class EnvBase:
                 p.COV_ENABLE_RENDERING, 1, physicsClientId=self.client_id
             )
 
-    def step(self):
+        # Generate meta info
+        self.meta_info["n_objects"] = sum(len(v) for v in self.obj_ids.values())
+        self.meta_info["difficulty"] = self.task.difficulty_level or "easy"
+        self.meta_info["views"] = list(self.agent_cams.keys())
+        self.meta_info["modalities"] = self.modalities
+        self.meta_info["seed"] = self._env_seed
+        self.meta_info["action_bounds"] = {
+            "low": self.position_bounds.low,
+            "high": self.position_bounds.high,
+        }
+
+        # return observation
+        obs, _, _, _, _ = self.step()
+
+        return obs
+
+
+    def step(self, action=None):
         # Step simulator asynchronously until objects settle.
         counter = 0
         while not self.is_static:
@@ -167,11 +196,28 @@ class EnvBase:
                 )
                 break
             counter += 1
+
+        # update task
+        self.task.update_goals()
+        result_tuple = self.task.check_success()
+
+        done = result_tuple.success
+        obs = self._get_obs()
+
+        return obs, 0, done, None, self._get_info()
     
     def step_simulation(self):
         p.stepSimulation(physicsClientId=self.client_id)
         self.step_counter += 1
     
+    @property
+    def task(self) -> BaseTask:
+        return self._task
+
+    @property
+    def task_name(self) -> str:
+        return self.task.task_name
+
     @property
     def is_static(self):
         """Return true if objects are no longer moving."""
@@ -181,11 +227,15 @@ class EnvBase:
         ]
         return all(np.array(v) < 5e-3)
 
+    @property
+    def seed(self):
+        return self._env_seed
+
     # Gym functions
     def close(self):
         p.disconnect(physicsClientId=self.client_id)
 
-    def seed(self, seed=None):
+    def set_seed(self, seed=None):
         self._random = np.random.default_rng(seed=seed)
         self._env_seed = seed
         return seed
@@ -194,7 +244,7 @@ class EnvBase:
     def set_up_camera(self, obs_img_size: tuple[int, int], obs_img_views: list[str]):
         obs_img_views = obs_img_views or ["front", "top"]
         all_cam_config = get_agent_cam_config(obs_img_size)
-        self.agent_cam_config = {view: all_cam_config[view] for view in obs_img_views}
+        self.agent_cams = {view: all_cam_config[view] for view in obs_img_views}
 
     def render_camera(self, config, image_size=None):
         """Render RGB-D image with specified camera configuration."""
@@ -290,10 +340,19 @@ class EnvBase:
         mask = np.int32(cmaps)[0, Ellipsis, 3:].squeeze()
         return cmap, hmap, mask
 
+    def _get_info(self):
+        result_tuple = self.task.check_success()
+        info = {
+            "prompt": self.prompt,
+            "success": result_tuple.success,
+            "failure": result_tuple.failure,
+        }
+        return info
+
     def _get_obs(self):
         obs = {f"{modality}": {} for modality in self.modalities}
 
-        for view, config in self.agent_cam_config.items():
+        for view, config in self.agent_cams.items():
             color, depth, segm = self.render_camera(config)
             render_result = {"rgb": color, "depth": depth, "segm": segm}
             for modality in self.modalities:
@@ -404,10 +463,48 @@ class EnvBase:
             category="rigid",
         )
 
+    # task related
+    def set_task(self, task: str | BaseTask, task_kwargs: dict):
+        # setup task
+        ALL_TASKS = _ALL_TASKS.copy()
+        ALL_TASKS.update({k.split("/")[1]: v for k, v in ALL_TASKS.items()})
+        if isinstance(task, str):
+            assert task in ALL_TASKS, f"Invalid task name provided {task}"
+            task = ALL_TASKS[task](debug=self._debug, **(task_kwargs or {}))
+        elif isinstance(task, BaseTask):
+            task = task
+        elif task is None:
+            assert False, "No task is set"
+        task.assets_root = self.assets_root
+        task.set_difficulty("easy")
+        self._task = task
+        # get agent camera config
+        # self.agent_cams = self.task.agent_cams
+
+        # setup action space
+        self.position_bounds = gym.spaces.Box(
+            low=np.array([0.25, -0.5], dtype=np.float32),
+            high=np.array([0.75, 0.50], dtype=np.float32),
+            shape=(2,),
+            dtype=np.float32,
+        )
+        self.action_space = gym.spaces.Dict(
+            {
+                "pose0_position": self.position_bounds,
+                "pose0_rotation": gym.spaces.Box(
+                    -1.0, 1.0, shape=(4,), dtype=np.float32
+                ),
+                "pose1_position": self.position_bounds,
+                "pose1_rotation": gym.spaces.Box(
+                    -1.0, 1.0, shape=(4,), dtype=np.float32
+                ),
+            }
+        )
+
 
 if __name__ == '__main__':
     assets_root = os.path.join(os.path.dirname(__file__), 'assets')
-    scene = EnvBase(assets_root=assets_root, modalities=['rgb'], display_debug_window=True)
+    scene = BaseEnv(modalities=['rgb'], display_debug_window=True)
     scene.reset()
     
     for i in range(1000):
