@@ -12,16 +12,18 @@ import traceback
 from typing import Dict, Any, Tuple, Union, List
 import os
 from PIL import Image
-import pybullet_utils
-from cameras import get_agent_cam_config
+import lgmcts.utils.pybullet_utils as pybullet_utils
+import lgmcts.utils.misc_utils as misc_utils
+from lgmcts.utils.cameras import get_agent_cam_config, Oracle
 from encyclopedia import ObjPedia, TexturePedia, ObjEntry, TextureEntry
 
 UR5_WORKSPACE_URDF_PATH = "ur5/workspace.urdf"
 PLANE_URDF_PATH = "plane/plane.urdf"
 UR5_URDF_PATH = "ur5/ur5.urdf"
 
-class TableSceneBase:
+class EnvBase:
     """A simple table top scene"""
+
     def __init__(
         self, 
         assets_root: str, 
@@ -37,7 +39,7 @@ class TableSceneBase:
         ):
         self.assets_root = assets_root
         self.obj_ids = {"fixed": [], "rigid": []}
-        self.add_object_id_reverse_mapping_info = {}
+        self.obj_id_reverse_mapping = {}
         # obj_id_reverse_mapping: a reverse mapping dict that maps object unique id to:
         # 1. object_name appended with color name
         # 2. object_texture entry in TexturePedia
@@ -57,10 +59,16 @@ class TableSceneBase:
         assert "depth" not in modalities, "FIXME: fix depth normalization"
         self.modalities = modalities
 
-        # setup camera
+        # Setup camera
         self.obs_img_size = obs_img_size
         self.obs_img_views = obs_img_views
         self.set_up_camera(obs_img_size, obs_img_views)
+        self.oracle_cams = Oracle.CONFIG
+
+        # Workspace bounds.
+        self.pix_size = 0.003125
+        self.bounds = np.array([[0.25, 0.75], [-0.5, 0.5], [0, 0.3]])
+        self.zone_bounds = np.copy(self.bounds)
 
         # Start PyBullet.
         client = self.connect_pybullet_hook(display_debug_window)
@@ -106,7 +114,7 @@ class TableSceneBase:
 
     def reset(self):
         self.obj_ids = {"fixed": [], "rigid": []}
-        self.add_object_id_reverse_mapping_info = {}
+        self.obj_id_reverse_mapping = {}
 
         self.step_counter = 0
         p.resetSimulation(physicsClientId=self.client_id)
@@ -256,6 +264,32 @@ class TableSceneBase:
 
         return color, depth, segm
 
+    def get_true_image(self):
+        """Get RGB-D orthographic heightmaps and segmentation masks."""
+
+        # Capture near-orthographic RGB-D images and segmentation masks.
+        # color: (C, H, W), depth: (1, H, W) within [0, 1]
+        color, depth, segm = self.render_camera(self.oracle_cams[0])
+        # process images to be compatible with oracle input
+        # rgb image, from CHW to HWC
+        color = np.transpose(color, (1, 2, 0))
+        # depth image, from (1, H, W) to (H, W) within [0, 20]
+        depth = 20.0 * np.squeeze(depth, axis=0)
+
+        # Combine color with masks for faster processing.
+        color = np.concatenate((color, segm[Ellipsis, None]), axis=2)
+
+        # Reconstruct real orthographic projection from point clouds.
+        hmaps, cmaps = misc_utils.reconstruct_heightmaps(
+            [color], [depth], self.oracle_cams, self.bounds, self.pix_size
+        )
+
+        # Split color back into color and masks.
+        cmap = np.uint8(cmaps)[0, Ellipsis, :3]
+        hmap = np.float32(hmaps)[0, Ellipsis]
+        mask = np.int32(cmaps)[0, Ellipsis, 3:].squeeze()
+        return cmap, hmap, mask
+
     def _get_obs(self):
         obs = {f"{modality}": {} for modality in self.modalities}
 
@@ -269,9 +303,41 @@ class TableSceneBase:
         return obs
 
     # Add objects related
+    @staticmethod
+    def _scale_size(size, scalar):
+        return (
+            tuple([scalar * s for s in size])
+            if isinstance(scalar, float)
+            else tuple([sc * s for sc, s in zip(scalar, size)])
+        )
+    
+    def get_random_pose(self, obj_size):
+        """Get random collision-free object pose within workspace bounds."""
+
+        # Get erosion size of object in pixels.
+        max_size = np.sqrt(obj_size[0] ** 2 + obj_size[1] ** 2)
+        erode_size = int(np.round(max_size / self.pix_size))
+
+        _, hmap, obj_mask = self.get_true_image()
+
+        # Randomly sample an object pose within free-space pixels.
+        free = np.ones(obj_mask.shape, dtype=np.uint8)
+        for obj_ids in self.obj_ids.values():
+            for obj_id in obj_ids:
+                free[obj_mask == obj_id] = 0
+        free[0, :], free[:, 0], free[-1, :], free[:, -1] = 0, 0, 0, 0
+        free = cv2.erode(free, np.ones((erode_size, erode_size), np.uint8))
+        if np.sum(free) == 0:
+            return None, None
+        pix = misc_utils.sample_distribution(prob=np.float32(free), rng=self._random)
+        pos = misc_utils.pix_to_xyz(pix, hmap, self.bounds, self.pix_size)
+        pos = (pos[0], pos[1], obj_size[2] / 2)
+        theta = self._random.random() * 2 * np.pi
+        rot = misc_utils.eulerXYZ_to_quatXYZW((0, 0, theta))
+        return pos, rot
+
     def add_object_to_env(
         self,
-        env,
         obj_entry: ObjEntry,
         color: TextureEntry,
         size: tuple[float, float, float],
@@ -284,12 +350,12 @@ class TableSceneBase:
         """helper function for adding object to env."""
         scaled_size = self._scale_size(size, scalar)
         if pose is None:
-            pose = self.get_random_pose(env, scaled_size)
+            pose = self.get_random_pose(scaled_size)
         if pose[0] is None or pose[1] is None:
             # reject sample because of no extra space to use (obj type & size) sampled outside this helper function
             return None, None, None
         obj_id, urdf_full_path = pybullet_utils.add_any_object(
-            env=env,
+            env=self,
             obj_entry=obj_entry,
             pose=pose,
             size=scaled_size,
@@ -301,10 +367,10 @@ class TableSceneBase:
         if obj_id is None:  # pybullet loaded error.
             return None, urdf_full_path, pose
         # change texture
-        pybullet_utils.p_change_texture(obj_id, color, env.client_id)
+        pybullet_utils.p_change_texture(obj_id, color, self.client_id)
         # add mapping info
         pybullet_utils.add_object_id_reverse_mapping_info(
-            mapping_dict=env.obj_id_reverse_mapping,
+            mapping_dict=self.obj_id_reverse_mapping,
             obj_id=obj_id,
             object_entry=obj_entry,
             texture_entry=color,
@@ -313,36 +379,35 @@ class TableSceneBase:
         return obj_id, urdf_full_path, pose
 
     def add_random_object_to_env(
-        self, 
-        env,
+        self,
         obj_lists: list[ObjEntry],
         color_lists: list[TextureEntry],
         **kwargs,
     ):
         """Add random an object from list, with a random texture and random size"""
-        sampled_obj = self.rng.choice(obj_lists).value
-        sampled_obj_size = self.rng.uniform(
+        sampled_obj = self._random.choice(obj_lists).value
+        sampled_obj_size = self._random.uniform(
             low=sampled_obj.size_range.low,
             high=sampled_obj.size_range.high,
         )
         if len(color_lists) > 1:
-            sampled_obj_color = self.rng.choice(color_lists).value
+            sampled_obj_color = self._random.choice(color_lists).value
         elif len(color_lists) == 1:
             sampled_obj_color = color_lists[0].value
         else:
             sampled_obj_color = None
         
-        obj_id, urdf, pose = self.add_object_to_env(
-            env,
+        return self.add_object_to_env(
             sampled_obj,
             sampled_obj_color,
             sampled_obj_size,
             category="rigid",
         )
 
+
 if __name__ == '__main__':
     assets_root = os.path.join(os.path.dirname(__file__), 'assets')
-    scene = TableSceneBase(assets_root=assets_root, modalities=['rgb'], display_debug_window=True)
+    scene = EnvBase(assets_root=assets_root, modalities=['rgb'], display_debug_window=True)
     scene.reset()
     
     for i in range(1000):
@@ -354,9 +419,9 @@ if __name__ == '__main__':
 
     # Test object adding 
     obj_lists = [ObjPedia.BOWL, ObjPedia.BLOCK, ObjPedia.CAPITAL_LETTER_A]
-    color_lists = [TexturePedia.RED, TexturePedia.GREEN, TexturePedia.BLUE]
-    for i in range(2):
-        scene.add_random_object_to_env(scene, obj_lists, color_lists)
+    color_lists = [TexturePedia.RED, TexturePedia.GREEN, TexturePedia.BLUE, TexturePedia.YELLOW]
+    for i in range(5):
+        scene.add_random_object_to_env(obj_lists, color_lists)
         for i in range(1000):
             scene.step_simulation()
 
