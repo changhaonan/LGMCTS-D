@@ -33,7 +33,7 @@ class BaseEnv:
         modalities: Literal["rgb", "depth", "segm"] | list[Literal["rgb", "depth", "segm"]] | None = None,
         task: BaseTask | str | None = None,
         task_kwargs: dict | None = None,
-        obs_img_size: Tuple[int, int] = (128, 256),
+        obs_img_size: Tuple[int, int] = (256, 256),  # (height, width), (128, 256) or (256, 256)
         obs_img_views: List[str] = ["front", "top"],
         seed:int = 0,
         hz: int = 240,
