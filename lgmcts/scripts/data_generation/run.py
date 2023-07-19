@@ -55,7 +55,7 @@ def _generate_data_for_one_task(
             obs_cache = []
             action_cache = []
 
-            # obs = env.reset()
+            # Start-config
             obs = task.reset(env)  # reset using task
             obs_cache.append(obs)
             elapsed_steps = 0
@@ -63,6 +63,8 @@ def _generate_data_for_one_task(
 
             task_failed = False
             for _ in range(10):
+                # Update env based on task progress
+                task.update_env(env)
                 # Loop inside one episode
                 obs, _, done, __, info = env.step()
                 obs_cache.append(obs)

@@ -31,5 +31,7 @@ if __name__ == '__main__':
     )
     task.reset(env)  # init
 
-    for i in range(100):
+    for i in range(10):
+        task.update_env(env)
         env.step()
+        task.update_goals()

@@ -73,8 +73,12 @@ class BaseEnv:
 
         # Workspace bounds.
         self.pix_size = 0.003125
-        self.bounds = np.array([[0.25, 0.75], [-0.5, 0.5], [0, 0.3]])
+        self.bounds = np.array([[0.0, 1.0], [-0.5, 0.5], [0, 0.3]])  # Square bounds
         self.zone_bounds = np.copy(self.bounds)
+        self.occupy_size = (
+            int(np.round((self.bounds[1, 1] - self.bounds[1, 0]) / self.pix_size)),
+            int(np.round((self.bounds[0, 1] - self.bounds[0, 0]) / self.pix_size)),
+        )  # (height, width)
 
         # Start PyBullet.
         client = self.connect_pybullet_hook(display_debug_window)
@@ -152,15 +156,15 @@ class BaseEnv:
             physicsClientId=self.client_id,
         )
 
-        self.ur5 = pybullet_utils.load_urdf(
-            p,
-            os.path.join(self.assets_root, UR5_URDF_PATH),
-            physicsClientId=self.client_id,
-        )
-        if self._hide_arm_rgb:
-            pybullet_utils.set_visibility_bullet(
-                self.client_id, self.ur5, pybullet_utils.INVISIBLE_ALPHA
-            )
+        # self.ur5 = pybullet_utils.load_urdf(
+        #     p,
+        #     os.path.join(self.assets_root, UR5_URDF_PATH),
+        #     physicsClientId=self.client_id,
+        # )
+        # if self._hide_arm_rgb:
+        #     pybullet_utils.set_visibility_bullet(
+        #         self.client_id, self.ur5, pybullet_utils.INVISIBLE_ALPHA
+        #     )
         
         # Re-enable rendering.
         if self._display_debug_window:
@@ -184,21 +188,11 @@ class BaseEnv:
 
         return obs
 
-
     def step(self, action=None):
         # Step simulator asynchronously until objects settle.
-        counter = 0
-        while not self.is_static:
-            self.step_simulation()
-            if counter > self._max_sim_steps_to_static:
-                print(
-                    f"WARNING: step until static exceeds max {self._max_sim_steps_to_static} steps!"
-                )
-                break
-            counter += 1
+        self.wait_until_settle()
 
         # update task
-        self.task.update_goals()
         result_tuple = self.task.check_success()
 
         done = result_tuple.success
@@ -210,6 +204,17 @@ class BaseEnv:
         p.stepSimulation(physicsClientId=self.client_id)
         self.step_counter += 1
     
+    def wait_until_settle(self):
+        counter = 0
+        while not self.is_static:
+            self.step_simulation()
+            if counter > self._max_sim_steps_to_static:
+                print(
+                    f"WARNING: step until static exceeds max {self._max_sim_steps_to_static} steps!"
+                )
+                break
+            counter += 1
+
     @property
     def task(self) -> BaseTask:
         return self._task
@@ -230,6 +235,10 @@ class BaseEnv:
     @property
     def seed(self):
         return self._env_seed
+
+    @property
+    def rng(self):
+        return self._random
 
     # Gym functions
     def close(self):
@@ -370,7 +379,7 @@ class BaseEnv:
             else tuple([sc * s for sc, s in zip(scalar, size)])
         )
     
-    def get_random_pose(self, obj_size):
+    def get_random_pose(self, obj_size, prior=None):
         """Get random collision-free object pose within workspace bounds."""
 
         # Get erosion size of object in pixels.
@@ -386,9 +395,14 @@ class BaseEnv:
                 free[obj_mask == obj_id] = 0
         free[0, :], free[:, 0], free[-1, :], free[:, -1] = 0, 0, 0, 0
         free = cv2.erode(free, np.ones((erode_size, erode_size), np.uint8))
+        free = free.astype(np.float32)
+        # Get the probability union
+        if prior is not None:
+            assert prior.shape == free.shape, "prior shape must be the same as free shape"
+            free = np.multiply(free, prior)
         if np.sum(free) == 0:
             return None, None
-        pix = misc_utils.sample_distribution(prob=np.float32(free), rng=self._random)
+        pix = misc_utils.sample_distribution(prob=free, rng=self._random)
         pos = misc_utils.pix_to_xyz(pix, hmap, self.bounds, self.pix_size)
         pos = (pos[0], pos[1], obj_size[2] / 2)
         theta = self._random.random() * 2 * np.pi
@@ -402,6 +416,7 @@ class BaseEnv:
         size: tuple[float, float, float],
         scalar: float | list[float] = 1.0,
         pose: tuple[tuple, tuple] = None,
+        prior: np.ndarray | None = None,  # a prior distribution of object pose
         category: str = "rigid",
         retain_temp: bool = True,
         **kwargs,
@@ -409,7 +424,7 @@ class BaseEnv:
         """helper function for adding object to env."""
         scaled_size = self._scale_size(size, scalar)
         if pose is None:
-            pose = self.get_random_pose(scaled_size)
+            pose = self.get_random_pose(scaled_size, prior=prior)
         if pose[0] is None or pose[1] is None:
             # reject sample because of no extra space to use (obj type & size) sampled outside this helper function
             return None, None, None
@@ -441,6 +456,7 @@ class BaseEnv:
         self,
         obj_lists: list[ObjEntry],
         color_lists: list[TextureEntry],
+        prior: np.ndarray | None = None,
         **kwargs,
     ):
         """Add random an object from list, with a random texture and random size"""
@@ -460,6 +476,7 @@ class BaseEnv:
             sampled_obj,
             sampled_obj_color,
             sampled_obj_size,
+            prior=prior,
             category="rigid",
         )
 

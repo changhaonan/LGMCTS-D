@@ -201,6 +201,46 @@ def sample_distribution(prob, rng, n_samples=1):
     return np.int32(rand_ind_coords.squeeze())
 
 
+# -----------------------------------------------------------------------------
+# PATTERN UTILS
+# -----------------------------------------------------------------------------
+
+
+def gen_random_pattern(pattern_type, pattern_shape, rng):
+    """Generate random pattern distribution in a given shape."""
+    if pattern_type == "line":
+        pattern = np.zeros(pattern_shape, dtype=np.float32)
+        # random line inside a square
+        # Generate random starting and ending points for the line
+        x0 = rng.integers(0, pattern_shape[1])
+        y0 = rng.integers(0, pattern_shape[0])
+        x1 = rng.integers(0, pattern_shape[1])
+        y1 = rng.integers(0, pattern_shape[0])
+
+        # Determine the direction of the line
+        dx = x1 - x0
+        dy = y1 - y0
+
+        # Calculate the scaling factors to reach the image boundary
+        scale_factor_x = pattern_shape[1] / abs(dx) if dx != 0 else 1
+        scale_factor_y = pattern_shape[0] / abs(dy) if dy != 0 else 1
+
+        # Adjust the endpoints to reach the boundary in both directions
+        if scale_factor_x < scale_factor_y:
+            scale_factor = scale_factor_x
+        else:
+            scale_factor = scale_factor_y
+
+        x1 = int(x0 + dx * scale_factor)
+        y1 = int(y0 + dy * scale_factor)
+
+        # Draw the line on the image
+        cv2.line(pattern, (x0, y0), (x1, y1), 1.0, 1)
+    else:
+        pattern = rng.uniform(size=pattern_shape)
+    return pattern
+
+
 # -------------------------------------------------------------------------
 # Transformation Helper Functions
 # -------------------------------------------------------------------------

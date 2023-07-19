@@ -31,7 +31,6 @@ class BaseTask:
         self.seed = seed
     
     def reset(self, env):
-        env.reset()
         self.client_id = env.client_id
 
         if not self.assets_root:
@@ -39,6 +38,7 @@ class BaseTask:
         self.goals = []
         self.progress = 0  # Task progression metric in range [0, 1].
         self.placeholders = {}
+        return env.reset()
 
     def set_difficulty(self, difficulty: Literal["easy", "medium", "hard"]):
         self.difficulty_level = difficulty
