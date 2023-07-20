@@ -30,7 +30,7 @@ if __name__ == '__main__':
         debug=True,
     )
     task.reset(env)  # init
-
+    env.move_all_objects_to_buffer()
     for i in range(10):
         task.update_env(env)
         env.step()

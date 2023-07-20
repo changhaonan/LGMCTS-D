@@ -69,7 +69,8 @@ def _generate_data_for_one_task(
                 obs, _, done, __, info = env.step()
                 obs_cache.append(obs)
                 elapsed_steps += 1
-                if done:
+                task.update_goals()
+                if task.check_success().success:
                     break
         except Exception as e:
             print(e)
@@ -78,11 +79,11 @@ def _generate_data_for_one_task(
             continue
 
         assert len(obs_cache) == elapsed_steps + 1
-        if success_only and not info["success"]:
-            if num_tried_this_seed >= MAX_TRIES_PER_SEED:
-                seed += 1
-                num_tried_this_seed = 0
-            continue
+        # if success_only and not info["success"]:
+        #     if num_tried_this_seed >= MAX_TRIES_PER_SEED:
+        #         seed += 1
+        #         num_tried_this_seed = 0
+        #     continue
         traj_save_path = U.f_join(save_path, f"{n_generated:0{num_save_digits}d}")
         os.makedirs(traj_save_path, exist_ok=True)
         obs = U.stack_sequence_fields(obs_cache)

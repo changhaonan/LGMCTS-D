@@ -45,6 +45,7 @@ class BaseEnv:
         with importlib_resources.files("lgmcts.assets") as _path:
             self.assets_root = str(_path)
         self.obj_ids = {"fixed": [], "rigid": []}
+        self.obj_sizes = {}  # mapping from object id to object size
         self.obj_id_reverse_mapping = {}
         # obj_id_reverse_mapping: a reverse mapping dict that maps object unique id to:
         # 1. object_name appended with color name
@@ -79,6 +80,7 @@ class BaseEnv:
             int(np.round((self.bounds[1, 1] - self.bounds[1, 0]) / self.pix_size)),
             int(np.round((self.bounds[0, 1] - self.bounds[0, 0]) / self.pix_size)),
         )  # (height, width)
+        self.buffer_shift = np.array([10.0, 10.0, 0.0])  #  A buffer zone for object storage
 
         # Start PyBullet.
         client = self.connect_pybullet_hook(display_debug_window)
@@ -127,6 +129,7 @@ class BaseEnv:
 
     def reset(self):
         self.obj_ids = {"fixed": [], "rigid": []}
+        self.obj_sizes = {}
         self.obj_id_reverse_mapping = {}
         self.meta_info = {}
         self.step_counter = 0
@@ -449,6 +452,8 @@ class BaseEnv:
             object_entry=obj_entry,
             texture_entry=color,
         )
+        # add object size
+        self.obj_sizes[obj_id] = scaled_size
 
         return obj_id, urdf_full_path, pose
 
@@ -479,6 +484,23 @@ class BaseEnv:
             prior=prior,
             category="rigid",
         )
+
+    # object-level manipulation functions
+    def move_all_objects_to_buffer(self):
+        """Move all objects to buffer space."""
+        for obj_id in self.obj_ids["rigid"]:
+            position, orientation = pybullet_utils.get_obj_pose(self, obj_id)
+            # apply buffer shift
+            position = [_p + _b for _p, _b in zip(position, self.buffer_shift)]
+            pybullet_utils.move_obj(self, obj_id, position, orientation)
+
+    def move_object_to_random(self, obj_id: int, prior=None):
+        """Move object to a random, free pose inside workspace bounds."""
+        obj_size = self.obj_sizes[obj_id]
+        pose = self.get_random_pose(obj_size, prior)
+        if pose[0] is None or pose[1] is None:
+            return None
+        pybullet_utils.move_obj(self, obj_id, pose[0], pose[1])
 
     # task related
     def set_task(self, task: str | BaseTask, task_kwargs: dict):

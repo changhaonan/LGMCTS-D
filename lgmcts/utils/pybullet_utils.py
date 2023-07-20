@@ -266,3 +266,18 @@ def p_change_texture(obj_id: int, texture_entry: TextureEntry, client_id: int):
             textureUniqueId=p.loadTexture(texture_entry.texture_asset, client_id),
             physicsClientId=client_id,
         )
+    
+
+def move_obj(env, obj_id: int, position, orientation=None):
+    """Move an object to a pose in pybullet"""
+    if orientation is None:
+        orientation = [0, 0, 0, 1]
+    p.resetBasePositionAndOrientation(
+        obj_id, position, orientation, physicsClientId=env.client_id
+    )
+
+
+def get_obj_pose(env, obj_id):
+    """Get object pose inside pybullet with object id"""
+    position, orientation = p.getBasePositionAndOrientation(obj_id, env.client_id)
+    return position, orientation

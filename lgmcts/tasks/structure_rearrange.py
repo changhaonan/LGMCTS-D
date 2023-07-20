@@ -18,7 +18,7 @@ class StructureRearrange(BaseTask):
     def __init__(
         self, 
         # ==== task specific ====
-        num_object: int = 4,
+        num_object: int = 6,
         obj_list: list[str] | None = None,
         color_list: list[str] | None = None,
         # ==== general ====
@@ -41,9 +41,9 @@ class StructureRearrange(BaseTask):
         self.obs_img_size = obs_img_size
 
     def update_goals(self):
-        # There is two stages in this task: start and end
+        # Three stages
         self.progress += 1
-        if self.progress >= 2:
+        if self.progress > 2:
             self.progress = 0
 
     def update_env(self, env):
@@ -55,10 +55,10 @@ class StructureRearrange(BaseTask):
         env.wait_until_settle()
 
     def check_success(self):
-        if self.progress == 0:
-            return ResultTuple(success=True, failure=False, distance=None)
-        elif self.progress == 1:
+        if self.progress == 0 or self.progress == 1:
             return ResultTuple(success=False, failure=True, distance=None)
+        elif self.progress == 2:
+            return ResultTuple(success=True, failure=False, distance=None)
         else:
             raise ValueError("Invalid progress value")
 
@@ -86,17 +86,7 @@ class StructureRearrange(BaseTask):
                     prior=None,
                 )
         else:
-            # Collect all objects info
-            obj_infos = env.obj_id_reverse_mapping
-            if len(obj_infos) != 0:
-                env.reset()  # Clear all objects
-                for obj_id, obj_info in obj_infos:
-                    obj_entry = None
-                    texture_entry = None
-                    obj_size = [1.0, 1.0, 1.0]
-                    env.add_object_to_env(
-                        obj_entry,
-                        texture_entry,
-                        obj_size,
-                        category="rigid"
-                    )
+            # Using existing objects
+            env.move_all_objects_to_buffer()
+            for obj_id in env.obj_ids["rigid"]:
+                env.move_object_to_random(obj_id, prior=None)
