@@ -8,6 +8,7 @@ import threading
 import time
 import os
 import cv2
+import open3d as o3d
 import math
 import traceback
 from typing import Dict, Any, Tuple, Union, List, Literal
@@ -45,7 +46,9 @@ class BaseEnv:
         with importlib_resources.files("lgmcts.assets") as _path:
             self.assets_root = str(_path)
         self.obj_ids = {"fixed": [], "rigid": []}
-        self.obj_sizes = {}  # mapping from object id to object size
+        self.obj_dyn_info = {
+            "size": {}, "urdf_full_path": {}
+        }  # obj dynamic info: size, urdf path, etc.
         self.obj_id_reverse_mapping = {}
         # obj_id_reverse_mapping: a reverse mapping dict that maps object unique id to:
         # 1. object_name appended with color name
@@ -63,7 +66,7 @@ class BaseEnv:
         assert set(modalities).issubset(
             {"rgb", "depth", "segm"}
         ), f"Unsupported modalities provided {modalities}"
-        assert "depth" not in modalities, "FIXME: fix depth normalization"
+        # assert "depth" not in modalities, "FIXME: fix depth normalization"
         self.modalities = modalities
 
         # Setup camera
@@ -129,7 +132,9 @@ class BaseEnv:
 
     def reset(self):
         self.obj_ids = {"fixed": [], "rigid": []}
-        self.obj_sizes = {}
+        self.obj_dyn_info = {
+            "size": {}, "urdf_full_path": {}
+        } 
         self.obj_id_reverse_mapping = {}
         self.meta_info = {}
         self.step_counter = 0
@@ -362,13 +367,31 @@ class BaseEnv:
         return info
 
     def _get_obs(self):
-        obs = {f"{modality}": {} for modality in self.modalities}
-
+        obs = {f"{modality}": {} for modality in self.modalities}  # sensing
+        obs["oracle"] = {}  # oracle information
+        obs["point_cloud"] = {}  # point cloud
+        # Sensing
         for view, config in self.agent_cams.items():
             color, depth, segm = self.render_camera(config)
             render_result = {"rgb": color, "depth": depth, "segm": segm}
             for modality in self.modalities:
                 obs[modality][view] = render_result[modality]
+            
+            # Pointcloud (from top view)
+            intrinsic_mat = np.array(config["intrinsics"]).reshape(3, 3)
+            top_pcd = misc_utils.get_pointcloud(depth[0], intrinsic_mat)
+
+            obs["point_cloud"][view] = {}
+            for obj_id in self.obj_ids["rigid"]:
+                obj_mask = segm == obj_id
+                obj_pcd = top_pcd[obj_mask].reshape(-1, 3)
+                # misc_utils.plot_3d(f"{view}-{obj_id}", obj_pcd, color='blue')
+                obs["point_cloud"][view][obj_id] = obj_pcd
+
+        # Oracle
+        for obj_id in self.obj_ids["rigid"]:
+            position, orientation = pybullet_utils.get_obj_pose(self, obj_id)
+            obs["oracle"][obj_id] = { "pose": position + orientation }
 
         # assert self.observation_space.contains(obs)
         return obs
@@ -452,8 +475,9 @@ class BaseEnv:
             object_entry=obj_entry,
             texture_entry=color,
         )
-        # add object size
-        self.obj_sizes[obj_id] = scaled_size
+        # update dynamic info
+        self.obj_dyn_info["size"][obj_id] = scaled_size
+        self.obj_dyn_info["urdf_full_path"][obj_id] = urdf_full_path
 
         return obj_id, urdf_full_path, pose
 
@@ -496,11 +520,15 @@ class BaseEnv:
 
     def move_object_to_random(self, obj_id: int, prior=None):
         """Move object to a random, free pose inside workspace bounds."""
-        obj_size = self.obj_sizes[obj_id]
+        obj_size = self.obj_dyn_info["size"][obj_id]
         pose = self.get_random_pose(obj_size, prior)
         if pose[0] is None or pose[1] is None:
             return None
         pybullet_utils.move_obj(self, obj_id, pose[0], pose[1])
+
+    def get_object_pcd(self, obj_id: int):
+        """Get point cloud of object."""
+        pass
 
     # task related
     def set_task(self, task: str | BaseTask, task_kwargs: dict):

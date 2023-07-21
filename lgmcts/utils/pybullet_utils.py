@@ -114,6 +114,25 @@ def add_object_id_reverse_mapping_info(
     }
 
 
+def recover_obj_and_texture_from_mapping_info(mapping_dict, obj_id):
+    """Recover object and texture entry from mapping info"""
+    obj_entry = ObjEntry(
+        **{
+            "_".join(k.split("_")[1:]): v
+            for k, v in mapping_dict[obj_id].items()
+            if k.startswith("obj_")
+        }
+    )
+    texture_entry = TextureEntry(
+        **{
+            "_".join(k.split("_")[1:]): v
+            for k, v in mapping_dict[obj_id].items()
+            if k.startswith("texture_")
+        }
+    )
+    return obj_entry, texture_entry
+
+
 def fill_template(assets_root, template, replace):
     """Read a file and replace key strings."""
     full_template_path = os.path.join(assets_root, template)

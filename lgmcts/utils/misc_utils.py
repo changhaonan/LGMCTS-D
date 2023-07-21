@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pybullet as p
 import torch
+import open3d as o3d
 from transforms3d import euler
 
 
@@ -742,3 +743,16 @@ def plot(
     plt.tight_layout()
     plt.savefig(fname)
     plt.clf()
+
+
+def plot_3d(title: str, points, color, block: bool = True):
+    """Plot 3D point cloud."""
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    colors = np.array([COLORS[color] for i in range(points.shape[0])])
+    ax.scatter(points[:, 0], points[:, 1], points[:, 2], c=colors)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    plt.title(title)
+    plt.show(block=block)

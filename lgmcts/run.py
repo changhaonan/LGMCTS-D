@@ -25,7 +25,7 @@ if __name__ == '__main__':
     env, task = build_env_and_task(
         task_name,
         PARTITION_TO_SPECS["train"][task_name],
-        modalities=["rgb", "segm"],
+        modalities=["rgb", "segm", "depth"],
         seed=0,
         debug=True,
     )
@@ -33,5 +33,7 @@ if __name__ == '__main__':
     env.move_all_objects_to_buffer()
     for i in range(10):
         task.update_env(env)
+        # get point cloud
+        pcd = env.get_object_pcd(2)
         env.step()
         task.update_goals()
