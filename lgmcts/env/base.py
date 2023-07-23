@@ -119,7 +119,6 @@ class BaseEnv:
 
         assert max_sim_steps_to_static > 0
         self._max_sim_steps_to_static = max_sim_steps_to_static
-
         self.set_seed(seed)
         self.meta_info = {}
         self._debug = debug
@@ -368,7 +367,7 @@ class BaseEnv:
 
     def _get_obs(self):
         obs = {f"{modality}": {} for modality in self.modalities}  # sensing
-        obs["oracle"] = {}  # oracle information
+        # obs["oracle"] = {}  # oracle information
         obs["point_cloud"] = {}  # point cloud
         # Sensing
         for view, config in self.agent_cams.items():
@@ -379,20 +378,30 @@ class BaseEnv:
             
             # Pointcloud (from top view)
             intrinsic_mat = np.array(config["intrinsics"]).reshape(3, 3)
-            top_pcd = misc_utils.get_pointcloud(depth[0], intrinsic_mat)
+            scene_pcd = misc_utils.get_pointcloud(depth[0], intrinsic_mat)
 
             obs["point_cloud"][view] = {}
+            #
+            max_pcd_size = color.shape[0] * color.shape[1]
+            obj_pcds = np.zeros([self.max_num_obj * max_pcd_size, 3])
+            obj_poses = np.zeros([self.max_num_obj, 7])
+            counter = 0
             for obj_id in self.obj_ids["rigid"]:
+                # point cloud
                 obj_mask = segm == obj_id
-                obj_pcd = top_pcd[obj_mask].reshape(-1, 3)
+                obj_pcd = scene_pcd[obj_mask].reshape(-1, 3)
                 # misc_utils.plot_3d(f"{view}-{obj_id}", obj_pcd, color='blue')
-                obs["point_cloud"][view][obj_id] = obj_pcd
+                offset = counter * max_pcd_size
+                obj_pcds[offset:offset+obj_pcd.shape[0], :] = obj_pcd
 
-        # Oracle
-        for obj_id in self.obj_ids["rigid"]:
-            position, orientation = pybullet_utils.get_obj_pose(self, obj_id)
-            obs["oracle"][obj_id] = { "pose": position + orientation }
-
+                # object pose
+                position, orientation = pybullet_utils.get_obj_pose(self, obj_id)
+                offset = counter * 7
+                obj_poses[offset:offset+7] = np.array(position + orientation)
+                
+                counter += 1
+            obs["point_cloud"][view] = obj_pcds
+            obs["point_cloud"][view] = obj_poses
         # assert self.observation_space.contains(obs)
         return obs
 
@@ -567,6 +576,9 @@ class BaseEnv:
                 ),
             }
         )
+
+        # Set task-related config
+        self.max_num_obj = self.task.max_num_obj
 
 
 if __name__ == '__main__':

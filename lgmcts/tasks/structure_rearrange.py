@@ -18,7 +18,7 @@ class StructureRearrange(BaseTask):
     def __init__(
         self, 
         # ==== task specific ====
-        num_object: int = 6,
+        max_num_obj: int = 6,
         obj_list: list[str] | None = None,
         color_list: list[str] | None = None,
         # ==== general ====
@@ -34,7 +34,7 @@ class StructureRearrange(BaseTask):
             seed=seed,
             debug=debug,
         )
-        self.num_object = num_object
+        self.max_num_obj = max_num_obj
         self.obj_list = [ObjPedia.lookup_object_by_name(obj) for obj in obj_list]
         self.color_list = [TexturePedia.lookup_color_by_name(color) for color in color_list]
         # 
@@ -68,7 +68,7 @@ class StructureRearrange(BaseTask):
         # Add object
         if not use_existing:
             env.reset()  # Clear all objects
-            for i in range(self.num_object):
+            for i in range(self.max_num_obj):
                 env.add_random_object_to_env(
                     obj_lists=self.obj_list,
                     color_lists=self.color_list,
@@ -79,7 +79,7 @@ class StructureRearrange(BaseTask):
         """Set objects to random positions"""
         if not use_existing:
             env.reset()  # Clear all objects
-            for i in range(self.num_object):
+            for i in range(self.max_num_obj):
                 env.add_random_object_to_env(
                     obj_lists=self.obj_list,
                     color_lists=self.color_list,
