@@ -209,34 +209,23 @@ def sample_distribution(prob, rng, n_samples=1):
 
 def gen_random_pattern(pattern_type, pattern_shape, rng):
     """Generate random pattern distribution in a given shape."""
+    height, width = pattern_shape
     if pattern_type == "line":
         pattern = np.zeros(pattern_shape, dtype=np.float32)
-        # random line inside a square
-        # Generate random starting and ending points for the line
-        x0 = rng.integers(0, pattern_shape[1])
-        y0 = rng.integers(0, pattern_shape[0])
-        x1 = rng.integers(0, pattern_shape[1])
-        y1 = rng.integers(0, pattern_shape[0])
-
-        # Determine the direction of the line
-        dx = x1 - x0
-        dy = y1 - y0
-
-        # Calculate the scaling factors to reach the image boundary
-        scale_factor_x = pattern_shape[1] / abs(dx) if dx != 0 else 1
-        scale_factor_y = pattern_shape[0] / abs(dy) if dy != 0 else 1
-
-        # Adjust the endpoints to reach the boundary in both directions
-        if scale_factor_x < scale_factor_y:
-            scale_factor = scale_factor_x
-        else:
-            scale_factor = scale_factor_y
-
-        x1 = int(x0 + dx * scale_factor)
-        y1 = int(y0 + dy * scale_factor)
+        i0 = rng.integers(0, 4)  # select one of 4 borders
+        i1 = (rng.integers(1, 4) + i0) % 4  # select one of 3 other borders
+        i = [i0, i1]
+        # select one point on each border
+        x0 = rng.integers(0, width) if i[0] % 2 == 0 else (1 - i[0]//2) * width - 1
+        y0 = rng.integers(0, height) if i[0] % 2 == 1 else (1 - i[0]//2) * height - 1
+        x1 = rng.integers(0, width) if i[1] % 2 == 0 else (1 - i[1]//2) * width - 1
+        y1 = rng.integers(0, height) if i[1] % 2 == 1 else (1 - i[1]//2) * height - 1
 
         # Draw the line on the image
         cv2.line(pattern, (x0, y0), (x1, y1), 1.0, 1)
+        # Debug
+        plt.imshow(pattern)
+        plt.show()
     else:
         pattern = rng.uniform(size=pattern_shape)
     return pattern
