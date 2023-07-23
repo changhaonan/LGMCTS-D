@@ -57,7 +57,7 @@ def _generate_data_for_one_task(
 
             # Start-config
             obs = task.reset(env)  # reset using task
-            obs_cache.append(obs)
+            # obs_cache.append(obs)
             elapsed_steps = 0
             meta, prompt, prompt_assets = env.meta_info, env.prompt, env.prompt_assets
 
@@ -78,7 +78,7 @@ def _generate_data_for_one_task(
             num_tried_this_seed = 0
             continue
 
-        assert len(obs_cache) == elapsed_steps + 1
+        assert len(obs_cache) == elapsed_steps
         # if success_only and not info["success"]:
         #     if num_tried_this_seed >= MAX_TRIES_PER_SEED:
         #         seed += 1
