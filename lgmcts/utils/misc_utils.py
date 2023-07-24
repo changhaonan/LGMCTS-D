@@ -210,8 +210,8 @@ def sample_distribution(prob, rng, n_samples=1):
 def gen_random_pattern(pattern_type, pattern_shape, rng):
     """Generate random pattern distribution in a given shape."""
     height, width = pattern_shape
+    pattern = np.zeros(pattern_shape, dtype=np.float32)
     if pattern_type == "line":
-        pattern = np.zeros(pattern_shape, dtype=np.float32)
         i0 = rng.integers(0, 4)  # select one of 4 borders
         i1 = (rng.integers(1, 4) + i0) % 4  # select one of 3 other borders
         i = [i0, i1]
@@ -223,11 +223,18 @@ def gen_random_pattern(pattern_type, pattern_shape, rng):
 
         # Draw the line on the image
         cv2.line(pattern, (x0, y0), (x1, y1), 1.0, 1)
-        # Debug
-        plt.imshow(pattern)
-        plt.show()
+    elif pattern_type == "circle":
+        # select center and radius
+        x = rng.integers(0, width)
+        y = rng.integers(0, height)
+        r = rng.integers(min(width, height) // 6, min(width, height) // 2)
+        # Draw the circle on the image
+        cv2.circle(pattern, (x, y), r, 1.0, 1)
     else:
         pattern = rng.uniform(size=pattern_shape)
+    # Debug
+    plt.imshow(pattern)
+    plt.show()
     return pattern
 
 

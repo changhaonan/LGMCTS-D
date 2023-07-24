@@ -19,6 +19,7 @@ class StructureRearrange(BaseTask):
         self, 
         # ==== task specific ====
         max_num_obj: int = 6,
+        pattern_types: list[str] = ["line", "circle"],
         obj_list: list[str] | None = None,
         color_list: list[str] | None = None,
         # ==== general ====
@@ -35,6 +36,7 @@ class StructureRearrange(BaseTask):
             debug=debug,
         )
         self.max_num_obj = max_num_obj
+        self.pattern_types = pattern_types
         self.obj_list = [ObjPedia.lookup_object_by_name(obj) for obj in obj_list]
         self.color_list = [TexturePedia.lookup_color_by_name(color) for color in color_list]
         # 
@@ -48,7 +50,9 @@ class StructureRearrange(BaseTask):
 
     def update_env(self, env):
         if self.progress == 0:
-            self.set_objects_to_line(env, False)  # Add new objects into a line
+            # randomize the pattern type
+            pattern_type = env.rng.choice(self.pattern_types)
+            self.set_objects_to_pattern(env, pattern_type, False)  # Add new objects into a line
         elif self.progress == 1:
             self.set_objects_to_random(env, True) # Put existing objects to random positions
         
@@ -62,9 +66,9 @@ class StructureRearrange(BaseTask):
         else:
             raise ValueError("Invalid progress value")
 
-    def set_objects_to_line(self, env, use_existing=False):
+    def set_objects_to_pattern(self, env, pattern_type: str, use_existing=False):
         """Set objects to a line, use_existing decides whether to add new object or not"""
-        line_pattern = utils.gen_random_pattern("line", env.occupy_size, env.rng)
+        line_pattern = utils.gen_random_pattern(pattern_type, env.occupy_size, env.rng)
         # Add object
         if not use_existing:
             env.reset()  # Clear all objects
