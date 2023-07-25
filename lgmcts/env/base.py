@@ -15,6 +15,7 @@ from typing import Dict, Any, Tuple, Union, List, Literal
 import os
 import gym
 from PIL import Image
+from anytree import Node, RenderTree
 from lgmcts.tasks.base import BaseTask
 from lgmcts.tasks import ALL_TASKS as _ALL_TASKS
 import lgmcts.utils.pybullet_utils as pybullet_utils
@@ -45,6 +46,7 @@ class BaseEnv:
         ):
         with importlib_resources.files("lgmcts.assets") as _path:
             self.assets_root = str(_path)
+        # Obj infos
         self.obj_ids = {"fixed": [], "rigid": []}
         self.obj_dyn_info = {
             "size": {}, "urdf_full_path": {}
@@ -54,6 +56,7 @@ class BaseEnv:
         # 1. object_name appended with color name
         # 2. object_texture entry in TexturePedia
         # 3. object_description entry in ObjPedia
+        self.obj_support_tree = Node(-1)  # -1 refers to the base
 
         # Configure pybullet
         self.dt = 1 / 480
@@ -135,6 +138,7 @@ class BaseEnv:
             "size": {}, "urdf_full_path": {}
         } 
         self.obj_id_reverse_mapping = {}
+        self.obj_support_tree = Node(-1)
         self.meta_info = {}
         self.step_counter = 0
         p.resetSimulation(physicsClientId=self.client_id)
@@ -414,8 +418,10 @@ class BaseEnv:
             else tuple([sc * s for sc, s in zip(scalar, size)])
         )
     
-    def get_random_pose(self, obj_size, prior=None):
-        """Get random collision-free object pose within workspace bounds."""
+    def get_random_pose(self, obj_size, prior=None, stack_prob=0.0):
+        """Get random collision-free object pose within workspace bounds.
+        Object has a chance of stack_prob to be stacked upon other objects.
+        """
 
         # Get erosion size of object in pixels.
         max_size = np.sqrt(obj_size[0] ** 2 + obj_size[1] ** 2)
@@ -423,26 +429,38 @@ class BaseEnv:
 
         _, hmap, obj_mask = self.get_true_image()
 
-        # Randomly sample an object pose within free-space pixels.
-        free = np.ones(obj_mask.shape, dtype=np.uint8)
-        for obj_ids in self.obj_ids.values():
-            for obj_id in obj_ids:
-                free[obj_mask == obj_id] = 0
-        free[0, :], free[:, 0], free[-1, :], free[:, -1] = 0, 0, 0, 0
-        free = cv2.erode(free, np.ones((erode_size, erode_size), np.uint8))
-        free = free.astype(np.float32)
-        # Get the probability union
-        if prior is not None:
-            assert prior.shape == free.shape, "prior shape must be the same as free shape"
-            free = np.multiply(free, prior)
-        if np.sum(free) == 0:
-            return None, None
-        pix = misc_utils.sample_distribution(prob=free, rng=self._random)
-        pos = misc_utils.pix_to_xyz(pix, hmap, self.bounds, self.pix_size)
-        pos = (pos[0], pos[1], obj_size[2] / 2)
+        obj_stack_id = -1  # -1 is the base
+        if self.rng.random() < stack_prob:
+            # select an object to stack up
+            if len(self.obj_ids["rigid"]) == 0:
+                return [None, None], None
+            obj_stack_id = self.rng.choice(self.obj_ids["rigid"])
+            # Get the object's top surface
+            pos_stack, _ = pybullet_utils.get_obj_pose(self, obj_stack_id)
+            obj_stack_size = self.obj_dyn_info["size"][obj_stack_id]
+            obj_stack_base = np.array(pos_stack) + np.array([0, 0, obj_stack_size[2] / 2])
+            pos = obj_stack_base + np.array([0, 0, obj_size[2] / 2])
+        else:
+            # Randomly sample an object pose within free-space pixels.
+            free = np.ones(obj_mask.shape, dtype=np.uint8)
+            for obj_ids in self.obj_ids.values():
+                for obj_id in obj_ids:
+                    free[obj_mask == obj_id] = 0
+            free[0, :], free[:, 0], free[-1, :], free[:, -1] = 0, 0, 0, 0
+            free = cv2.erode(free, np.ones((erode_size, erode_size), np.uint8))
+            free = free.astype(np.float32)
+            # Get the probability union
+            if prior is not None:
+                assert prior.shape == free.shape, "prior shape must be the same as free shape"
+                free = np.multiply(free, prior)
+            if np.sum(free) == 0:
+                return [None, None], None
+            pix = misc_utils.sample_distribution(prob=free, rng=self._random)
+            pos = misc_utils.pix_to_xyz(pix, hmap, self.bounds, self.pix_size)
+            pos = (pos[0], pos[1], obj_size[2] / 2)
         theta = self._random.random() * 2 * np.pi
         rot = misc_utils.eulerXYZ_to_quatXYZW((0, 0, theta))
-        return pos, rot
+        return [pos, rot], obj_stack_id
 
     def add_object_to_env(
         self,
@@ -459,7 +477,7 @@ class BaseEnv:
         """helper function for adding object to env."""
         scaled_size = self._scale_size(size, scalar)
         if pose is None:
-            pose = self.get_random_pose(scaled_size, prior=prior)
+            pose, obj_stack_id = self.get_random_pose(scaled_size, prior=prior)
         if pose[0] is None or pose[1] is None:
             # reject sample because of no extra space to use (obj type & size) sampled outside this helper function
             return None, None, None
@@ -475,6 +493,8 @@ class BaseEnv:
         )
         if obj_id is None:  # pybullet loaded error.
             return None, urdf_full_path, pose
+        # update support tree
+        self._update_support_tree(obj_id, obj_stack_id)
         # change texture
         pybullet_utils.p_change_texture(obj_id, color, self.client_id)
         # add mapping info
@@ -530,15 +550,29 @@ class BaseEnv:
     def move_object_to_random(self, obj_id: int, prior=None):
         """Move object to a random, free pose inside workspace bounds."""
         obj_size = self.obj_dyn_info["size"][obj_id]
-        pose = self.get_random_pose(obj_size, prior)
+        pose, obj_stack_id = self.get_random_pose(obj_size, prior)
         if pose[0] is None or pose[1] is None:
             return None
         pybullet_utils.move_obj(self, obj_id, pose[0], pose[1])
+        self._update_support_tree(obj_id, obj_stack_id)
 
-    def get_object_pcd(self, obj_id: int):
-        """Get point cloud of object."""
-        pass
-
+    def _update_support_tree(self, obj_id, obj_stack_id):
+        """Update object support tree."""
+        obj_node = None
+        obj_stack_node = None
+        for __, _, node in RenderTree(self.obj_support_tree):
+            if node.name == obj_stack_id:
+                obj_stack_node = node
+            elif node.name == obj_id:
+                obj_node = node
+            if obj_stack_node and obj_node:
+                obj_node.parent = obj_stack_node
+                break
+        if obj_stack_node is None:
+            raise RuntimeError("obj_stack_node is not found.")
+        if obj_node is None:
+            Node(obj_id, parent=obj_stack_node)
+            
     # task related
     def set_task(self, task: str | BaseTask, task_kwargs: dict):
         # setup task
@@ -579,6 +613,10 @@ class BaseEnv:
 
         # Set task-related config
         self.max_num_obj = self.task.max_num_obj
+
+    # Debug method
+    def show_support_tree(self):
+        print(RenderTree(self.obj_support_tree))
 
 
 if __name__ == '__main__':

@@ -37,3 +37,4 @@ if __name__ == '__main__':
         pcd = env.get_object_pcd(2)
         env.step()
         task.update_goals()
+        env.show_support_tree()

@@ -26,5 +26,5 @@ Point cloud & pose are all padded with zero. Their shape is of (max_num_obj * ma
 
 ## TODO:
 
-- Output pointcloud
-- Output pose
+- Add support for stacking.
+- Add support for random prompt generation.
