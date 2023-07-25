@@ -34,7 +34,6 @@ if __name__ == '__main__':
     for i in range(10):
         task.update_env(env)
         # get point cloud
-        pcd = env.get_object_pcd(2)
         env.step()
         task.update_goals()
         env.show_support_tree()

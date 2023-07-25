@@ -48,9 +48,7 @@ class BaseEnv:
             self.assets_root = str(_path)
         # Obj infos
         self.obj_ids = {"fixed": [], "rigid": []}
-        self.obj_dyn_info = {
-            "size": {}, "urdf_full_path": {}
-        }  # obj dynamic info: size, urdf path, etc.
+        self.obj_dyn_info = { "size": {}, "urdf_full_path": {} }  # obj dynamic info: size, urdf path, etc.
         self.obj_id_reverse_mapping = {}
         # obj_id_reverse_mapping: a reverse mapping dict that maps object unique id to:
         # 1. object_name appended with color name
@@ -134,9 +132,7 @@ class BaseEnv:
 
     def reset(self):
         self.obj_ids = {"fixed": [], "rigid": []}
-        self.obj_dyn_info = {
-            "size": {}, "urdf_full_path": {}
-        } 
+        self.obj_dyn_info = { "size": {}, "urdf_full_path": {} }
         self.obj_id_reverse_mapping = {}
         self.obj_support_tree = Node(-1)
         self.meta_info = {}
@@ -434,7 +430,9 @@ class BaseEnv:
             # select an object to stack up
             if len(self.obj_ids["rigid"]) == 0:
                 return [None, None], None
-            obj_stack_id = self.rng.choice(self.obj_ids["rigid"])
+            leaf_nodes = self.obj_support_tree.leaves
+            leaf_obj_ids = [leaf_node.name for leaf_node in leaf_nodes]
+            obj_stack_id = self.rng.choice(leaf_obj_ids)
             # Get the object's top surface
             pos_stack, _ = pybullet_utils.get_obj_pose(self, obj_stack_id)
             obj_stack_size = self.obj_dyn_info["size"][obj_stack_id]
@@ -472,12 +470,13 @@ class BaseEnv:
         prior: np.ndarray | None = None,  # a prior distribution of object pose
         category: str = "rigid",
         retain_temp: bool = True,
+        stack_prob: float = 0.0,
         **kwargs,
     ):
         """helper function for adding object to env."""
         scaled_size = self._scale_size(size, scalar)
         if pose is None:
-            pose, obj_stack_id = self.get_random_pose(scaled_size, prior=prior)
+            pose, obj_stack_id = self.get_random_pose(scaled_size, prior=prior, stack_prob=stack_prob)
         if pose[0] is None or pose[1] is None:
             # reject sample because of no extra space to use (obj type & size) sampled outside this helper function
             return None, None, None
@@ -515,6 +514,7 @@ class BaseEnv:
         obj_lists: list[ObjEntry],
         color_lists: list[TextureEntry],
         prior: np.ndarray | None = None,
+        stack_prob: float = 0.0,
         **kwargs,
     ):
         """Add random an object from list, with a random texture and random size"""
@@ -536,6 +536,7 @@ class BaseEnv:
             sampled_obj_size,
             prior=prior,
             category="rigid",
+            stack_prob=stack_prob,
         )
 
     # object-level manipulation functions
@@ -546,11 +547,13 @@ class BaseEnv:
             # apply buffer shift
             position = [_p + _b for _p, _b in zip(position, self.buffer_shift)]
             pybullet_utils.move_obj(self, obj_id, position, orientation)
+            # update support tree, objects moved to buffer will be detached from the tree
+        self.obj_support_tree.children = []
 
-    def move_object_to_random(self, obj_id: int, prior=None):
+    def move_object_to_random(self, obj_id: int, prior=None, stack_prob:float=0.0):
         """Move object to a random, free pose inside workspace bounds."""
         obj_size = self.obj_dyn_info["size"][obj_id]
-        pose, obj_stack_id = self.get_random_pose(obj_size, prior)
+        pose, obj_stack_id = self.get_random_pose(obj_size, prior, stack_prob=stack_prob)
         if pose[0] is None or pose[1] is None:
             return None
         pybullet_utils.move_obj(self, obj_id, pose[0], pose[1])
@@ -572,7 +575,7 @@ class BaseEnv:
             raise RuntimeError("obj_stack_node is not found.")
         if obj_node is None:
             Node(obj_id, parent=obj_stack_node)
-            
+
     # task related
     def set_task(self, task: str | BaseTask, task_kwargs: dict):
         # setup task

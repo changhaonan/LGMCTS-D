@@ -19,7 +19,7 @@ class StructureRearrange(BaseTask):
         self, 
         # ==== task specific ====
         max_num_obj: int = 6,
-        enable_stack: bool = False,
+        stack_prob: float = 0.0,
         pattern_types: list[str] = ["line", "circle"],
         obj_list: list[str] | None = None,
         color_list: list[str] | None = None,
@@ -37,7 +37,7 @@ class StructureRearrange(BaseTask):
             debug=debug,
         )
         self.max_num_obj = max_num_obj
-        self.enable_stack = enable_stack
+        self.stack_prob = stack_prob
         self.pattern_types = pattern_types
         self.obj_list = [ObjPedia.lookup_object_by_name(obj) for obj in obj_list]
         self.color_list = [TexturePedia.lookup_color_by_name(color) for color in color_list]
@@ -54,9 +54,9 @@ class StructureRearrange(BaseTask):
         if self.progress == 0:
             # randomize the pattern type
             pattern_type = env.rng.choice(self.pattern_types)
-            self.set_objects_to_pattern(env, pattern_type, False)  # Structured Goal
+            self.set_objects_to_pattern(env, pattern_type, False, self.stack_prob)  # Structured Goal
         elif self.progress == 1:
-            self.set_objects_to_random(env, True, self.enable_stack) # Random Init
+            self.set_objects_to_random(env, True, self.stack_prob) # Random Init
         
         env.wait_until_settle()
 
@@ -68,7 +68,7 @@ class StructureRearrange(BaseTask):
         else:
             raise ValueError("Invalid progress value")
 
-    def set_objects_to_pattern(self, env, pattern_type: str, use_existing=False):
+    def set_objects_to_pattern(self, env, pattern_type: str, use_existing=False, stack_prob=0.0):
         """Set objects to a line, use_existing decides whether to add new object or not"""
         line_pattern = utils.gen_random_pattern(pattern_type, env.occupy_size, env.rng)
         # Add object
@@ -79,11 +79,12 @@ class StructureRearrange(BaseTask):
                     obj_lists=self.obj_list,
                     color_lists=self.color_list,
                     prior=line_pattern,
+                    stack_prob=stack_prob,
                 )
         else:
             raise NotImplementedError("Not implemented yet")
 
-    def set_objects_to_random(self, env, use_existing=False, enable_stack=False):
+    def set_objects_to_random(self, env, use_existing=False, stack_prob=0.0):
         """Set objects to random positions"""
         if not use_existing:
             env.reset()  # Clear all objects
@@ -92,9 +93,10 @@ class StructureRearrange(BaseTask):
                     obj_lists=self.obj_list,
                     color_lists=self.color_list,
                     prior=None,
+                    stack_prob=stack_prob,
                 )
         else:
             # Using existing objects
             env.move_all_objects_to_buffer()
             for obj_id in env.obj_ids["rigid"]:
-                env.move_object_to_random(obj_id, prior=None)
+                env.move_object_to_random(obj_id, prior=None, stack_prob=stack_prob)
