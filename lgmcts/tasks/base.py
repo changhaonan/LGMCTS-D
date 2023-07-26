@@ -1,6 +1,8 @@
 from __future__ import annotations
 import cv2
 import gym
+import numpy as np
+import random
 import importlib_resources
 from copy import deepcopy
 from typing import Literal, NamedTuple
@@ -42,7 +44,6 @@ class BaseTask:
         self.goals = []
         self.progress = 0  # Task progression metric in range [0, 1].
         self.placeholders = {}
-        return env.reset()
 
     def set_difficulty(self, difficulty: Literal["easy", "medium", "hard"]):
         self.difficulty_level = difficulty
@@ -70,8 +71,8 @@ class BaseTask:
         for name, placeholder in self.placeholders.items():
             args = self.placeholder_expression[name]
             expressions[name] = placeholder.get_expression(**args)
-        # now assemble the prompt
-        prompt = deepcopy(self.prompt_template)
+        # now assemble the prompt, random select one from template
+        prompt = deepcopy(self.rng.choice(self.prompt_template))
         assets = {}
         for name in self.placeholders:
             replacement = ""
@@ -86,3 +87,7 @@ class BaseTask:
             replacement = replacement[:-1]
             prompt = prompt.replace("{" + f"{name}" + "}", replacement)
         return prompt, assets
+
+    def set_seed(self, seed):
+        self.rng = np.random.default_rng(seed=seed)
+        self.seed = seed

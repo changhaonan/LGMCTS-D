@@ -36,10 +36,11 @@ class StructureRearrange(BaseTask):
         }
         placeholder_expression = {
             f"obj_{i}" : {
-                "type": obj_express_types,
+                "types": obj_express_types,
             }
             for i in range(1, max_num_obj + 1)
-        }
+        } 
+        placeholder_expression["pattern"] = { "types": ["text"] }
         # template
         prompt_template = [
             "Set the table to {pattern}",
@@ -62,12 +63,11 @@ class StructureRearrange(BaseTask):
         self.obs_img_size = obs_img_size
         # template
 
-    def update_goals(self, env):
+    def reset(self, env):
         """Reset the scene to goal state"""
+        super().reset(env)
         pattern_type = env.rng.choice(self.pattern_types)
         self.set_objects_to_pattern(env, pattern_type, False, self.stack_prob)  # Structured Goal
-        obs, _, _, _, _ = env.step()
-        return obs
 
     def start(self, env):
         """Reset the env to start state"""
@@ -88,7 +88,6 @@ class StructureRearrange(BaseTask):
         pattern_prior = utils.gen_random_pattern(pattern_type, env.occupy_size, env.rng)
         # Add object
         if not use_existing:
-            env.reset()  # Clear all objects
             for i in range(self.max_num_obj):
                 env.add_random_object_to_env(
                     obj_lists=self.obj_list,

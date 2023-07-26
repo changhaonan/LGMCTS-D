@@ -61,7 +61,7 @@ def _generate_data_for_one_task(
             meta, prompt, prompt_assets = env.meta_info, env.prompt, env.prompt_assets
 
             # Update goal
-            obs = task.update_goals(env)
+            obs = env.reset()
             obs_cache.append(obs)
             # Set to start state
             obs = task.start(env)
@@ -95,6 +95,18 @@ def _generate_data_for_one_task(
                 img.save(U.f_join(rgb_per_view_save_path, f"{i}.jpg"))
         with open(U.f_join(traj_save_path, "obs.pkl"), "wb") as f:
             pickle.dump(obs, f)
+        
+        # save trajectory
+        trajectory = {
+            **meta,
+            "prompt": prompt,
+            "prompt_assets": prompt_assets,
+            "steps": elapsed_steps,
+            # "success": info["success"],
+            # "failure": info["failure"],
+        }
+        with open(U.f_join(traj_save_path, "trajectory.pkl"), "wb") as fp:
+            pickle.dump(trajectory, fp)
 
         # update metadata
         metadata["n_steps_min"] = min(metadata["n_steps_min"], elapsed_steps)
@@ -114,7 +126,6 @@ def _generate_data_for_one_task(
     metadata["n_steps_mean"] /= n_generated
     with open(U.f_join(save_path, "metadata.pkl"), "wb") as f:
         pickle.dump(metadata, f)
-
 
 
 if __name__ == '__main__':

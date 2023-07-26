@@ -120,12 +120,13 @@ class BaseEnv:
 
         assert max_sim_steps_to_static > 0
         self._max_sim_steps_to_static = max_sim_steps_to_static
-        self.set_seed(seed)
+        self.prompt, self.prompt_assets = None, None
         self.meta_info = {}
         self._debug = debug
         self._display_debug_window = display_debug_window
         self._hide_arm_rgb = hide_arm_rgb
         self.set_task(task, task_kwargs)
+        self.set_seed(seed)
     
     def connect_pybullet_hook(self, display_debug_window: bool):
         return p.connect(p.DIRECT if not display_debug_window else p.GUI)
@@ -146,6 +147,9 @@ class BaseEnv:
                 p.COV_ENABLE_RENDERING, 0, physicsClientId=self.client_id
             )
         
+        # reset task
+        self.task.reset(self)
+
         # generate prompt and corresponding assets
         self.prompt, self.prompt_assets = self.task.generate_prompt()
 
@@ -254,6 +258,7 @@ class BaseEnv:
     def set_seed(self, seed=None):
         self._random = np.random.default_rng(seed=seed)
         self._env_seed = seed
+        self.task.set_seed(seed)
         return seed
 
     # Render & obs

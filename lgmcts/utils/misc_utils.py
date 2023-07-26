@@ -233,8 +233,8 @@ def gen_random_pattern(pattern_type, pattern_shape, rng):
     else:
         pattern = rng.uniform(size=pattern_shape)
     # Debug
-    plt.imshow(pattern)
-    plt.show()
+    # plt.imshow(pattern)
+    # plt.show()
     return pattern
 
 
