@@ -35,6 +35,7 @@ class BaseTask:
         self.progress = 0
         self.placeholders = {}
         self.seed = seed
+        self.set_seed(seed)
     
     def reset(self, env):
         self.client_id = env.client_id

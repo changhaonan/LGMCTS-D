@@ -56,13 +56,11 @@ def _generate_data_for_one_task(
             action_cache = []
 
             # Start-config
-            task.reset(env)  # reset using task
+            obs = env.reset()
+            obs_cache.append(obs)
             elapsed_steps = 0
             meta, prompt, prompt_assets = env.meta_info, env.prompt, env.prompt_assets
 
-            # Update goal
-            obs = env.reset()
-            obs_cache.append(obs)
             # Set to start state
             obs = task.start(env)
             obs_cache.append(obs)

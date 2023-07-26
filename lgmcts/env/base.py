@@ -14,6 +14,7 @@ import traceback
 from typing import Dict, Any, Tuple, Union, List, Literal
 import os
 import gym
+from matplotlib import pyplot as plt
 from PIL import Image
 from anytree import Node, RenderTree
 from lgmcts.tasks.base import BaseTask
@@ -147,9 +148,6 @@ class BaseEnv:
                 p.COV_ENABLE_RENDERING, 0, physicsClientId=self.client_id
             )
         
-        # reset task
-        self.task.reset(self)
-
         # generate prompt and corresponding assets
         self.prompt, self.prompt_assets = self.task.generate_prompt()
 
@@ -177,6 +175,9 @@ class BaseEnv:
         #         self.client_id, self.ur5, pybullet_utils.INVISIBLE_ALPHA
         #     )
         
+        # reset task
+        self.task.reset(self)
+
         # Re-enable rendering.
         if self._display_debug_window:
             p.configureDebugVisualizer(
@@ -451,7 +452,7 @@ class BaseEnv:
                     free[obj_mask == obj_id] = 0
             free[0, :], free[:, 0], free[-1, :], free[:, -1] = 0, 0, 0, 0
             free = cv2.erode(free, np.ones((erode_size, erode_size), np.uint8))
-            free = free.astype(np.float32)
+            free = free.astype(np.float32) 
             # Get the probability union
             if prior is not None:
                 assert prior.shape == free.shape, "prior shape must be the same as free shape"
