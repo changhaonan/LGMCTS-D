@@ -48,7 +48,7 @@ class BaseTask:
         self.difficulty_level = difficulty
 
     def update_goals(
-        self
+        self, env
     ): 
         pass
 

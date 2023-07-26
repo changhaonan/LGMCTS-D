@@ -56,29 +56,24 @@ def _generate_data_for_one_task(
             action_cache = []
 
             # Start-config
-            obs = task.reset(env)  # reset using task
-            # obs_cache.append(obs)
+            task.reset(env)  # reset using task
             elapsed_steps = 0
             meta, prompt, prompt_assets = env.meta_info, env.prompt, env.prompt_assets
 
-            task_failed = False
-            for _ in range(10):
-                # Update env based on task progress
-                task.update_env(env)
-                # Loop inside one episode
-                obs, _, done, __, info = env.step()
-                obs_cache.append(obs)
-                elapsed_steps += 1
-                task.update_goals()
-                if task.check_success().success:
-                    break
+            # Update goal
+            obs = task.update_goals(env)
+            obs_cache.append(obs)
+            # Set to start state
+            obs = task.start(env)
+            obs_cache.append(obs)
+            # Run
         except Exception as e:
             print(e)
             seed += 1
             num_tried_this_seed = 0
             continue
 
-        assert len(obs_cache) == elapsed_steps
+        # assert len(obs_cache) == elapsed_steps
         # if success_only and not info["success"]:
         #     if num_tried_this_seed >= MAX_TRIES_PER_SEED:
         #         seed += 1

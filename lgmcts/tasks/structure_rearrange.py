@@ -40,10 +40,9 @@ class StructureRearrange(BaseTask):
             }
             for i in range(1, max_num_obj + 1)
         }
-
         # template
         prompt_template = [
-            "Set {objs} to {pattern}",
+            "Set the table to {pattern}",
         ]
         super().__init__(
             prompt_template=prompt_template,
@@ -63,21 +62,18 @@ class StructureRearrange(BaseTask):
         self.obs_img_size = obs_img_size
         # template
 
-    def update_goals(self):
-        # Three stages
-        self.progress += 1
-        if self.progress > 2:
-            self.progress = 0
+    def update_goals(self, env):
+        """Reset the scene to goal state"""
+        pattern_type = env.rng.choice(self.pattern_types)
+        self.set_objects_to_pattern(env, pattern_type, False, self.stack_prob)  # Structured Goal
+        obs, _, _, _, _ = env.step()
+        return obs
 
-    def update_env(self, env):
-        if self.progress == 0:
-            # randomize the pattern type
-            pattern_type = env.rng.choice(self.pattern_types)
-            self.set_objects_to_pattern(env, pattern_type, False, self.stack_prob)  # Structured Goal
-        elif self.progress == 1:
-            self.set_objects_to_random(env, True, self.stack_prob) # Random Init
-        
-        env.wait_until_settle()
+    def start(self, env):
+        """Reset the env to start state"""
+        self.set_objects_to_random(env, True, self.stack_prob) # Random Init
+        obs, _, _, _, _ = env.step()
+        return obs
 
     def check_success(self):
         if self.progress == 0 or self.progress == 1:
@@ -89,7 +85,7 @@ class StructureRearrange(BaseTask):
 
     def set_objects_to_pattern(self, env, pattern_type: str, use_existing=False, stack_prob=0.0):
         """Set objects to a line, use_existing decides whether to add new object or not"""
-        line_pattern = utils.gen_random_pattern(pattern_type, env.occupy_size, env.rng)
+        pattern_prior = utils.gen_random_pattern(pattern_type, env.occupy_size, env.rng)
         # Add object
         if not use_existing:
             env.reset()  # Clear all objects
@@ -97,11 +93,12 @@ class StructureRearrange(BaseTask):
                 env.add_random_object_to_env(
                     obj_lists=self.obj_list,
                     color_lists=self.color_list,
-                    prior=line_pattern,
+                    prior=pattern_prior,
                     stack_prob=stack_prob,
                 )
         else:
             raise NotImplementedError("Not implemented yet")
+        self.placeholders["pattern"] = PlaceholderText(pattern_type)
 
     def set_objects_to_random(self, env, use_existing=False, stack_prob=0.0):
         """Set objects to random positions"""
