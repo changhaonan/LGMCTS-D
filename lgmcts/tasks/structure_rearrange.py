@@ -4,6 +4,7 @@ import cv2
 import lgmcts.utils.misc_utils as utils
 from lgmcts.tasks import BaseTask
 from lgmcts.encyclopedia import ObjPedia, TexturePedia
+from lgmcts.placeholders import PlaceholderText, PlaceholderObj, PlaceholderScene
 
 
 class ResultTuple(NamedTuple):
@@ -21,6 +22,7 @@ class StructureRearrange(BaseTask):
         max_num_obj: int = 6,
         stack_prob: float = 0.0,
         pattern_types: list[str] = ["line", "circle"],
+        obj_express_types: Literal["name", "image"] = "name",
         obj_list: list[str] | None = None,
         color_list: list[str] | None = None,
         # ==== general ====
@@ -28,8 +30,24 @@ class StructureRearrange(BaseTask):
         obs_img_size: tuple[int, int] = (128, 256),
         seed: int | None = None,
         debug: bool = False,):
+        
+        task_meta = {
+            "max_num_obj": max_num_obj,
+        }
+        placeholder_expression = {
+            f"obj_{i}" : {
+                "type": obj_express_types,
+            }
+            for i in range(1, max_num_obj + 1)
+        }
+
+        # template
+        prompt_template = [
+            "Set {objs} to {pattern}",
+        ]
         super().__init__(
-            prompt_template="Rearrange to this {structure}",
+            prompt_template=prompt_template,
+            placeholder_expression=placeholder_expression,
             modalities=["rgb"],
             obs_img_views=obs_img_views,
             obs_img_size=obs_img_size,
@@ -43,6 +61,7 @@ class StructureRearrange(BaseTask):
         self.color_list = [TexturePedia.lookup_color_by_name(color) for color in color_list]
         # 
         self.obs_img_size = obs_img_size
+        # template
 
     def update_goals(self):
         # Three stages

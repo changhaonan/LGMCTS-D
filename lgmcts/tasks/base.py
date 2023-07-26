@@ -2,6 +2,7 @@ from __future__ import annotations
 import cv2
 import gym
 import importlib_resources
+from copy import deepcopy
 from typing import Literal, NamedTuple
 
 
@@ -18,12 +19,15 @@ class BaseTask:
     def __init__(
         self,
         prompt_template: str,
+        placeholder_expression: dict[str, dict[str, str]],
         modalities: list[str],
         obs_img_views: str | list[str] | None = None,
         obs_img_size: tuple[int, int] = (128, 256),
         seed: int | None = None,
         debug: bool = False,
     ):
+        self.prompt_template = prompt_template
+        self.placeholder_expression = placeholder_expression
         self.assets_root = None
         self.goals = []
         self.progress = 0
@@ -56,4 +60,29 @@ class BaseTask:
         return ResultTuple(success=True, failure=False, distance=None)
 
     def generate_prompt(self, *args, **kwargs):
-        return "", []
+        """
+        Generate prompt from `self.prompt_template`, 'self.task_meta', and `self.placeholders`.
+        This method may be invoked in `env.reset()`.
+        Implementation of this method may vary in different tasks.
+        """
+        expressions = {}
+        # for each placeholder items, generate required expressions
+        for name, placeholder in self.placeholders.items():
+            args = self.placeholder_expression[name]
+            expressions[name] = placeholder.get_expression(**args)
+        # now assemble the prompt
+        prompt = deepcopy(self.prompt_template)
+        assets = {}
+        for name in self.placeholders:
+            replacement = ""
+            for expression_type in self.placeholder_expression[name]["types"]:
+                if expression_type == "image":
+                    replacement = replacement + "{" + name + "} "
+                    assets[name] = expressions[name]["image"]
+                else:
+                    # text expression, e.g., name, novel_name, alias, etc
+                    replacement = replacement + expressions[name][expression_type] + " "
+            # stripe the last white space
+            replacement = replacement[:-1]
+            prompt = prompt.replace("{" + f"{name}" + "}", replacement)
+        return prompt, assets
