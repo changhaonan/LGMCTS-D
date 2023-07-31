@@ -29,11 +29,17 @@ if __name__ == '__main__':
         seed=0,
         debug=True,
     )
-    task.reset(env)  # init
-    env.move_all_objects_to_buffer()
+
+    obs_cache = []
     for i in range(10):
-        task.update_env(env)
-        # get point cloud
-        env.step()
-        task.update_goals()
-        env.show_support_tree()
+        # Start-config
+        obs = env.reset()
+        obs_cache.append(obs)
+        elapsed_steps = 0
+        meta, prompt, prompt_assets = env.meta_info, env.prompt, env.prompt_assets
+
+        # Set to start state
+        obs = task.start(env)
+        obs_cache.append(obs)
+
+        task.gen_goal_spec(env)

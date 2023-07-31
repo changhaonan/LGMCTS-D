@@ -8,6 +8,7 @@ import pybullet as p
 import torch
 import open3d as o3d
 from transforms3d import euler
+from scipy.spatial.transform import Rotation as R
 
 
 # -----------------------------------------------------------------------------
@@ -211,6 +212,7 @@ def gen_random_pattern(pattern_type, pattern_shape, rng):
     """Generate random pattern distribution in a given shape."""
     height, width = pattern_shape
     pattern = np.zeros(pattern_shape, dtype=np.float32)
+    pattern_info = {}
     if pattern_type == "line":
         i0 = rng.integers(0, 4)  # select one of 4 borders
         i1 = (rng.integers(1, 4) + i0) % 4  # select one of 3 other borders
@@ -223,6 +225,11 @@ def gen_random_pattern(pattern_type, pattern_shape, rng):
 
         # Draw the line on the image
         cv2.line(pattern, (x0, y0), (x1, y1), 1.0, 1)
+        # Pattern info
+        pattern_info["type"] = "line"
+        pattern_info["position_pixel"] = [int(x0), int(y0)]
+        pattern_info["rotation"] = [0, 0, np.arctan2(y1 - y0, x1 - x0)]
+
     elif pattern_type == "circle":
         # select center and radius
         x = rng.integers(0, width)
@@ -230,12 +237,18 @@ def gen_random_pattern(pattern_type, pattern_shape, rng):
         r = rng.integers(min(width, height) // 6, min(width, height) // 2)
         # Draw the circle on the image
         cv2.circle(pattern, (x, y), r, 1.0, 1)
+        # Pattern info
+        pattern_info["type"] = "circle"
+        pattern_info["position_pixel"] = [int(x), int(y)]
+        pattern_info["rotation"] = [0, 0, 0]
+        pattern_info["radius_pixel"] = int(r)
     else:
         pattern = rng.uniform(size=pattern_shape)
+        pattern_info["type"] = "random"
     # Debug
     # plt.imshow(pattern)
     # plt.show()
-    return pattern
+    return pattern, pattern_info
 
 
 # -------------------------------------------------------------------------
@@ -752,3 +765,22 @@ def plot_3d(title: str, points, color, block: bool = True):
     ax.set_zlabel("Z")
     plt.title(title)
     plt.show(block=block)
+
+
+# Transform Utils
+def get_transfroms(position, quat):
+    """ Get the transform matrix from position and quaternion."""
+    pose = np.eye(4)
+    pose[:3, 3] = position
+    pose[:3, :3] = R.from_quat(quat).as_matrix()
+    return pose
+
+
+def get_transforms_batch(positions, quats):
+    """ Get the transform matrix from position and quaternion."""
+    batch_size = positions.shape[0]
+    poses = np.eye(4).reshape(1, 4, 4).repeat(batch_size, axis=0)
+    for i in range(batch_size):
+        poses[i, :3, 3] = positions[i]
+        poses[i, :3, :3] = R.from_quat(quats[i]).as_matrix()
+    return poses

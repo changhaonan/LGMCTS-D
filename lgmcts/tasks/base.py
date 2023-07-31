@@ -92,3 +92,8 @@ class BaseTask:
     def set_seed(self, seed):
         self.rng = np.random.default_rng(seed=seed)
         self.seed = seed
+
+    # Struct-diffusion style goal specification
+    def gen_goal_spec(self):
+        spec = {}
+        return spec

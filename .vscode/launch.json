@@ -8,9 +8,9 @@
             "name": "Gen data",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/lgmcts/scripts/data_generation/run.py",
+            "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_struct_diffusion.py",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": false
         },
         {
             "name": "Test env",

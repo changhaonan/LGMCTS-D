@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Literal, NamedTuple
 import cv2
+from copy import deepcopy
 import lgmcts.utils.misc_utils as utils
 from lgmcts.tasks import BaseTask
 from lgmcts.encyclopedia import ObjPedia, TexturePedia
@@ -61,7 +62,8 @@ class StructureRearrange(BaseTask):
         self.color_list = [TexturePedia.lookup_color_by_name(color) for color in color_list]
         # 
         self.obs_img_size = obs_img_size
-        # template
+        # temporary data
+        self.goal_pattern_info = {}
 
     def reset(self, env):
         """Reset the scene to goal state"""
@@ -85,7 +87,7 @@ class StructureRearrange(BaseTask):
 
     def set_objects_to_pattern(self, env, pattern_type: str, use_existing=False, stack_prob=0.0):
         """Set objects to a line, use_existing decides whether to add new object or not"""
-        pattern_prior = utils.gen_random_pattern(pattern_type, env.occupy_size, env.rng)
+        pattern_prior, self.goal_pattern_info = utils.gen_random_pattern(pattern_type, env.occupy_size, env.rng)
         # Add object
         if not use_existing:
             for i in range(self.max_num_obj):
@@ -115,3 +117,33 @@ class StructureRearrange(BaseTask):
             env.move_all_objects_to_buffer()
             for obj_id in env.obj_ids["rigid"]:
                 env.move_object_to_random(obj_id, prior=None, stack_prob=stack_prob)
+
+    def gen_goal_spec(self, env):
+        """goal specification; used for StructDiffusion"""
+        spec = super().gen_goal_spec()
+        # anchor object
+        spec["anchor"] = {}
+
+        # rearrange object
+        spec["rearrange"] = {
+            "combine_features_logic": "None",
+            "count": "None",
+            "objects": []
+        }
+        for obj_id in env.obj_ids["rigid"]:
+            obj_info = env.obj_id_reverse_mapping[obj_id]
+            spec["rearrange"]["objects"].append(
+                {
+                    "obj_id": obj_id,
+                    "obj_name": obj_info["obj_name"],
+                    "obj_assets": obj_info["obj_assets"],
+                }
+            )
+
+        # distract object
+        spec["distract"] = {}  # Empty for now
+
+        # shape information (pattern)
+        # append pattern information
+        spec["shape"] = self.goal_pattern_info
+        return spec

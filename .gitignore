@@ -1,3 +1,6 @@
 *.pyc
 *.egg-info
 output
+
+# test data
+examples/

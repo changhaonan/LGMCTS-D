@@ -8,6 +8,7 @@ import threading
 import time
 import os
 import cv2
+import copy
 import open3d as o3d
 import math
 import traceback
@@ -122,6 +123,7 @@ class BaseEnv:
         assert max_sim_steps_to_static > 0
         self._max_sim_steps_to_static = max_sim_steps_to_static
         self.prompt, self.prompt_assets = None, None
+        self.goal_specification = {}  # for StructDiffusion
         self.meta_info = {}
         self._debug = debug
         self._display_debug_window = display_debug_window
@@ -148,9 +150,6 @@ class BaseEnv:
                 p.COV_ENABLE_RENDERING, 0, physicsClientId=self.client_id
             )
         
-        # generate prompt and corresponding assets
-        self.prompt, self.prompt_assets = self.task.generate_prompt()
-
         pybullet_utils.load_urdf(
             p,
             os.path.join(self.assets_root, PLANE_URDF_PATH),
@@ -183,6 +182,11 @@ class BaseEnv:
             p.configureDebugVisualizer(
                 p.COV_ENABLE_RENDERING, 1, physicsClientId=self.client_id
             )
+
+        # Generate prompt and corresponding assets
+        self.prompt, self.prompt_assets = self.task.generate_prompt()
+        # Generate goal specification
+        self.goal_specification = copy.deepcopy(self.task.gen_goal_spec(self))
 
         # Generate meta info
         self.meta_info["n_objects"] = sum(len(v) for v in self.obj_ids.values())
@@ -375,6 +379,7 @@ class BaseEnv:
         obs = {f"{modality}": {} for modality in self.modalities}  # sensing
         # obs["oracle"] = {}  # oracle information
         obs["point_cloud"] = {}  # point cloud
+        obs["poses"] = {}  # object poses
         # Sensing
         for view, config in self.agent_cams.items():
             color, depth, segm = self.render_camera(config)
@@ -387,6 +392,7 @@ class BaseEnv:
             scene_pcd = misc_utils.get_pointcloud(depth[0], intrinsic_mat)
 
             obs["point_cloud"][view] = {}
+            obs["poses"][view] = {}
             #
             max_pcd_size = color.shape[0] * color.shape[1]
             obj_pcds = np.zeros([self.max_num_obj * max_pcd_size, 3])
@@ -407,7 +413,7 @@ class BaseEnv:
                 
                 counter += 1
             obs["point_cloud"][view] = obj_pcds
-            obs["point_cloud"][view] = obj_poses
+            obs["poses"][view] = obj_poses
         # assert self.observation_space.contains(obs)
         return obs
 

@@ -4,7 +4,7 @@ import multiprocessing
 import os
 import pickle
 from math import ceil
-
+import h5py
 import hydra
 import numpy as np
 from PIL import Image
@@ -54,16 +54,21 @@ def _generate_data_for_one_task(
             num_tried_this_seed += 1
             obs_cache = []
             action_cache = []
+            goal_specs = []
 
             # Start-config
             obs = env.reset()
             obs_cache.append(obs)
             elapsed_steps = 0
-            meta, prompt, prompt_assets = env.meta_info, env.prompt, env.prompt_assets
+            meta, prompt, prompt_assets, goal_spec = env.meta_info, env.prompt, env.prompt_assets, env.goal_specification
 
             # Set to start state
             obs = task.start(env)
             obs_cache.append(obs)
+
+            # Save related info
+            goal_specs.append(goal_spec)
+
             # Run
         except Exception as e:
             print(e)
