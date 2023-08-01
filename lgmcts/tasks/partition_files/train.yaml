@@ -36,7 +36,7 @@ dragged_obj:
   - L-shaped block
 
 # ==== structure rearrange ====
-structure_rearrange:
+struct_rearrange:
   stack_prob: 0.0
   pattern_types: ["circle"]  # support: "line", "circle"
   obj_list: ${dragged_obj}

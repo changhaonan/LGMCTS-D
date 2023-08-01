@@ -3,13 +3,13 @@ from omegaconf import OmegaConf
 import importlib_resources
 from lgmcts.tasks.base import BaseTask
 from lgmcts.tasks.partition_files import *
-from lgmcts.tasks.structure_rearrange import StructureRearrange
+from lgmcts.tasks.struct_rearrange import StructRearrange
 
 __all__ = ["ALL_TASKS", "ALL_PARTITIONS", "PARTITION_TO_SPECS"]
 
 _ALL_TASKS = {
-    "structure_rearrange": [
-        StructureRearrange
+    "struct_rearrange": [
+        StructRearrange
     ],
 }
 ALL_TASKS = {
@@ -37,7 +37,7 @@ def _load_partition_file(file: str):
 # test
 TRAIN = _load_partition_file(file="train.yaml")
 ALL_PARTITIONS = [
-    "structure_rearrange"
+    "struct_rearrange"
 ]
 PARTITION_TO_SPECS = {
     "train": TRAIN,

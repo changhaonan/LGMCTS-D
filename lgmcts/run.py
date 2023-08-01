@@ -21,7 +21,7 @@ def build_env_and_task(
     return env, task
 
 if __name__ == '__main__':
-    task_name = "structure_rearrange"
+    task_name = "struct_rearrange"
     env, task = build_env_and_task(
         task_name,
         PARTITION_TO_SPECS["train"][task_name],

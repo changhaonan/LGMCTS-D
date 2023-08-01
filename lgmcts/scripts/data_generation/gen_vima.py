@@ -132,7 +132,7 @@ def _generate_data_for_one_task(
 
 
 if __name__ == '__main__':
-    task_name = "structure_rearrange"
+    task_name = "struct_rearrange"
     _generate_data_for_one_task(
         task_name,
         PARTITION_TO_SPECS["train"][task_name],

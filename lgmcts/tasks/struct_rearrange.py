@@ -14,8 +14,8 @@ class ResultTuple(NamedTuple):
     distance: float | None
 
     
-class StructureRearrange(BaseTask):
-    task_name = "structure_rearrange"
+class StructRearrange(BaseTask):
+    task_name = "struct_rearrange"
 
     def __init__(
         self, 
@@ -122,7 +122,9 @@ class StructureRearrange(BaseTask):
         """goal specification; used for StructDiffusion"""
         spec = super().gen_goal_spec()
         # anchor object
-        spec["anchor"] = {}
+        spec["anchor"] = {
+            "objects": []
+        }
 
         # rearrange object
         spec["rearrange"] = {
@@ -141,7 +143,9 @@ class StructureRearrange(BaseTask):
             )
 
         # distract object
-        spec["distract"] = {}  # Empty for now
+        spec["distract"] = {
+            "objects": []
+        }  # Empty for now
 
         # shape information (pattern)
         # append pattern information
