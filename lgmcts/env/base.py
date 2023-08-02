@@ -79,13 +79,13 @@ class BaseEnv:
         self.oracle_cams = Oracle.CONFIG
 
         # Workspace bounds.
-        self.pix_size = 0.003125
+        self.pix_size = 0.003125  # 0.003125 m/pixel
         self.bounds = np.array([[0.0, 1.0], [-0.5, 0.5], [0, 0.3]])  # Square bounds
         self.zone_bounds = np.copy(self.bounds)
-        self.occupy_size = (
+        self.ws_map_size = (
             int(np.round((self.bounds[1, 1] - self.bounds[1, 0]) / self.pix_size)),
             int(np.round((self.bounds[0, 1] - self.bounds[0, 0]) / self.pix_size)),
-        )  # (height, width)
+        )  # workspace map size (height, width)
         self.buffer_shift = np.array([10.0, 10.0, 0.0])  #  A buffer zone for object storage
 
         # Start PyBullet.

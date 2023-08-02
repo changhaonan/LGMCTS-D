@@ -87,7 +87,9 @@ class StructRearrange(BaseTask):
 
     def set_objects_to_pattern(self, env, pattern_type: str, use_existing=False, stack_prob=0.0):
         """Set objects to a line, use_existing decides whether to add new object or not"""
-        pattern_prior, self.goal_pattern_info = utils.gen_random_pattern(pattern_type, env.occupy_size, env.rng)
+        pattern_prior, self.goal_pattern_info = utils.gen_random_pattern(pattern_type, env.ws_map_size, env.rng)
+        # update goal pattern info
+        
         # Add object
         if not use_existing:
             for i in range(self.max_num_obj):
@@ -149,5 +151,10 @@ class StructRearrange(BaseTask):
 
         # shape information (pattern)
         # append pattern information
+        self.goal_pattern_info["position"] = utils.pix_to_xyz(self.goal_pattern_info["position_pixel"], None, env.bounds, env.pix_size, True)
+        if "radius_pixel" in self.goal_pattern_info:
+            self.goal_pattern_info["radius"] = self.goal_pattern_info["radius_pixel"] * env.pix_size
         spec["shape"] = self.goal_pattern_info
+
+        # 
         return spec
