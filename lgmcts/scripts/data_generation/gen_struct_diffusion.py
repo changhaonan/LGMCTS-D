@@ -137,6 +137,9 @@ def _generate_data_for_one_task(
         json.dump(indices_all, f)
 
     # Generate vocabulary
+    type_vocab = task.gen_type_vocabs()
+    with open(os.path.join(save_path, "type_vocabs_coarse.json"), "w") as f:
+        json.dump(type_vocab, f)
 
 
 if __name__ == '__main__':

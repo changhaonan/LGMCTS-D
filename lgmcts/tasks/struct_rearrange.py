@@ -122,7 +122,7 @@ class StructRearrange(BaseTask):
 
     def gen_goal_spec(self, env):
         """goal specification; used for StructDiffusion"""
-        spec = super().gen_goal_spec()
+        spec = super().gen_goal_spec(env)
         # anchor object
         spec["anchor"] = {
             "objects": []
@@ -158,3 +158,14 @@ class StructRearrange(BaseTask):
 
         # 
         return spec
+
+    def gen_type_vocabs(self):
+        type_vocabs = super().gen_type_vocabs()
+        # update class according to task
+        type_vocabs["class"] = {}
+        for i, obj in enumerate(self.obj_list):
+            type_vocabs["class"][obj.name] = i
+        type_vocabs["color"] = {}
+        for i, color in enumerate(self.color_list):
+            type_vocabs["color"][color.name] = i
+        return type_vocabs

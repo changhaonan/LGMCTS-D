@@ -1,4 +1,6 @@
 from __future__ import annotations
+import os
+import json
 import cv2
 import gym
 import numpy as np
@@ -94,6 +96,13 @@ class BaseTask:
         self.seed = seed
 
     # Struct-diffusion style goal specification
-    def gen_goal_spec(self):
+    def gen_goal_spec(self, env):
         spec = {}
         return spec
+
+    def gen_type_vocabs(self):
+        # load the template
+        template_path = os.path.join(self.assets_root, "templates", "type_vocabs_coarse.json")
+        with open(template_path, "r") as f:
+            type_vocabs = json.load(f)
+        return type_vocabs
