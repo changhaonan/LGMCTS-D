@@ -23,7 +23,7 @@ from lgmcts.tasks import ALL_TASKS as _ALL_TASKS
 import lgmcts.utils.pybullet_utils as pybullet_utils
 import lgmcts.utils.misc_utils as misc_utils
 from lgmcts.utils.cameras import get_agent_cam_config, Oracle
-from lgmcts.encyclopedia import ObjPedia, TexturePedia, ObjEntry, TextureEntry
+from lgmcts.components.encyclopedia import ObjPedia, TexturePedia, ObjEntry, TextureEntry
 
 UR5_WORKSPACE_URDF_PATH = "ur5/workspace.urdf"
 PLANE_URDF_PATH = "plane/plane.urdf"

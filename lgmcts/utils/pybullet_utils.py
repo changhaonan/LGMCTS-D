@@ -10,8 +10,8 @@ from typing import Dict, Optional, Any, Union, List
 import numpy as np
 import pybullet as p
 
-from lgmcts.encyclopedia.definitions import ObjEntry, TextureEntry
-from lgmcts.encyclopedia.replace_fns import default_replace_fn
+from lgmcts.components.encyclopedia.definitions import ObjEntry, TextureEntry
+from lgmcts.components.encyclopedia.replace_fns import default_replace_fn
 
 INVISIBLE_ALPHA = 0
 VISIBLE_ALPHA = 1

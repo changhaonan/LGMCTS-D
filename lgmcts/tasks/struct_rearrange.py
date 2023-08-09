@@ -4,8 +4,8 @@ import cv2
 from copy import deepcopy
 import lgmcts.utils.misc_utils as utils
 from lgmcts.tasks import BaseTask
-from lgmcts.encyclopedia import ObjPedia, TexturePedia
-from lgmcts.placeholders import PlaceholderText, PlaceholderObj, PlaceholderScene
+from lgmcts.components.encyclopedia import ObjPedia, TexturePedia
+from lgmcts.components.placeholders import PlaceholderText
 
 
 class ResultTuple(NamedTuple):
