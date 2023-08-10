@@ -9,6 +9,7 @@ import importlib_resources
 from copy import deepcopy
 from typing import Literal, NamedTuple
 from lgmcts.components.end_effectors import Suction
+from lgmcts.components.action_primitives import PickPlace
 
 
 class ResultTuple(NamedTuple):
@@ -40,6 +41,7 @@ class BaseTask:
         self.seed = seed
         self.set_seed(seed)
         self.ee = Suction  # ee is bined to the task
+        self.primitive = PickPlace  # primitive is bined to the task
     
     def reset(self, env):
         self.client_id = env.client_id

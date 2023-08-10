@@ -24,10 +24,12 @@ import lgmcts.utils.pybullet_utils as pybullet_utils
 import lgmcts.utils.misc_utils as misc_utils
 from lgmcts.utils.cameras import get_agent_cam_config, Oracle
 from lgmcts.components.encyclopedia import ObjPedia, TexturePedia, ObjEntry, TextureEntry
+from lgmcts.components.end_effectors import Suction, Spatula
 
 UR5_WORKSPACE_URDF_PATH = "ur5/workspace.urdf"
 PLANE_URDF_PATH = "plane/plane.urdf"
 UR5_URDF_PATH = "ur5/ur5.urdf"
+
 
 class BaseEnv:
     """A simple table top scene"""
@@ -232,6 +234,31 @@ class BaseEnv:
         return obs
 
     def step(self, action=None):
+        if action is not None:
+            assert self.action_space.contains(
+                action
+            ), f"got {action} instead, action space {self.action_space}"
+
+            pose0 = (action["pose0_position"], action["pose0_rotation"])
+            pose1 = (action["pose1_position"], action["pose1_rotation"])
+
+            if isinstance(self.ee, Suction):
+                timeout, released = self.task.primitive(
+                    self.movej, self.movep, self.ee, pose0, pose1
+                )
+            elif isinstance(self.ee, Spatula):
+                timeout = self.task.primitive(
+                    self.movej, self.movep, self.ee, pose0, pose1
+                )
+            else:
+                raise ValueError("Unknown end effector type")
+
+            # Exit early if action times out. We still return an observation
+            # so that we don't break the Gym API contract.
+            if timeout:
+                obs = self._get_obs()
+                return obs, 0.0, True, self._get_info()
+
         # Step simulator asynchronously until objects settle.
         self.wait_until_settle()
 
