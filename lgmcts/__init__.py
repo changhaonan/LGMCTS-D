@@ -20,7 +20,7 @@ def make(
     render_prompt: bool = False,
     record_gui: bool = False,
     record_kwargs: dict | None = None,
-    hide_arm_rgb: bool = True,
+    hide_arm_rgb: bool = False,
 ) -> BaseEnv:
     if record_gui:
         record_kwargs = record_kwargs or dict(video_name="gui_record.mp4")

@@ -186,12 +186,14 @@ class StructRearrange(BaseTask):
         prompt.reset()
         ## Step 1: generate a random pattern
         pattern_type = env.rng.choice(self.pattern_types)
-        pattern_obj_ids = self.add_objects_to_pattern(env, int(self.max_num_obj/2), pattern_type, False, self.stack_prob)
+        max_num_pattern = int(self.max_num_obj/2)
+        pattern_obj_ids = self.add_objects_to_pattern(env, max_num_pattern, pattern_type, False, self.stack_prob)
         # parse object names
         pattern_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pattern_obj_ids]
         prompt.gen_pattern_prompt(pattern_obj_names, pattern_type)
         ## Step 2: add some more objects & spatial relationship
-        added_obj_ids = self.add_objects_to_random(env, int(self.max_num_obj/2), False, self.stack_prob)
+        max_num_add = int(self.max_num_obj/2)
+        added_obj_ids = self.add_objects_to_random(env, max_num_add, False, self.stack_prob)
         # randomly select one from pattern obj and added obj
         pair_obj_ids = env.rng.choice(pattern_obj_ids + added_obj_ids, 2)
         pair_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pair_obj_ids]

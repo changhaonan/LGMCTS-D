@@ -8,7 +8,7 @@
             "name": "Gen data",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_struct_diffusion.py",
+            "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_lgmcts.py",
             "console": "integratedTerminal",
             "justMyCode": false
         },

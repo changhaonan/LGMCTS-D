@@ -52,13 +52,14 @@ class BaseEnv:
         self.obj_ids = {"fixed": [], "rigid": []}
         self.obj_dyn_info = { "size": {}, "urdf_full_path": {} }  # obj dynamic info: size, urdf path, etc.
         self.obj_id_reverse_mapping = {}
-        # obj_id_reverse_mapping: a reverse mapping dict that maps object unique id to:
+        ## obj_id_reverse_mapping: a reverse mapping dict that maps object unique id to:
         # 1. object_name appended with color name
         # 2. object_texture entry in TexturePedia
         # 3. object_description entry in ObjPedia
         self.obj_support_tree = Node(-1)  # -1 refers to the base
 
         # Configure pybullet
+        self.homej = np.array([-1, -0.5, 0.5, -0.5, -0.5, 0]) * np.pi
         self.dt = 1 / 480
         self.sim_step = 0
 
@@ -164,15 +165,41 @@ class BaseEnv:
             physicsClientId=self.client_id,
         )
 
-        # self.ur5 = pybullet_utils.load_urdf(
-        #     p,
-        #     os.path.join(self.assets_root, UR5_URDF_PATH),
-        #     physicsClientId=self.client_id,
-        # )
-        # if self._hide_arm_rgb:
-        #     pybullet_utils.set_visibility_bullet(
-        #         self.client_id, self.ur5, pybullet_utils.INVISIBLE_ALPHA
-        #     )
+        self.ur5 = pybullet_utils.load_urdf(
+            p,
+            os.path.join(self.assets_root, UR5_URDF_PATH),
+            physicsClientId=self.client_id,
+        )
+        if self._hide_arm_rgb:
+            pybullet_utils.set_visibility_bullet(
+                self.client_id, self.ur5, pybullet_utils.INVISIBLE_ALPHA
+            )
+        self.ee = self.task.ee(
+            self.assets_root,
+            self.ur5,
+            9,
+            self.obj_ids,
+            self.client_id,
+        )
+        self.ee.is_visible = not self._hide_arm_rgb
+        self.ee_tip = 10  # Link ID of suction cup.
+
+        # Get revolute joint indices of robot (skip fixed joints).
+        n_joints = p.getNumJoints(self.ur5, physicsClientId=self.client_id)
+        joints = [
+            p.getJointInfo(self.ur5, i, physicsClientId=self.client_id)
+            for i in range(n_joints)
+        ]
+        self.joints = [j[0] for j in joints if j[2] == p.JOINT_REVOLUTE]
+
+        # Move robot to home joint configuration.
+        for i in range(len(self.joints)):
+            p.resetJointState(
+                self.ur5, self.joints[i], self.homej[i], physicsClientId=self.client_id
+            )
+
+        # Reset end effector.
+        self.ee.release()
         
         # reset task
         self.task.reset(self)
@@ -629,9 +656,72 @@ class BaseEnv:
         # Set task-related config
         self.max_num_obj = self.task.max_num_obj
 
-    # Debug method
+    # ---------------------------------------------------------------------------
+    # Debug Functions
+    # ---------------------------------------------------------------------------
+
     def show_support_tree(self):
         print(RenderTree(self.obj_support_tree))
+
+    # ---------------------------------------------------------------------------
+    # Robot Movement Functions
+    # ---------------------------------------------------------------------------
+
+    def movej(self, targj, speed=0.01, timeout=5):
+        """Move UR5 to target joint configuration."""
+        t0 = time.time()
+        while (time.time() - t0) < timeout:
+            currj = [
+                p.getJointState(self.ur5, i, physicsClientId=self.client_id)[0]
+                for i in self.joints
+            ]
+            currj = np.array(currj)
+            diffj = targj - currj
+            if all(np.abs(diffj) < 1e-2):
+                return False
+
+            # Move with constant velocity
+            norm = np.linalg.norm(diffj)
+            v = diffj / norm if norm > 0 else 0
+            stepj = currj + v * speed
+            gains = np.ones(len(self.joints))
+            p.setJointMotorControlArray(
+                bodyIndex=self.ur5,
+                jointIndices=self.joints,
+                controlMode=p.POSITION_CONTROL,
+                targetPositions=stepj,
+                positionGains=gains,
+                physicsClientId=self.client_id,
+            )
+            self.step_counter += 1
+            self.step_simulation()
+
+        print(f"Warning: movej exceeded {timeout} second timeout. Skipping.")
+        return True
+
+    def movep(self, pose, speed=0.01):
+        """Move UR5 to target end effector pose."""
+        targj = self.solve_ik(pose)
+        return self.movej(targj, speed)
+
+    def solve_ik(self, pose):
+        """Calculate joint configuration with inverse kinematics."""
+        joints = p.calculateInverseKinematics(
+            bodyUniqueId=self.ur5,
+            endEffectorLinkIndex=self.ee_tip,
+            targetPosition=pose[0],
+            targetOrientation=pose[1],
+            lowerLimits=[-3 * np.pi / 2, -2.3562, -17, -17, -17, -17],
+            upperLimits=[-np.pi / 2, 0, 17, 17, 17, 17],
+            jointRanges=[np.pi, 2.3562, 34, 34, 34, 34],  # * 6,
+            restPoses=np.float32(self.homej).tolist(),
+            maxNumIterations=100,
+            residualThreshold=1e-5,
+            physicsClientId=self.client_id,
+        )
+        joints = np.float32(joints)
+        joints[2:] = (joints[2:] + np.pi) % (2 * np.pi) - np.pi
+        return joints
 
 
 if __name__ == '__main__':

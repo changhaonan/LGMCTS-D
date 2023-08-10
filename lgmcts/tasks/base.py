@@ -8,6 +8,7 @@ import random
 import importlib_resources
 from copy import deepcopy
 from typing import Literal, NamedTuple
+from lgmcts.components.end_effectors import Suction
 
 
 class ResultTuple(NamedTuple):
@@ -38,6 +39,7 @@ class BaseTask:
         self.placeholders = {}
         self.seed = seed
         self.set_seed(seed)
+        self.ee = Suction  # ee is bined to the task
     
     def reset(self, env):
         self.client_id = env.client_id
