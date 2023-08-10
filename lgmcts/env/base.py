@@ -186,7 +186,7 @@ class BaseEnv:
         # Generate prompt and corresponding assets
         self.prompt, self.prompt_assets = self.task.generate_prompt()
         # Generate goal specification
-        self.goal_specification = copy.deepcopy(self.task.gen_goal_spec(self))
+        # self.goal_specification = copy.deepcopy(self.task.gen_goal_spec(self))
 
         # Generate meta info
         self.meta_info["n_objects"] = sum(len(v) for v in self.obj_ids.values())

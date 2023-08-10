@@ -16,7 +16,13 @@ class PromptGenerator:
         self.pattern_list = ["Circle", "Square"]
         self.obj_list = ["Letter A", "Letter B", "Letter C"]
         self.prep_list = ["at", "in", "on"]
-        self.correlative_list = [", then ", ", and ", ", while ", ", so ", ", "]
+        self.correlative_list = ["; then ", "; and ", "; while ", "; so ", "; "]
+        self.region_prompt = ""
+        self.pattern_prompt = ""
+        self.pair_prompt = ""
+
+    def reset(self):
+        """Reset the generator"""
         self.region_prompt = ""
         self.pattern_prompt = ""
         self.pair_prompt = ""
@@ -25,7 +31,7 @@ class PromptGenerator:
         """Generate pattern prompt"""
         self.rng.shuffle(pattern_objs)
         obj_str = ", ".join(pattern_objs)
-        self.pattern_prompt = f"{self.rng.choice(self.place_action_list)} {obj_str} {self.rng.choice(self.prep_list)} {pattern}"
+        self.pattern_prompt = f"{self.rng.choice(self.place_action_list)} {obj_str} {self.rng.choice(self.prep_list)} a {pattern} pattern"
 
     def gen_region_prompt(self, region_objs: list[str], region: str):
         """Generate region prompt"""
@@ -40,11 +46,11 @@ class PromptGenerator:
     @property
     def prompt(self):
         """Randomly combine three prompt"""
-        num_prompt = self.rng.randint(1, 3)
-        prompt_candidate = self.rng.sample(
-            [self.region_prompt, self.pattern_prompt, self.pair_prompt], num_prompt
-        )
-        correlative = self.rng.sample(self.correlative_list, num_prompt - 1)
+        prompt_candidate = [self.region_prompt, self.pattern_prompt, self.pair_prompt]
+        prompt_candidate = list(filter(lambda x: x != "", prompt_candidate))
+        num_prompt = min(self.rng.integers(1, 3), len(prompt_candidate))
+        prompt_candidate = self.rng.choice(prompt_candidate, num_prompt, replace=False)
+        correlative = self.rng.choice(self.correlative_list, num_prompt - 1)
         prompt_str = ""
         for i in range(num_prompt):
             prompt_str += prompt_candidate[i]

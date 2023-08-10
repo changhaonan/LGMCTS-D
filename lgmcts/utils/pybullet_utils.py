@@ -300,3 +300,9 @@ def get_obj_pose(env, obj_id):
     """Get object pose inside pybullet with object id"""
     position, orientation = p.getBasePositionAndOrientation(obj_id, env.client_id)
     return position, orientation
+
+
+def get_obj_aabb(env, obj_id, joint_index=-1):
+    """Get object aabb inside pybullet with object id"""
+    aabb_min, aabb_max = p.getAABB(obj_id, joint_index, env.client_id)  # if joint_index is -1, meaning base
+    return np.array(aabb_min), np.array(aabb_max)

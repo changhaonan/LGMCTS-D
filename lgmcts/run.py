@@ -5,6 +5,7 @@ from lgmcts import PARTITION_TO_SPECS
 import lgmcts.utils.file_utils as U
 from lgmcts.tasks import BaseTask
 from lgmcts.env.base import BaseEnv
+from lgmcts.components.prompt import PromptGenerator
 
 
 def build_env_and_task(
@@ -31,15 +32,19 @@ if __name__ == '__main__':
     )
 
     obs_cache = []
+    prompt_generator = PromptGenerator(env.rng)
     for i in range(10):
         # Start-config
         obs = env.reset()
-        obs_cache.append(obs)
-        elapsed_steps = 0
-        meta, prompt, prompt_assets = env.meta_info, env.prompt, env.prompt_assets
+        # obs_cache.append(obs)
+        # elapsed_steps = 0
+        # meta, prompt, prompt_assets = env.meta_info, env.prompt, env.prompt_assets
 
-        # Set to start state
-        obs = task.start(env)
-        obs_cache.append(obs)
+        # # Set to start state
+        # obs = task.start(env)
+        # obs_cache.append(obs)
 
-        task.gen_goal_spec(env)
+        # task.gen_goal_spec(env)
+        prompt_str = task.gen_goal_config(env, prompt_generator)
+        print(f"==== Episode {i} ====")
+        print(prompt_str)
