@@ -45,6 +45,7 @@ if __name__ == '__main__':
         # obs_cache.append(obs)
 
         # task.gen_goal_spec(env)
-        prompt_str = task.gen_goal_config(env, prompt_generator)
+        prompt_str, obs = task.gen_goal_config(env, prompt_generator)
+        obs = task.gen_start_config(env)
         print(f"==== Episode {i} ====")
         print(prompt_str)

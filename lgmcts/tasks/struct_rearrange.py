@@ -18,6 +18,7 @@ class ResultTuple(NamedTuple):
 
     
 class StructRearrange(BaseTask):
+    """Structured Rearrange Task"""
     task_name = "struct_rearrange"
 
     def __init__(
@@ -166,7 +167,6 @@ class StructRearrange(BaseTask):
             self.goal_pattern_info["radius"] = self.goal_pattern_info["radius_pixel"] * env.pix_size
         spec["shape"] = self.goal_pattern_info
 
-        # 
         return spec
 
     def gen_type_vocabs(self):
@@ -205,8 +205,15 @@ class StructRearrange(BaseTask):
         if spatial_str_list[0] != "A has no relationship with B":
             spatial_rel = self.rng.choice(spatial_str_list)
             prompt.gen_pair_prompt(pair_obj_names[0], pair_obj_names[1], spatial_rel[4:-1].strip())
-        return prompt.prompt
+        
+        # Env step forward
+        obs, _, _, _, _ = env.step()
+        return prompt.prompt, obs
 
     def gen_start_config(self, env):
-        """Generate start config"""
-        pass
+        """Generate a random config using existing objects"""
+        self.add_objects_to_random(env, self.max_num_obj, True, self.stack_prob)
+
+        # Env step forward
+        obs, _, _, _, _ = env.step()
+        return obs
