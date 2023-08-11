@@ -133,6 +133,26 @@ class BaseEnv:
         self._hide_arm_rgb = hide_arm_rgb
         self.set_task(task, task_kwargs)
         self.set_seed(seed)
+
+        # setup action space
+        self.position_bounds = gym.spaces.Box(
+            low=np.array([0.25, -0.5], dtype=np.float32),
+            high=np.array([0.75, 0.50], dtype=np.float32),
+            shape=(2,),
+            dtype=np.float32,
+        )
+        self.action_space = gym.spaces.Dict(
+            {
+                "pose0_position": self.position_bounds,
+                "pose0_rotation": gym.spaces.Box(
+                    -1.0, 1.0, shape=(4,), dtype=np.float32
+                ),
+                "pose1_position": self.position_bounds,
+                "pose1_rotation": gym.spaces.Box(
+                    -1.0, 1.0, shape=(4,), dtype=np.float32
+                ),
+            }
+        )
     
     def connect_pybullet_hook(self, display_debug_window: bool):
         return p.connect(p.DIRECT if not display_debug_window else p.GUI)
@@ -262,9 +282,16 @@ class BaseEnv:
         # Step simulator asynchronously until objects settle.
         self.wait_until_settle()
 
-        # update task
-        result_tuple = self.task.check_success()
-
+        # check if done
+        if isinstance(self.ee, Suction):
+            if action is not None:
+                result_tuple = self.task.check_success(release_obj=released)
+            else:
+                result_tuple = self.task.check_success(release_obj=False)
+        elif isinstance(self.ee, Spatula):
+            result_tuple = self.task.check_success()
+        else:
+            raise NotImplementedError()
         done = result_tuple.success
         obs = self._get_obs()
 

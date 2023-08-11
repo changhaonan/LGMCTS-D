@@ -6,6 +6,7 @@ import lgmcts.utils.file_utils as U
 from lgmcts.tasks import BaseTask
 from lgmcts.env.base import BaseEnv
 from lgmcts.components.prompt import PromptGenerator
+from lgmcts.algorithm import Sampler
 
 
 def build_env_and_task(
@@ -21,6 +22,7 @@ def build_env_and_task(
     task = env.task
     return env, task
 
+
 if __name__ == '__main__':
     task_name = "struct_rearrange"
     env, task = build_env_and_task(
@@ -33,19 +35,21 @@ if __name__ == '__main__':
 
     obs_cache = []
     prompt_generator = PromptGenerator(env.rng)
+    sampler = Sampler()
     for i in range(10):
-        # Start-config
+        # reset
         obs = env.reset()
-        # obs_cache.append(obs)
-        # elapsed_steps = 0
-        # meta, prompt, prompt_assets = env.meta_info, env.prompt, env.prompt_assets
-
-        # # Set to start state
-        # obs = task.start(env)
-        # obs_cache.append(obs)
-
-        # task.gen_goal_spec(env)
+        sampler.reset()
+        prompt_generator.reset()
+        # generate goal
         prompt_str, obs = task.gen_goal_config(env, prompt_generator)
         obs = task.gen_start_config(env)
+        ## Test a sampling process
+        ## Step 1. update the sampler
+        sampler.update(obs)
+        ## Step 2. sample a goal
+        goals = task.goals
+        sampler.sample(goal)
+
         print(f"==== Episode {i} ====")
         print(prompt_str)

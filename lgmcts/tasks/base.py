@@ -64,8 +64,14 @@ class BaseTask:
         """Update environment according to env progress"""
         return 
 
-    def check_success(self):
-        return ResultTuple(success=True, failure=False, distance=None)
+    def check_success(self, *args, **kwargs) -> NamedTuple:
+        """
+        Check success. It should return a tuple of two boolean values, (success, failure).
+        A trajectory will be terminated if fails.
+        This function may be invoked at the final step.
+        It may also be invoked every step for "constraint satisfaction" tasks.
+        """
+        raise NotImplementedError
 
     def generate_prompt(self, *args, **kwargs):
         """

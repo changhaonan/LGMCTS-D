@@ -82,7 +82,7 @@ class StructRearrange(BaseTask):
         obs, _, _, _, _ = env.step()
         return obs
 
-    def check_success(self):
+    def check_success(self, *args, **kwargs) -> NamedTuple:
         if self.progress == 0 or self.progress == 1:
             return ResultTuple(success=False, failure=True, distance=None)
         elif self.progress == 2:
@@ -183,7 +183,6 @@ class StructRearrange(BaseTask):
     def gen_goal_config(self, env, prompt: PromptGenerator):
         """Generate goal config"""
         #TODO: add region prompt later, currently not supported
-        prompt.reset()
         ## Step 1: generate a random pattern
         pattern_type = env.rng.choice(self.pattern_types)
         max_num_pattern = int(self.max_num_obj/2)
