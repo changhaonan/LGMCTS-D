@@ -3,9 +3,8 @@ from __future__ import annotations
 New version of region sampler, remove direction related things.
 Instead of using mask, using center + size representation.
 Sampling using corrosion now & probability summary now.
+FIXME: Currently, there is still a very small error here. Making the result not fully collsion free
 """
-
-""" Region sampler for notion """
 from scipy.spatial import ConvexHull
 from dataclasses import dataclass
 from lgmcts.algorithm.region import Region, Region2D
@@ -49,7 +48,8 @@ def sample_distribution(prob, rng, n_samples=1):
         np.arange(len(flat_prob)), n_samples, p=flat_prob, replace=False
     )
     rand_ind_coords = np.array(np.unravel_index(rand_ind, prob.shape)).T
-    return np.int32(rand_ind_coords.squeeze())
+    sample_probs = flat_prob[rand_ind]
+    return np.int32(rand_ind_coords.squeeze()), sample_probs
 
 
 def draw_convex_contour(img, pixels):
@@ -143,6 +143,7 @@ class Region2DSampler(Region2D):
         obj_id: int,
         points: np.ndarray,
         pos_ref: Union[None, np.ndarray] = None,
+        name: str | None = None,
         color=(127, 127, 127),
     ):
         """Add object to scene, create mask from points"""
@@ -168,17 +169,18 @@ class Region2DSampler(Region2D):
         pixels = pixels[:, [1, 0]]
         # pixels[0, :] = mask.shape[1] - pixels[0, :]  # flip y
         cv2.fillConvexPoly(mask, pixels, 1,)
-        # test
+        ## DEBUG start here
         # contour = draw_convex_contour(mask, pixels)
-
-        cv2.imshow("contour", mask * 255)
-        cv2.waitKey(0)
+        # cv2.imshow("contour", mask * 255)
+        # cv2.waitKey(0)
+        ## DEBUG end here
         height = points_region[:, 2].max() - points_region[:, 2].min()
         # compute offset compared with pos_ref (reference position)
         mask_center = np.array([mask.shape[0] // 2, mask.shape[1] // 2, 0]) + lb_region
         mask_center_world = self._region2world(mask_center)
         pos_offset = mask_center_world - pos_ref
-        self.objects[obj_id] = ObjectData(name=f"obj_{obj_id}", pos=mask_center, mask=mask, height=height, color=color, points=points, pos_offset=pos_offset)
+        name = name if name is not None else f"obj_{obj_id}"
+        self.objects[obj_id] = ObjectData(name=name, pos=mask_center, mask=mask, height=height, color=color, points=points, pos_offset=pos_offset)
 
     def remove_object(self, obj_id: int) -> None:
         """Remove object from scene"""
@@ -235,7 +237,8 @@ class Region2DSampler(Region2D):
                 offset,
             )
 
-    ## Sample related
+    ## Sample methods
+
     def _put_mask(
         self,
         mask: np.ndarray,
@@ -280,44 +283,67 @@ class Region2DSampler(Region2D):
                 )
         return occupancy_map
 
-    def get_free_space(self, obj_id: int) -> np.ndarray:
+    def get_free_space(self, obj_id: int, allow_outside: bool=True) -> np.ndarray:
         """Get the free space of the object using cv2.erosion"""
         obj = self.objects[obj_id]
         mask = obj.mask
         obj_list = [id for id in self.objects if id != obj_id]
         occupancy_map = self.get_occupancy(obj_list)
-        # get free space, free is 0, occupied is 1
+        if not allow_outside:
+            # mark the boundary as 0
+            occupancy_map[0, :, :] = 0
+            occupancy_map[-1, :, :] = 0
+            occupancy_map[:, 0, :] = 0
+            occupancy_map[:, -1, :] = 0
+        # get free space, free is 1, occupied is 0
         free_space = cv2.erode(occupancy_map, mask, iterations=1)
-        # flip the free space, now free is 1, occupied is 0
-        free_space = 1 - free_space
         return free_space
 
-    # Sampling related methods
     def sample(
-        self, obj_id: int, n_samples: int, prior: np.array | None = None
+        self, obj_id: int, n_samples: int, prior: np.array | None = None, allow_outside: bool = True
     ) -> Tuple[List[np.ndarray], SampleStatus, Dict[str, float]]:
         """General sampling method
         Return sample results, sample status, and sample info
+        Args:
+            allow_outside: whether allow sampling outside the region (paritially)
+        Return:
+            sample_probs: probability of each sample
         """
-        free_space = self.get_free_space(obj_id).astype(np.float32)  # free is 1, occupied is 0
+        free_space = self.get_free_space(obj_id, allow_outside).astype(np.float32)  # free is 1, occupied is 0
         cv2.imshow("free", free_space)
         cv2.waitKey(0)
         if prior is not None:
-            assert prior.shape == free_space.shape, "prior shape must be the same as free shape"
+            assert prior.shape[:2] == free_space.shape[:2], "prior shape must be the same as free shape"
+            if len(prior.shape) == 2:
+                prior = prior[:, :, None]
             free_space = np.multiply(free_space, prior)
         if np.sum(free_space) == 0:
             return [], SampleStatus.NO_SPACE, {}
-        samples_2d = sample_distribution(prob=free_space, rng=self.rng, n_samples=n_samples)  # (N, 2)
+        samples_2d, sample_probs = sample_distribution(prob=free_space, rng=self.rng, n_samples=n_samples)  # (N, 2)
         samples_2d = np.concatenate([samples_2d, np.zeros((n_samples, 1))], axis=1)  # (N, 3)
         samples_3d = self._region2world(samples_2d)  # (N, 3)
         samples_3d = samples_3d + self.objects[obj_id].pos_offset.reshape(1, 3)
         # Assemble sample info
         sample_info = {
             "free_volume": np.sum(free_space),
+            "sample_probs": sample_probs,
         }
         return samples_3d, SampleStatus.SUCCESS, sample_info
 
+    ## Properties
+
+    @property
+    def grid_size_2d(self):
+        """Grid size in 2D"""
+        return self.grid_size[:2]
+
+    @property
+    def empty_map(self):
+        """An empty map used for generating samples and so on"""
+        return np.zeros(self.grid_size_2d, dtype=np.uint8)
+
     ## Create method
+
     def create(self, method: str, **kwargs):
         """Create region from different methods"""
         if method == "instances":
@@ -343,14 +369,12 @@ class Region2DSampler(Region2D):
             intrinsic=intrinsic,
             require_draw=False,
         )
-        for pcd, name in zip(instances_pcd, instances_name):
+        for obj_id, pcd, name in enumerate(zip(instances_pcd, instances_name)):
             obj_color = np.array(pcd.colors).mean(axis=0)
             obj_color = improve_saturation(color_rgb=obj_color, percent=0.5)
             obj_color = (obj_color[0] * 255.0, obj_color[1] * 255.0, obj_color[2] * 255.0)
-            # obj pcd
             obj_points = np.array(pcd.points)
-            # obj_color = (obj_color[2], obj_color[1], obj_color[0])
-            self.add_object(obj_name=name, points=obj_points, color=obj_color)
+            self.add_object(obj_id=obj_id, points=obj_points, color=obj_color, name=name)
 
     # Debug related methods
     def visualize(self, **kwargs):
@@ -404,19 +428,13 @@ class Region2DSampler(Region2D):
         if self.region_pcd is not None:
             vis_list.append(self.region_pcd)
         # get obj bbox
-        for obj_name, (
-            obj_pos,
-            obj_mask,
-            obj_color,
-            obj_points,
-            obj_offset,
-        ) in self.objects.items():
-            o3d_color = (obj_color[0] / 255.0, obj_color[1] / 255.0, obj_color[2] / 255.0)
+        for obj_id, obj_data in self.objects.items():
+            o3d_color = (obj_data.color[0] / 255.0, obj_data.color[1] / 255.0, obj_data.color[2] / 255.0)
             bbox = o3d.geometry.AxisAlignedBoundingBox.create_from_points(
-                o3d.utility.Vector3dVector(obj_points)
+                o3d.utility.Vector3dVector(obj_data.points)
             )
             bbox.color = o3d_color
-            pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(obj_points))
+            pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(obj_data.points))
             pcd.paint_uniform_color(o3d_color)
             vis_list.append(bbox)
             vis_list.append(pcd)
@@ -425,6 +443,7 @@ class Region2DSampler(Region2D):
 
 
 if __name__ == "__main__":
+    from lgmcts.utils import misc_utils as misc_utils
     ## Create a test scene using open3d
     # add a sphere
     sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.1)
@@ -463,8 +482,18 @@ if __name__ == "__main__":
     region2d_sampler.visualize(show_grid=True)
 
     # Step 2: test the sampling
+    n_samples = 100
+    # for obj_id in region2d_sampler.objects:
+    #     poses, status, sample_info = region2d_sampler.sample(obj_id, n_samples, prior=None, allow_outside=False)
+    #     print(sample_info)
+    #     for pose in poses:
+    #         region2d_sampler.set_object_pose(obj_id, pose)
+    #         region2d_sampler.visualize()
+
+    # Step 3: test prior based samples
+    prior, pattern_info = misc_utils.gen_random_pattern("circle", region2d_sampler.grid_size_2d, region2d_sampler.rng)
     for obj_id in region2d_sampler.objects:
-        poses, status, sample_info = region2d_sampler.sample(obj_id, 10, prior=None)
+        poses, status, sample_info = region2d_sampler.sample(obj_id, n_samples, prior=prior, allow_outside=False)
         print(sample_info)
         for pose in poses:
             region2d_sampler.set_object_pose(obj_id, pose)
