@@ -23,11 +23,12 @@ class SampleStatus(Enum):
 
     SUCCESS = 0  # success
     REGION_SMALL = 1  # region is too small
-    COLLISION = 2  # collision
+    NO_SPACE = 2  # collision
     UNKNOWN = 3  # unknown, placeholder
 
 
 ## Utils
+
 def improve_saturation(color_rgb: Tuple[int, int, int], percent: float) -> Tuple[int, int, int]:
     color_hsv = colorsys.rgb_to_hsv(*color_rgb)  # Convert RGB to HSV
     # Increase saturation by 50%
@@ -39,6 +40,24 @@ def improve_saturation(color_rgb: Tuple[int, int, int], percent: float) -> Tuple
     # Convert new color from HSV to RGB format
     new_color_rgb = colorsys.hsv_to_rgb(*new_color_hsv)
     return new_color_rgb
+
+
+def sample_distribution(prob, rng, n_samples=1):
+    """Sample data point from a custom distribution."""
+    flat_prob = prob.flatten() / np.sum(prob)
+    rand_ind = rng.choice(
+        np.arange(len(flat_prob)), n_samples, p=flat_prob, replace=False
+    )
+    rand_ind_coords = np.array(np.unravel_index(rand_ind, prob.shape)).T
+    return np.int32(rand_ind_coords.squeeze())
+
+
+def draw_convex_contour(img, pixels):
+    """ Draw image, with convex contour """
+    bg = np.zeros([img.shape[0], img.shape[1], 3], dtype=np.uint8)
+    # convert pixels to cv2 shape
+    bg = cv2.drawContours(bg, [pixels], 0, (0, 0, 255), 2)
+    return bg
 
 
 @dataclass
@@ -74,12 +93,14 @@ class Region2DSampler(Region2D):
         grid_size: Union[List[int], None] = None,
         world2region: np.ndarray = np.eye(4, dtype=np.float32),
         name: str = "region",
+        seed: int = 0,
         **kwargs,
     ):
         super().__init__(resolution, grid_size, world2region, name, **kwargs)
         self.occupancy_map = None
         self.objects : Dict[int, ObjectData] = {}
         self._spatial_feasibility = True
+        self.rng = np.random.default_rng(seed=seed)
 
     def reset(self):
         """Reset sampler"""
@@ -142,12 +163,16 @@ class Region2DSampler(Region2D):
         if mask_height % 2 == 0:
             mask_height += 1
         mask = np.zeros((mask_width, mask_height), dtype=np.uint8)
-        cv2.fillConvexPoly(
-            mask,
-            (points_convex_hull.points[points_convex_hull.vertices]).astype(np.int32)
-            - lb_region[:2],
-            1,
-        )
+        pixels = (points_convex_hull.points[points_convex_hull.vertices]).astype(np.int32) - lb_region[:2]
+        # convert pixels to cv2 shape, cv2 is (y, x)
+        pixels = pixels[:, [1, 0]]
+        # pixels[0, :] = mask.shape[1] - pixels[0, :]  # flip y
+        cv2.fillConvexPoly(mask, pixels, 1,)
+        # test
+        # contour = draw_convex_contour(mask, pixels)
+
+        cv2.imshow("contour", mask * 255)
+        cv2.waitKey(0)
         height = points_region[:, 2].max() - points_region[:, 2].min()
         # compute offset compared with pos_ref (reference position)
         mask_center = np.array([mask.shape[0] // 2, mask.shape[1] // 2, 0]) + lb_region
@@ -232,22 +257,16 @@ class Region2DSampler(Region2D):
         mask_min_y = max(0, mask_half_y - pos[1])
         mask_max_y = min(mask_y, self.grid_size[1] - pos[1] + mask_half_y)
         mask_in_region = mask[mask_min_x:mask_max_x, mask_min_y:mask_max_y]
-
-        if len(occupancy_map.shape) == 2:
-            occupancy_map[
-                pos[0] - mask_half_x + mask_min_x : pos[0] - mask_half_x + mask_max_x,
-                pos[1] - mask_half_y + mask_min_y : pos[1] - mask_half_y + mask_max_y,
-            ][mask_in_region == 1] = value
-        elif len(occupancy_map.shape) == 3:
-            occupancy_map[
-                pos[0] - mask_half_x + mask_min_x : pos[0] - mask_half_x + mask_max_x,
-                pos[1] - mask_half_y + mask_min_y : pos[1] - mask_half_y + mask_max_y,
-                :,
-            ][mask_in_region == 1] = value
+        assert len(occupancy_map.shape) == 3, "Only support 3D occupancy map"
+        occupancy_map[
+            pos[0] - mask_half_x + mask_min_x : pos[0] - mask_half_x + mask_max_x,
+            pos[1] - mask_half_y + mask_min_y : pos[1] - mask_half_y + mask_max_y,
+            :,
+        ][mask_in_region == 1] = value
 
     def get_occupancy(self, obj_list: list[int] | None = None) -> bool:
         """Update occupancy grid occupied by obj_list"""
-        occupancy_map = np.ones((self.grid_size[0], self.grid_size[1]), dtype=np.float32)
+        occupancy_map = np.ones((self.grid_size[0], self.grid_size[1], 3), dtype=np.float32)
         # objects
         if obj_list is None:
             obj_list = list(self.objects.keys())
@@ -267,140 +286,38 @@ class Region2DSampler(Region2D):
         mask = obj.mask
         obj_list = [id for id in self.objects if id != obj_id]
         occupancy_map = self.get_occupancy(obj_list)
-        # get free space
+        # get free space, free is 0, occupied is 1
         free_space = cv2.erode(occupancy_map, mask, iterations=1)
+        # flip the free space, now free is 1, occupied is 0
+        free_space = 1 - free_space
         return free_space
 
     # Sampling related methods
     def sample(
-        self, obj_name: str, num_sample: int, **kwargs
+        self, obj_id: int, n_samples: int, prior: np.array | None = None
     ) -> Tuple[List[np.ndarray], SampleStatus, Dict[str, float]]:
-        """General sampling method"""
-        # init
-        collision_info = {}
+        """General sampling method
+        Return sample results, sample status, and sample info
+        """
+        free_space = self.get_free_space(obj_id).astype(np.float32)  # free is 1, occupied is 0
+        cv2.imshow("free", free_space)
+        cv2.waitKey(0)
+        if prior is not None:
+            assert prior.shape == free_space.shape, "prior shape must be the same as free shape"
+            free_space = np.multiply(free_space, prior)
+        if np.sum(free_space) == 0:
+            return [], SampleStatus.NO_SPACE, {}
+        samples_2d = sample_distribution(prob=free_space, rng=self.rng, n_samples=n_samples)  # (N, 2)
+        samples_2d = np.concatenate([samples_2d, np.zeros((n_samples, 1))], axis=1)  # (N, 3)
+        samples_3d = self._region2world(samples_2d)  # (N, 3)
+        samples_3d = samples_3d + self.objects[obj_id].pos_offset.reshape(1, 3)
+        # Assemble sample info
+        sample_info = {
+            "free_volume": np.sum(free_space),
+        }
+        return samples_3d, SampleStatus.SUCCESS, sample_info
 
-        # sample
-        sample_type = kwargs.get("sample_type", "uniform")
-        if sample_type == "uniform":
-            sample_poses, samples_status = self._sample_uniform(obj_name, num_sample, **kwargs)
-        else:
-            print(Warning(f"Sample type {sample_type} not supported!"))
-            return [], SampleStatus.UNKNOWN, collision_info
-
-        if samples_status == SampleStatus.SUCCESS:
-            # get feasible pose
-            early_stop = kwargs.get("early_stop", False)
-            # cache the object
-            self.cache(obj_name)
-            valid_sample_poses = []
-            for i, sample_pose in enumerate(sample_poses):
-                collision_list = self.check_collision(obj_name, sample_pose, **kwargs)
-                if not collision_list:
-                    if early_stop:
-                        # compute collision rate
-                        collision_info = {k: v / float(i + 1) for k, v in collision_info.items()}
-                        collision_info["num_sample"] = i + 1
-                        # decache
-                        self.decache()
-                        return (
-                            [self._region2world(sample_pose)],
-                            SampleStatus.SUCCESS,
-                            collision_info,
-                        )
-                    else:
-                        valid_sample_poses.append(sample_pose)
-                else:
-                    for collision_obj_name in collision_list:
-                        if collision_obj_name in collision_info.keys():
-                            collision_info[collision_obj_name] += 1.0
-                        else:
-                            collision_info[collision_obj_name] = 1.0
-            # decache
-            self.decache()
-
-            if not valid_sample_poses:
-                # compute collision rate
-                collision_info["num_sample"] = len(sample_poses)
-                collision_info = {
-                    k: v / float(len(sample_poses)) for k, v in collision_info.items()
-                }
-                return [], SampleStatus.COLLISION, collision_info
-            else:
-                # transfer to world space
-                valid_sample_poses = [self._region2world(pos) for pos in valid_sample_poses]
-                return valid_sample_poses, SampleStatus.SUCCESS, collision_info
-        else:
-            return [], samples_status, collision_info
-
-    def _sample_uniform(
-        self, obj_name: str, num_sample: int, **kwargs
-    ) -> Tuple[List[np.ndarray], SampleStatus]:
-        """Sample a feasible pose uniformly"""
-        # sample
-        (obj_pos, obj_mask, obj_color, obj_points, obj_offset) = self.objects[obj_name]
-        obj_size_x = obj_mask.shape[0]
-        obj_size_y = obj_mask.shape[1]
-        num_grid_x = self.grid_size[0] - obj_size_x
-        num_grid_y = self.grid_size[1] - obj_size_y
-        if num_grid_x <= 0 or num_grid_y <= 0:
-            return [], SampleStatus.REGION_SMALL
-        # decide the num_sample_xy
-        sample_poses = []
-        if num_sample > num_grid_x * num_grid_y:
-            # sample all the grid
-            for i in range(num_grid_x):
-                for j in range(num_grid_y):
-                    sample_poses.append(np.array([i, j, obj_pos[2]]))
-        else:
-            for i in range(num_sample):
-                sample_poses.append(
-                    np.array(
-                        [
-                            np.random.randint(0, num_grid_x),
-                            np.random.randint(0, num_grid_y),
-                            obj_pos[2],
-                        ]
-                    )
-                )
-        return sample_poses, SampleStatus.SUCCESS
-
-    # interface related methods
-    def sample_once(
-        self,
-        obj_name: str,
-        direction: Union[Direction, None],
-        origin_name: Union[str, None],
-        **kwargs,
-    ) -> Tuple[Union[np.ndarray, None], SampleStatus, Dict[str, float]]:
-        """Sample a feasible pose once"""
-        limit_sample = kwargs.get("limit_sample", 100)  # limit the number of sampling
-        # get subregion
-        if origin_name is None:
-            origin_shift = None
-        else:
-            # TODO: Further check this part
-            if origin_name in self.objects:
-                # origin should be the center of origin name
-                origin = self.objects[origin_name][0]
-                mask = self.objects[origin_name][1]
-                origin_shift = np.zeros(2)
-                origin_shift[0] = origin[0] + mask.shape[0] / 2
-                origin_shift[1] = origin[1] + mask.shape[1] / 2
-            else:
-                raise ValueError("Origin object not found!")
-        subregion = self.sub_region(direction, origin_shift)
-        # sample
-        kwargs["early_stop"] = True
-        sample_poses, sample_status, collision_info = subregion.sample(
-            obj_name, limit_sample, **kwargs
-        )
-
-        if len(sample_poses) == 0:
-            return None, sample_status, collision_info
-        else:
-            return sample_poses[0], sample_status, collision_info
-
-    # create method
+    ## Create method
     def create(self, method: str, **kwargs):
         """Create region from different methods"""
         if method == "instances":
@@ -509,40 +426,46 @@ class Region2DSampler(Region2D):
 
 if __name__ == "__main__":
     ## Create a test scene using open3d
-    # add a plane
-    plane = o3d.geometry.TriangleMesh.create_box(width=1.0, height=1.0, depth=0.01)
     # add a sphere
     sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.1)
     sphere.paint_uniform_color([1.0, 0.0, 0.0])
+    # turn into point cloud
+    sphere = sphere.sample_points_uniformly(number_of_points=1000)
     # add a box
-    box = o3d.geometry.TriangleMesh.create_box(width=0.1, height=0.1, depth=0.1)
+    box = o3d.geometry.TriangleMesh.create_box(width=0.1, height=0.2, depth=0.3)
     box.paint_uniform_color([0.0, 1.0, 0.0])
+    box = box.sample_points_uniformly(number_of_points=1000)
     # add a cylinder
     cylinder = o3d.geometry.TriangleMesh.create_cylinder(radius=0.1, height=0.2)
     cylinder.paint_uniform_color([0.0, 0.0, 1.0])
-    
+    cylinder = cylinder.sample_points_uniformly(number_of_points=1000)
+
+    o3d.visualization.draw_geometries([box])
+
     # prepare objs as points
-    sphere_points = np.asarray(sphere.vertices)
-    box_points = np.asarray(box.vertices)
-    cylinder_points = np.asarray(cylinder.vertices)
+    sphere_points = np.asarray(sphere.points)
+    box_points = np.asarray(box.points)
+    cylinder_points = np.asarray(cylinder.points)
 
     ## Test region2Dsampler
     # Step 1: create the scene
-    region2d_sampler = Region2DSampler(resolution=0.01, grid_size=(100, 100))  # the region is (1, 1)
+    region2d_sampler = Region2DSampler(resolution=0.01, grid_size=(200, 100))  # the region is (1, 1)
     region2d_sampler.add_object(0, sphere_points, None, (255, 0, 0))
     region2d_sampler.add_object(1, box_points, None, (0, 255, 0))
     region2d_sampler.add_object(2, cylinder_points, None, (0, 0, 255))
     region2d_sampler.set_object_poses(
         {
             0: np.array([0.3, 0.3, 0.0]),
-            1: np.array([0.5, 0.5, 0.0]),
-            2: np.array([0.8, 0.8, 0.0]),
+            1: np.array([0.5, 0.3, 0.0]),
+            2: np.array([0.8, 0.3, 0.0]),
         }
     )
     region2d_sampler.visualize(show_grid=True)
 
-    # Step 2: test the free space
+    # Step 2: test the sampling
     for obj_id in region2d_sampler.objects:
-        free_space = region2d_sampler.get_free_space(obj_id)
-        cv2.imshow("Free Space", free_space)
-        cv2.waitKey(0)
+        poses, status, sample_info = region2d_sampler.sample(obj_id, 10, prior=None)
+        print(sample_info)
+        for pose in poses:
+            region2d_sampler.set_object_pose(obj_id, pose)
+            region2d_sampler.visualize()
