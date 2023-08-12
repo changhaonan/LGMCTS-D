@@ -82,6 +82,7 @@ class ObjectData:
     height: float  # height
     points: np.ndarray
     color: Tuple[int, int, int]
+    rot: np.ndarray = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)  # TODO: currently, rot is not implemented
 
 
 class Region2DSampler(Region2D):
@@ -97,9 +98,7 @@ class Region2DSampler(Region2D):
         **kwargs,
     ):
         super().__init__(resolution, grid_size, world2region, name, **kwargs)
-        self.occupancy_map = None
         self.objects : Dict[int, ObjectData] = {}
-        self._spatial_feasibility = True
         self.rng = np.random.default_rng(seed=seed)
 
     def reset(self):
@@ -422,9 +421,10 @@ class Region2DSampler(Region2D):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def visualize_3d(self):
+    def visualize_3d(self, show_origin: bool = False):
         """Visualize the region and obj bbox in 3D"""
-        vis_list = [self.bbox()]
+        # vis_list = [self.bbox()]
+        vis_list = []
         if self.region_pcd is not None:
             vis_list.append(self.region_pcd)
         # get obj bbox
@@ -436,9 +436,15 @@ class Region2DSampler(Region2D):
             bbox.color = o3d_color
             pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(obj_data.points))
             pcd.paint_uniform_color(o3d_color)
+            # transform obj to global pos
+            obj_pose = self.get_object_pose(obj_id)
+            pcd.translate(obj_pose)
+            bbox.translate(obj_pose)
             vis_list.append(bbox)
             vis_list.append(pcd)
-
+        if show_origin:
+            origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0)
+            vis_list.append(origin)
         o3d.visualization.draw_geometries(vis_list)
 
 

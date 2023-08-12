@@ -86,8 +86,8 @@ class NearPerfectCamera256x256(object):
 
     # Near-orthographic projection.
     image_size = (256, 256)
-    front_intrinsics = (64e4 // 1.80, 0, 320.0, 0, 63e4, 240.0, 0, 0, 1)
-    top_intrinsics = (64e4 // 2.55, 0, 320.0, 0, 63e4, 240.0, 0, 0, 1)
+    front_intrinsics = (64e4 // 1.80, 0, 320.0, 0, 63e4 // 1.80, 240.0, 0, 0, 1)
+    top_intrinsics = (64e4 // 2.55, 0, 320.0, 0, 63e4 // 2.55, 240.0, 0, 0, 1)
 
     # Set default camera poses.
     front_offset = 0.09  # offset from the center of workspace to make the workspace close to the bottom in the view

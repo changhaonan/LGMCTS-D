@@ -19,6 +19,14 @@
             "program": "${workspaceFolder}/lgmcts/run.py",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Eval online",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/lgmcts/scripts/eval/eval_lgmcts.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }

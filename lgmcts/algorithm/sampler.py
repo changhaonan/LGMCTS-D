@@ -4,6 +4,7 @@ from typing import NamedTuple
 from dataclasses import dataclass
 from lgmcts.utils import misc_utils as utils
 from lgmcts.utils import pybullet_utils as pb_utils
+from lgmcts.algorithm.region_sampler import Region2DSampler
 
 ## Sample Data representation
 

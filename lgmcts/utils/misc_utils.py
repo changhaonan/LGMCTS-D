@@ -767,7 +767,10 @@ def plot_3d(title: str, points, color, block: bool = True):
     plt.show(block=block)
 
 
+# -----------------------------------------------------------------------------
 # Transform Utils
+# -----------------------------------------------------------------------------
+
 def get_transfroms(position, quat):
     """ Get the transform matrix from position and quaternion."""
     pose = np.eye(4)

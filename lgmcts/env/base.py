@@ -294,7 +294,6 @@ class BaseEnv:
             raise NotImplementedError()
         done = result_tuple.success
         obs = self._get_obs()
-
         return obs, 0, done, None, self._get_info()
     
     def step_simulation(self):
@@ -470,12 +469,13 @@ class BaseEnv:
             
             # Pointcloud (from top view)
             intrinsic_mat = np.array(config["intrinsics"]).reshape(3, 3)
-            scene_pcd = misc_utils.get_pointcloud(depth[0], intrinsic_mat)
-
+            # Notice: depth is within [0, 1], so we need to scale it back to [0, 20]
+            real_depth = depth[0] * 20.0
+            scene_pcd = misc_utils.get_pointcloud(real_depth, intrinsic_mat)
             obs["point_cloud"][view] = {}
             obs["poses"][view] = {}
             #
-            max_pcd_size = color.shape[0] * color.shape[1]
+            max_pcd_size = self.obs_img_size[0] * self.obs_img_size[1]
             obj_pcds = np.zeros([self.max_num_obj * max_pcd_size, 3])
             obj_poses = np.zeros([self.max_num_obj, 7])
             counter = 0
@@ -490,7 +490,7 @@ class BaseEnv:
                 # object pose
                 position, orientation = pybullet_utils.get_obj_pose(self, obj_id)
                 offset = counter * 7
-                obj_poses[offset:offset+7] = np.array(position + orientation)
+                obj_poses[counter, :] = np.array(position + orientation).copy()
                 
                 counter += 1
             obs["point_cloud"][view] = obj_pcds
