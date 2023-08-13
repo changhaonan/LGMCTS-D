@@ -490,13 +490,21 @@ class BaseEnv:
                 # object pose
                 position, orientation = pybullet_utils.get_obj_pose(self, obj_id)
                 offset = counter * 7
-                obj_poses[counter, :] = np.array(position + orientation).copy()
+                obj_poses[counter, :] = np.array(position + orientation)
                 
                 counter += 1
             obs["point_cloud"][view] = obj_pcds
             obs["poses"][view] = obj_poses
         # assert self.observation_space.contains(obs)
         return obs
+
+    def get_obj_poses(self):
+        """Get the obj poses dict"""
+        obj_poses = {}
+        for obj_id in self.obj_ids["rigid"]:
+            position, orientation = pybullet_utils.get_obj_pose(self, obj_id)
+            obj_poses[obj_id] = np.array(position + orientation)
+        return obj_poses
 
     # Add objects related
     @staticmethod

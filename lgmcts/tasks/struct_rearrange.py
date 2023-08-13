@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Literal, NamedTuple
 import cv2
+import numpy as np
 from copy import deepcopy
 import lgmcts.utils.misc_utils as utils
 import lgmcts.utils.spatial_utils as spatial_utils
@@ -9,6 +10,7 @@ from lgmcts.tasks import BaseTask
 from lgmcts.components.encyclopedia import ObjPedia, TexturePedia
 from lgmcts.components.placeholders import PlaceholderText
 from lgmcts.components.prompt import PromptGenerator
+from lgmcts.components.patterns import PATTERN_DICT
 
 
 class ResultTuple(NamedTuple):
@@ -82,17 +84,8 @@ class StructRearrange(BaseTask):
         obs, _, _, _, _ = env.step()
         return obs
 
-    def check_success(self, *args, **kwargs) -> NamedTuple:
-        if self.progress == 0 or self.progress == 1:
-            return ResultTuple(success=False, failure=True, distance=None)
-        elif self.progress == 2:
-            return ResultTuple(success=True, failure=False, distance=None)
-        else:
-            raise ValueError("Invalid progress value")
-
-    def add_objects_to_pattern(self, env, max_num_obj: int, pattern_type: str, use_existing: bool=False, stack_prob: float=0.0):
+    def add_objects_to_pattern(self, env, max_num_obj: int, pattern_prior: np.ndarray, use_existing: bool=False, stack_prob: float=0.0):
         """Set objects to a line, use_existing decides whether to add new object or not"""
-        pattern_prior, self.goal_pattern_info = utils.gen_random_pattern(pattern_type, env.ws_map_size, env.rng)
         # Add object
         added_obj_ids = []
         if not use_existing:
@@ -107,7 +100,6 @@ class StructRearrange(BaseTask):
                     added_obj_ids.append(obj_id)
         else:
             raise NotImplementedError("Not implemented yet")
-        self.placeholders["pattern"] = PlaceholderText(pattern_type)
         return added_obj_ids
 
     def add_objects_to_random(self, env, max_num_obj: int, use_existing: bool=False, stack_prob :float=0.0):
@@ -186,10 +178,14 @@ class StructRearrange(BaseTask):
         ## Step 1: generate a random pattern
         pattern_type = env.rng.choice(self.pattern_types)
         max_num_pattern = int(self.max_num_obj/2)
-        pattern_obj_ids = self.add_objects_to_pattern(env, max_num_pattern, pattern_type, False, self.stack_prob)
+        pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
+        pattern_obj_ids = self.add_objects_to_pattern(env, max_num_pattern, pattern_prior, False, self.stack_prob)
         # parse object names
         pattern_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pattern_obj_ids]
         prompt.gen_pattern_prompt(pattern_obj_names, pattern_type)
+        # update goals
+        pattern_info["obj_ids"] = pattern_obj_ids
+        self.goals.append(pattern_info)
         ## Step 2: add some more objects & spatial relationship
         max_num_add = int(self.max_num_obj/2)
         added_obj_ids = self.add_objects_to_random(env, max_num_add, False, self.stack_prob)
@@ -206,7 +202,15 @@ class StructRearrange(BaseTask):
         if spatial_str_list[0] != "A has no relationship with B":
             spatial_rel = self.rng.choice(spatial_str_list)
             prompt.gen_pair_prompt(pair_obj_names[0], pair_obj_names[1], spatial_rel[4:-1].strip())
-        
+            # update goal
+            self.goals.append(
+                {
+                "type": "pattern:spatial",
+                "obj_ids": pair_obj_ids,
+                "spatial_label": spatial_label,
+                "spatial_str": spatial_rel
+                }
+            )
         # Env step forward
         obs, _, _, _, _ = env.step()
         return prompt.prompt, obs
@@ -218,3 +222,15 @@ class StructRearrange(BaseTask):
         # Env step forward
         obs, _, _, _, _ = env.step()
         return obs
+
+    def check_success(self, *args, **kwargs) -> NamedTuple:
+        """Implementation of checking success"""
+        if "obj_poses" not in kwargs:
+            return ResultTuple(success=False, failure=True, distance=None)
+        else:
+            obj_poses = kwargs["obj_poses"]
+            for goal in self.goals:
+                pattern_type = goal["type"].split(":")[-1]
+                if not PATTERN_DICT[pattern_type].check(obj_poses, pattern_info=goal):
+                    return ResultTuple(success=False, failure=True, distance=None)
+            return ResultTuple(success=True, failure=False, distance=None)

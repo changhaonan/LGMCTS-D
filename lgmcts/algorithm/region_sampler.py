@@ -83,7 +83,7 @@ class ObjectData:
     points: np.ndarray
     color: Tuple[int, int, int]
     rot: np.ndarray = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)  # TODO: currently, rot is not implemented
-
+    collision_mask: np.ndarray = None  # TODO: currently, collision mask is not implemented
 
 class Region2DSampler(Region2D):
     """Region2D sampler"""
@@ -295,8 +295,12 @@ class Region2DSampler(Region2D):
             occupancy_map[:, 0, :] = 0
             occupancy_map[:, -1, :] = 0
         # get free space, free is 1, occupied is 0
+        # TODO: use the collision mask instead of using the mask
         free_space = cv2.erode(occupancy_map, mask, iterations=1)
         return free_space
+
+    #TODO: the most accurate way to compute the free space is to go through the scene,
+    # and filter out the ones with collision. @Alex
 
     def sample(
         self, obj_id: int, n_samples: int, prior: np.array | None = None, allow_outside: bool = True
@@ -309,8 +313,8 @@ class Region2DSampler(Region2D):
             sample_probs: probability of each sample
         """
         free_space = self.get_free_space(obj_id, allow_outside).astype(np.float32)  # free is 1, occupied is 0
-        cv2.imshow("free", free_space)
-        cv2.waitKey(0)
+        # cv2.imshow("free", free_space)
+        # cv2.waitKey(0)
         if prior is not None:
             assert prior.shape[:2] == free_space.shape[:2], "prior shape must be the same as free shape"
             if len(prior.shape) == 2:

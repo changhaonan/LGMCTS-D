@@ -82,7 +82,7 @@ def eval_online(seed: int = 0):
         prompt_str, obs = task.gen_goal_config(env, prompt_generator)
         obs = task.gen_start_config(env)
         
-        # Step 1:  Load the scene from data
+        # Step 1: get observation
         obj_pcds = obs["point_cloud"]["top"]
         obj_poses = obs["poses"]["top"]
         obj_lists = env.obj_ids["rigid"]
@@ -112,13 +112,14 @@ def eval_online(seed: int = 0):
             region_sampler.set_object_pose(obj_id, obj_pose[:3])
             # get point cloud
         
-        region_sampler.visualize()
-        region_sampler.visualize_3d()
+            # region_sampler.visualize()
+            # region_sampler.visualize_3d()
 
-        # Step 3: Exectue actions
+            # Step 3: Exectue actions
 
-        # Step 4: Collect result
-
+            # Step 4: Collect result
+            obj_poses = env.get_obj_poses()
+            result = task.check_success(obj_poses=obj_poses)
     ## Analysis the result
 
 
