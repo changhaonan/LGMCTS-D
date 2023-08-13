@@ -13,6 +13,7 @@ from lgmcts.components.prompt import PromptGenerator
 from lgmcts.algorithm import Sampler
 ##
 from lgmcts.algorithm.region_sampler import Region2DSampler
+from lgmcts.components.patterns import PATTERN_DICT
 
 ## Utils method
 
@@ -118,7 +119,15 @@ def eval_online(seed: int = 0):
 
         # Step 3: Exectue actions
         # parse the sample strategy from prompt
+        sample_goals = task.goals  # TODO: This is temp cheat by directly loading the goal @Haonan
         # run mcts to get plan
+        # TODO: currently using a simple sequential sampler @Haonan
+        n_samples = 10
+        sample_goal = sample_goals[0]
+        pattern_type = sample_goal["type"].split(":")[-1]
+        pattern_prior = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
+        # sample_poses = region_sample.sample()
+
         # execute action
 
         # Step 4: Collect result
