@@ -73,6 +73,7 @@ def eval_online(seed: int = 0):
     world2region[:3, 3] = -bounds[:, 0]
     region_sampler = Region2DSampler(resolution, grid_size, world2region=world2region)
     prompt_generator = PromptGenerator(env.rng)
+    result_list = []
 
     for i in range(num_epochs):
         obs = env.reset()
@@ -91,7 +92,7 @@ def eval_online(seed: int = 0):
         obj_lists, obj_pcd_list, obj_pose_list = separate_pcd_pose(obj_lists, obj_pcds, obj_poses, max_pcd_size)
         
         # Step 2: init region sampler
-        for i, (obj_id, obj_name, obj_pcd, obj_pose) in enumerate(zip(obj_lists, obj_names, obj_pcd_list, obj_pose_list)):
+        for j, (obj_id, obj_name, obj_pcd, obj_pose) in enumerate(zip(obj_lists, obj_names, obj_pcd_list, obj_pose_list)):
             # compute the pos_ref
             obj_pcd_center = obj_pcd.mean(axis=0)
             obj_pcd -= obj_pcd_center
@@ -115,13 +116,23 @@ def eval_online(seed: int = 0):
             # region_sampler.visualize()
             # region_sampler.visualize_3d()
 
-            # Step 3: Exectue actions
+        # Step 3: Exectue actions
+        # parse the sample strategy from prompt
+        # run mcts to get plan
+        # execute action
 
-            # Step 4: Collect result
-            obj_poses = env.get_obj_poses()
-            result = task.check_success(obj_poses=obj_poses)
+        # Step 4: Collect result
+        obj_poses = env.get_obj_poses()
+        result = task.check_success(obj_poses=obj_poses)
+        if result.success:
+            result_list.append(1)
+        else:
+            result_list.append(0)
+        # Step 5: Log
+        print(f"Epoch {i}: {result.success}")
+
     ## Analysis the result
-
+    print(f"Success rate: {np.mean(result_list)}")
 
 if __name__ == "__main__":
     eval_online()

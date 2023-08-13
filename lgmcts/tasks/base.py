@@ -64,7 +64,7 @@ class BaseTask:
         """Update environment according to env progress"""
         return 
 
-    def check_success(self, *args, **kwargs) -> NamedTuple:
+    def check_success(self, *args, **kwargs) -> ResultTuple:
         """
         Check success. It should return a tuple of two boolean values, (success, failure).
         A trajectory will be terminated if fails.

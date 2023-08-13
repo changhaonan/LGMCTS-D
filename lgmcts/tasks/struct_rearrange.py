@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Literal, NamedTuple
 import cv2
 import numpy as np
+import warnings
 from copy import deepcopy
 import lgmcts.utils.misc_utils as utils
 import lgmcts.utils.spatial_utils as spatial_utils
@@ -223,7 +224,7 @@ class StructRearrange(BaseTask):
         obs, _, _, _, _ = env.step()
         return obs
 
-    def check_success(self, *args, **kwargs) -> NamedTuple:
+    def check_success(self, *args, **kwargs) -> ResultTuple:
         """Implementation of checking success"""
         if "obj_poses" not in kwargs:
             return ResultTuple(success=False, failure=True, distance=None)
@@ -231,6 +232,9 @@ class StructRearrange(BaseTask):
             obj_poses = kwargs["obj_poses"]
             for goal in self.goals:
                 pattern_type = goal["type"].split(":")[-1]
-                if not PATTERN_DICT[pattern_type].check(obj_poses, pattern_info=goal):
-                    return ResultTuple(success=False, failure=True, distance=None)
+                if pattern_type in PATTERN_DICT:
+                    if not PATTERN_DICT[pattern_type].check(obj_poses, pattern_info=goal):
+                        return ResultTuple(success=False, failure=True, distance=None)
+                else:
+                    warnings.warn(f"Pattern type {pattern_type} is not supported")
             return ResultTuple(success=True, failure=False, distance=None)

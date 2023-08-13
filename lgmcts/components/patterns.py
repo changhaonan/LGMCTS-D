@@ -82,8 +82,8 @@ class LinePattern(Pattern):
     def dist_p2l(cls, p, o, k):
         """(Vectorized meethod) disance, point to line"""
         op = p - o
-        k = np.repeat(k, [op.shape[0]]).reshape([-1, 2])
-        op_proj = np.dot(op, k)
+        k = np.repeat(k, [op.shape[0]]).reshape([2, -1]).T
+        op_proj = np.sum(np.multiply(op, k), axis=-1)[..., None] * k
         op_ver = op - op_proj
         return np.linalg.norm(op_ver, axis=-1)
 
