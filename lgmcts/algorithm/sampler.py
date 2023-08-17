@@ -1,5 +1,6 @@
 """Sampling interface, Currently we only consider 2.5D cases"""
 from __future__ import annotations
+import numpy as np
 from typing import NamedTuple
 from dataclasses import dataclass
 from lgmcts.utils import misc_utils as utils
@@ -13,12 +14,13 @@ class SampleData:
     """Sample representation"""
     pattern: str
     obj_id: int
-    rel_obj_ids: list[int]
-
+    obj_ids: list[int]  # all included objects
+    obj_poses: dict[int, np.ndarray] = {}  # poses that are already sampled
 
 ## Sampler examples
 
 class Sampler:
+    """Sampler class is function class"""
     @staticmethod
     def sample(self, env, sample_data: SampleData):
         """Sample"""

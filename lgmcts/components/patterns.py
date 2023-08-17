@@ -2,6 +2,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod, abstractclassmethod
 import numpy as np
+import warnings
 import cv2
 
 
@@ -62,6 +63,9 @@ class LinePattern(Pattern):
         pattern_info = kwargs["pattern_info"]
         # check if p2l distance exceeds threshold
         threshold = pattern_info.get("threshold", 0.1)
+        if len(pattern_info["obj_ids"]) == 0:
+            warnings.warn("No object in the pattern!")
+            return False
         # assemble obj_poses
         obj_poses_pattern = []
         for obj_id in pattern_info["obj_ids"]:

@@ -787,3 +787,27 @@ def get_transforms_batch(positions, quats):
         poses[i, :3, 3] = positions[i]
         poses[i, :3, :3] = R.from_quat(quats[i]).as_matrix()
     return poses
+
+
+# -----------------------------------------------------------------------------
+# Eval Utils
+# -----------------------------------------------------------------------------
+
+def separate_pcd_pose(obj_ids, pcd_batch, pose_batch, max_pcd_size):
+    """Seperate point cloud from tensor structure
+    Args:
+        obj_ids: list of object ids
+        pcd_batch: tensor of shape (batch_size, max_pcd_size, 3)
+    """
+    pcd_batch = pcd_batch.reshape([-1, max_pcd_size, 3])
+    pose_batch = pose_batch.reshape([-1, 7])
+    pcd_list = []
+    pose_list = []
+    for i, obj_id in enumerate(obj_ids):
+        pcd = pcd_batch[i]
+        pose = pose_batch[i]
+        # remove 0 padding from pcd
+        pcd = pcd[pcd[:, 0] != 0]
+        pcd_list.append(pcd)
+        pose_list.append(pose)
+    return obj_ids, pcd_list, pose_list
