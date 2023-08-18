@@ -34,20 +34,70 @@ class LinePattern(Pattern):
 
     @classmethod
     def gen_prior(cls, img_size, rng, **kwargs):
-        """Generate line prior"""
+        """Generate line prior, based on if other objects are already sampled, 
+            we will have different generate pattern.
+        """
+        obj_poses_pix = kwargs.get("obj_poses_pix", {})
+        obj_id = kwargs.get("obj_id", -1)
+        obj_ids = kwargs.get("obj_ids", [])
+        thickness = kwargs.get("thickness", 1)
+        # extract relative obj & poses
+        rel_obj_ids = []
+        rel_obj_poses_pix = []
+        for id in obj_ids:
+            if id != obj_id and id in obj_poses_pix:
+                rel_obj_ids.append(id)
+                rel_obj_poses_pix.append(obj_poses_pix[id])
+        # if no other objects are sampled, we generate a random line
         height, width = img_size
         prior = np.zeros(img_size, dtype=np.float32)
-        i0 = rng.integers(0, 4)  # select one of 4 borders
-        i1 = (rng.integers(1, 4) + i0) % 4  # select one of 3 other borders
-        i = [i0, i1]
-        # select one point on each border
-        x0 = rng.integers(0, width) if i[0] % 2 == 0 else (1 - i[0]//2) * width - 1
-        y0 = rng.integers(0, height) if i[0] % 2 == 1 else (1 - i[0]//2) * height - 1
-        x1 = rng.integers(0, width) if i[1] % 2 == 0 else (1 - i[1]//2) * width - 1
-        y1 = rng.integers(0, height) if i[1] % 2 == 1 else (1 - i[1]//2) * height - 1
+        if len(rel_obj_ids) == 0:
+            i0 = rng.integers(0, 4)  # select one of 4 borders
+            i1 = (rng.integers(1, 4) + i0) % 4  # select one of 3 other borders
+            i = [i0, i1]
+            # select one point on each border
+            x0 = rng.integers(0, width)
+            y0 = rng.integers(0, height)
+            x1 = rng.integers(0, width)
+            y1 = rng.integers(0, height)
+        elif len(rel_obj_ids) == 1:
+            # random pixel
+            x0 = rng.integers(0, width)
+            y0 = rng.integers(0, height)
+            x1 = rel_obj_poses_pix[0][0]
+            y1 = rel_obj_poses_pix[0][1]
+        else:
+            # if more than one object is sampled, we generate a line based on the objects
+            x0 = rel_obj_poses_pix[0][0]
+            y0 = rel_obj_poses_pix[0][1]
+            x1 = rel_obj_poses_pix[1][0]
+            y1 = rel_obj_poses_pix[1][1]
+            # compute the line that passing (xc1, yc1) & (xc2, yc2), both sides ending at borders
+        ## Draw lines & extend to the borders
+        # calculate the line's equation: y = mx + c
+        if x1 - x0 == 0:  # vertical line
+            cv2.line(prior, (x0, 0), (x0, height-1), 1.0, thickness)
+        else:
+            m = (y1 - y0) / (x1 - x0)
+            c = y0 - m * x0
 
-        # Draw the line on the image
-        cv2.line(prior, (x0, y0), (x1, y1), 1.0, 1)
+            # Calculate intersection with the boundaries
+            x_at_y0 = int(-c / m)
+            x_at_y_max = int((height - c) / m)
+
+            y_at_x0 = int(c)
+            y_at_x_max = int(m * width + c)
+
+            # Find points on the prior boundaries
+            start_point = (max(min(x_at_y0, width-1), 0), 0) if 0 <= x_at_y0 <= width-1 else (0, max(min(y_at_x0, height-1), 0))
+            end_point = (max(min(x_at_y_max, width-1), 0), height-1) if 0 <= x_at_y_max <= width-1 else (width-1, max(min(y_at_x_max, height-1), 0))
+
+            # Draw the line on the prior
+            cv2.line(prior, start_point, end_point, 1.0, thickness)
+
+        # Debug
+        cv2.imshow("prior", prior)
+        cv2.waitKey(0)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"

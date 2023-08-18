@@ -15,7 +15,7 @@ class SampleData:
     pattern: str
     obj_id: int
     obj_ids: list[int]  # all included objects
-    obj_poses: dict[int, np.ndarray] = {}  # poses that are already sampled
+    obj_poses: dict[int, np.ndarray]  # poses that are already sampled
 
 ## Sampler examples
 

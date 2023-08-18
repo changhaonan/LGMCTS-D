@@ -49,7 +49,7 @@ def sample_distribution(prob, rng, n_samples=1):
     )
     rand_ind_coords = np.array(np.unravel_index(rand_ind, prob.shape)).T
     sample_probs = flat_prob[rand_ind]
-    return np.int32(rand_ind_coords.squeeze()), sample_probs
+    return np.int32(rand_ind_coords), sample_probs
 
 
 def draw_convex_contour(img, pixels):
@@ -304,13 +304,17 @@ class Region2DSampler(Region2D):
 
     def sample(
         self, obj_id: int, n_samples: int, prior: np.array | None = None, allow_outside: bool = True
-    ) -> Tuple[List[np.ndarray], SampleStatus, Dict[str, float]]:
+    ) -> Tuple[List[np.ndarray], List[np.ndarray], SampleStatus, Dict[str, any]]:
         """General sampling method
-        Return sample results, sample status, and sample info
         Args:
             allow_outside: whether allow sampling outside the region (paritially)
         Return:
-            sample_probs: probability of each sample
+            samples_3d: samples in 3D
+            samples_2d: samples in 2D (pixel)
+            sample_status: sample status
+            sample_info: information of sampling
+                - free_volume: free volume of the region
+                - sample_probs: probability of each sample
         """
         free_space = self.get_free_space(obj_id, allow_outside).astype(np.float32)  # free is 1, occupied is 0
         # cv2.imshow("free", free_space)
@@ -322,16 +326,16 @@ class Region2DSampler(Region2D):
             free_space = np.multiply(free_space, prior)
         if np.sum(free_space) == 0:
             return [], SampleStatus.NO_SPACE, {}
-        samples_2d, sample_probs = sample_distribution(prob=free_space, rng=self.rng, n_samples=n_samples)  # (N, 2)
-        samples_2d = np.concatenate([samples_2d, np.zeros((n_samples, 1))], axis=1)  # (N, 3)
-        samples_3d = self._region2world(samples_2d)  # (N, 3)
-        samples_3d = samples_3d + self.objects[obj_id].pos_offset.reshape(1, 3)
+        samples_reg, sample_probs = sample_distribution(prob=free_space, rng=self.rng, n_samples=n_samples)  # (N, 2)
+        samples_reg = np.concatenate([samples_reg, np.zeros((n_samples, 1))], axis=1)  # (N, 3)
+        samples_wd = self._region2world(samples_reg)  # (N, 3)
+        samples_wd = samples_wd + self.objects[obj_id].pos_offset.reshape(1, 3)
         # Assemble sample info
         sample_info = {
             "free_volume": np.sum(free_space),
             "sample_probs": sample_probs,
         }
-        return samples_3d, SampleStatus.SUCCESS, sample_info
+        return samples_wd, samples_reg, SampleStatus.SUCCESS, sample_info
 
     ## Properties
 

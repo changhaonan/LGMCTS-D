@@ -55,10 +55,6 @@ if __name__ == '__main__':
         # generate goal
         prompt_str, obs = task.gen_goal_config(env, prompt_generator)
         obs = task.gen_start_config(env)
-
-        # generate goal
-        prompt_str, obs = task.gen_goal_config(env, prompt_generator)
-        obs = task.gen_start_config(env)
         
         # Step 1: get observation
         obj_pcds = obs["point_cloud"]["top"]
@@ -88,30 +84,31 @@ if __name__ == '__main__':
             )
             # set object pose
             region_sampler.set_object_pose(obj_id, obj_pose[:3])
-
+        region_sampler.visualize()
         ## Step 3. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
         goals = task.goals
         L = []
         for j, goal in enumerate(goals):
             goal_obj_ids = goal["obj_ids"]
             for goal_obj_id in goal_obj_ids:
-                sample_data = SampleData(goals["type"].split(":")[-1], goal_obj_id, goals["obj_ids"])
+                sample_data = SampleData(goal["type"].split(":")[-1], goal_obj_id, goal["obj_ids"], {})
                 L.append(sample_data)
 
         ## Step 4. sample a goal
-        sampled_obj_poses = {}
+        sampled_obj_poses_pix = {}
         for sample_data in L:
             # the prior is where the joint sampling happens
-            prior = PATTERN_DICT[sample_data.pattern].gen_prior(
-                env.ws_map_size, env.rng, 
-                obj_id=sample_data.obj_id, 
-                obj_ids=sample_data.obj_ids,
-                obj_poses=sampled_obj_poses)
-            poses = region_sampler.sample(sample_data.obj_id, n_samples, prior)
-            # mark this as sampled
-            sampled_obj_poses[sample_data.obj_id] = poses
-            # update the pose in sampler
-            region_sampler.set_object_pose(sample_data.obj_id, poses[0])
+            if sample_data.pattern in PATTERN_DICT:
+                prior, pattern_info = PATTERN_DICT[sample_data.pattern].gen_prior(
+                    grid_size, env.rng, 
+                    obj_id=sample_data.obj_id, 
+                    obj_ids=sample_data.obj_ids,
+                    obj_poses_pix=sampled_obj_poses_pix)
+                pose_wd, pose_rg, sample_status, _ = region_sampler.sample(sample_data.obj_id, n_samples, prior)
+                # mark this as sampled
+                sampled_obj_poses_pix[sample_data.obj_id] = pose_rg[0, :2]
+                # update the pose in sampler
+                region_sampler.set_object_pose(sample_data.obj_id, pose_wd[0])
 
         print(f"==== Episode {i} ====")
         print(prompt_str)
