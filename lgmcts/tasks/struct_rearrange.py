@@ -85,6 +85,10 @@ class StructRearrange(BaseTask):
                     added_obj_ids.append(obj_id)
         else:
             raise NotImplementedError("Not implemented yet")
+        if len(added_obj_ids) == 0:
+            cv2.imshow("prior", pattern_prior)
+            cv2.waitKey(0)
+            assert False, "No object is added to the pattern"
         return added_obj_ids
 
     def add_objects_to_random(self, env, max_num_obj: int, use_existing: bool=False, stack_prob :float=0.0):
@@ -165,6 +169,7 @@ class StructRearrange(BaseTask):
         max_num_pattern = int(self.max_num_obj/2)
         pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
         pattern_obj_ids = self.add_objects_to_pattern(env, max_num_pattern, pattern_prior, False, self.stack_prob)
+        assert len(pattern_obj_ids) > 0, "No object is added to the pattern"
         # parse object names
         pattern_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pattern_obj_ids]
         prompt.gen_pattern_prompt(pattern_obj_names, pattern_type)

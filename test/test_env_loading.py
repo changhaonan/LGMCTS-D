@@ -1,5 +1,6 @@
 """Test environment saving and loading"""
 from __future__ import annotations
+import os
 import lgmcts
 from lgmcts.components.prompt import PromptGenerator
 
@@ -23,7 +24,8 @@ if __name__ == '__main__':
     task_name = "struct_rearrange"
     resolution = 0.01
     n_samples = 1
-    save_path = "/Users/haonanchang/Projects/LGMCTS-D/output/test/save_load/test.pkl"
+    n_generate = 10
+    save_path = "/Users/haonanchang/Projects/LGMCTS-D/output/test/save_load"
         
     env, task = build_env_and_task(
         task_name,
@@ -33,14 +35,22 @@ if __name__ == '__main__':
         debug=True,
     )
     prompt_generator = PromptGenerator(env.rng)
-    # reset
-    obs = env.reset()
-    prompt_generator.reset()
+    print("Generate dataset...")
+    for i in range(n_generate):
+        # reset
+        obs = env.reset()
+        prompt_generator.reset()
 
-    # generate goal
-    prompt_str, obs = task.gen_goal_config(env, prompt_generator)
-    obs = task.gen_start_config(env)
-    
-    env.save_checkpoint(save_path)
-    env.load_checkpoint(save_path)
-    print(task.prompt)
+        # generate goal
+        prompt_str, obs = task.gen_goal_config(env, prompt_generator)
+        obs = task.gen_start_config(env)
+        
+        env.save_checkpoint(os.path.join(save_path, f"checkpoint_{i}.pkl"))
+        print(f"==== {i} ====")
+        print(task.prompt)
+
+    print("Load dataset...")
+    for i in range(n_generate):
+        print(f"==== {i} ====")
+        env.load_checkpoint(os.path.join(save_path, f"checkpoint_{i}.pkl"))
+        print(task.prompt)

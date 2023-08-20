@@ -76,7 +76,13 @@ class LinePattern(Pattern):
         ## Draw lines & extend to the borders
         # calculate the line's equation: y = mx + c
         if x1 - x0 == 0:  # vertical line
+            start_point = (x0, 0)
+            end_point = (x0, height-1)
             cv2.line(prior, (x0, 0), (x0, height-1), 1.0, thickness)
+        elif y1 - y0 == 0:  # horizontal line
+            start_point = (0, y0)
+            end_point = (width-1, y0)
+            cv2.line(prior, (0, y0), (width-1, y0), 1.0, thickness)
         else:
             m = (y1 - y0) / (x1 - x0)
             c = y0 - m * x0
@@ -89,11 +95,13 @@ class LinePattern(Pattern):
             y_at_x_max = int(m * width + c)
 
             # Find points on the prior boundaries
-            start_point = (max(min(x_at_y0, width-1), 0), 0) if 0 <= x_at_y0 <= width-1 else (0, max(min(y_at_x0, height-1), 0))
-            end_point = (max(min(x_at_y_max, width-1), 0), height-1) if 0 <= x_at_y_max <= width-1 else (width-1, max(min(y_at_x_max, height-1), 0))
-
+            pt_candidate = [(x_at_y0, 0), (x_at_y_max, height-1), (0, y_at_x0), (width-1, y_at_x_max)]
+            pt_candidate = [pt for pt in pt_candidate if 0 <= pt[0] <= width-1 and 0 <= pt[1] <= height-1]
+            assert len(pt_candidate) == 2, "Cannot find two points on the prior boundaries!"
             # Draw the line on the prior
-            cv2.line(prior, start_point, end_point, 1.0, thickness)
+            start_point = pt_candidate[0]
+            end_point = pt_candidate[1]
+            cv2.line(prior, pt_candidate[0], pt_candidate[1], 1.0, thickness)
 
         # Debug
         # cv2.imshow("prior", prior)
@@ -101,7 +109,7 @@ class LinePattern(Pattern):
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
-        pattern_info["position_pixel"] = [int(x0), int(y0)]
+        pattern_info["position_pixel"] = [start_point[0], start_point[1], end_point[0], end_point[1]]
         pattern_info["rotation"] = [0, 0, np.arctan2(y1 - y0, x1 - x0)]
         
         return prior, pattern_info
