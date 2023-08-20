@@ -39,23 +39,7 @@ class StructRearrange(BaseTask):
         seed: int | None = None,
         debug: bool = False,):
         
-        task_meta = {
-            "max_num_obj": max_num_obj,
-        }
-        placeholder_expression = {
-            f"obj_{i}" : {
-                "types": obj_express_types,
-            }
-            for i in range(1, max_num_obj + 1)
-        } 
-        placeholder_expression["pattern"] = { "types": ["text"] }
-        # template
-        prompt_template = [
-            "Set the table to {pattern}",
-        ]
         super().__init__(
-            prompt_template=prompt_template,
-            placeholder_expression=placeholder_expression,
             modalities=["rgb"],
             obs_img_views=obs_img_views,
             obs_img_size=obs_img_size,
@@ -214,7 +198,9 @@ class StructRearrange(BaseTask):
             )
         # Env step forward
         obs, _, _, _, _ = env.step()
-        return prompt.prompt, obs
+        #
+        self.prompt = prompt.prompt
+        return self.prompt, obs
 
     def gen_start_config(self, env):
         """Generate a random config using existing objects"""

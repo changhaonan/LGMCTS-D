@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
 import tempfile
+import pickle
 import importlib_resources
 import pybullet as p
 import pybullet_data
@@ -231,11 +232,6 @@ class BaseEnv:
             p.configureDebugVisualizer(
                 p.COV_ENABLE_RENDERING, 1, physicsClientId=self.client_id
             )
-
-        # Generate prompt and corresponding assets
-        self.prompt, self.prompt_assets = self.task.generate_prompt()
-        # Generate goal specification
-        # self.goal_specification = copy.deepcopy(self.task.gen_goal_spec(self))
 
         # Generate meta info
         self.meta_info["n_objects"] = sum(len(v) for v in self.obj_ids.values())
@@ -578,9 +574,11 @@ class BaseEnv:
         scaled_size = self._scale_size(size, scalar)
         if pose is None:
             pose, obj_stack_id = self.get_random_pose(scaled_size, prior=prior, stack_prob=stack_prob)
-        if pose[0] is None or pose[1] is None:
+        elif pose[0] is None or pose[1] is None:
             # reject sample because of no extra space to use (obj type & size) sampled outside this helper function
             return None, None, None
+        else:
+            obj_stack_id = None
         obj_id, urdf_full_path = pybullet_utils.add_any_object(
             env=self,
             obj_entry=obj_entry,
@@ -594,7 +592,8 @@ class BaseEnv:
         if obj_id is None:  # pybullet loaded error.
             return None, urdf_full_path, pose
         # update support tree
-        self._update_support_tree(obj_id, obj_stack_id)
+        if obj_stack_id is not None:
+            self._update_support_tree(obj_id, obj_stack_id)
         # change texture
         pybullet_utils.p_change_texture(obj_id, color, self.client_id)
         # add mapping info
@@ -724,6 +723,45 @@ class BaseEnv:
 
     def show_support_tree(self):
         print(RenderTree(self.obj_support_tree))
+
+    def save_checkpoint(self, check_point_path: str):
+        """Save environment state."""
+        save_dir = os.path.dirname(check_point_path)
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        env_state = {}
+        env_state["obj_ids"] = self.obj_ids
+        env_state["obj_dyn_info"] = self.obj_dyn_info
+        env_state["obj_id_reverse_mapping"] = self.obj_id_reverse_mapping
+        env_state["obj_support_tree"] = self.obj_support_tree
+        env_state["obj_poses"] = self.get_obj_poses()
+        env_state["meta_info"] = self.meta_info
+        # task related
+        env_state["task_state"] = self.task.get_state()
+        with open(check_point_path, "wb") as f:
+            pickle.dump(env_state, f)
+
+    def load_checkpoint(self, check_point_path: str):
+        """Load env from checkpoint."""
+        self.reset()  # reset env before loading
+        with open(check_point_path, "rb") as f:
+            env_state = pickle.load(f)
+        # load objects
+        obj_ids = env_state["obj_ids"]
+        obj_dyn_info = env_state["obj_dyn_info"]
+        obj_id_reverse_mapping = env_state["obj_id_reverse_mapping"]
+        obj_poses = env_state["obj_poses"]
+        for obj_id in obj_ids["rigid"]:
+            obj_entry, color_entry = pybullet_utils.recover_obj_and_texture_from_mapping_info(obj_id_reverse_mapping, obj_id)
+            obj_size = obj_dyn_info["size"][obj_id]
+            obj_pose = (obj_poses[obj_id][:3], obj_poses[obj_id][3:7])  # tuple: (pos, rot)
+            self.add_object_to_env(obj_entry, color=color_entry, size=obj_size, pose=obj_pose, category="rigid", retain_temp=False)
+            # pybullet_utils.p_change_texture(obj_id, color_entry, self.client_id)
+        self.obj_support_tree = env_state["obj_support_tree"]
+
+        # load task
+        task_state = env_state["task_state"]
+        self.task.set_state(task_state)
 
     # ---------------------------------------------------------------------------
     # Robot Movement Functions

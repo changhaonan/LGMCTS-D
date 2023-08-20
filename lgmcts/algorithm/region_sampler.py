@@ -425,7 +425,7 @@ class Region2DSampler(Region2D):
         # img_resized = np.flipud(img_resized)
         img_resized = np.transpose(img_resized, (1, 0, 2))
         img_resized = np.flipud(img_resized)
-        cv2.imshow("Occupancy Grid with Grid Lines", img_resized)
+        # cv2.imshow("Occupancy Grid with Grid Lines", img_resized)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 

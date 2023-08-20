@@ -82,8 +82,8 @@ class LinePattern(Pattern):
             c = y0 - m * x0
 
             # Calculate intersection with the boundaries
-            x_at_y0 = int(-c / m)
-            x_at_y_max = int((height - c) / m)
+            x_at_y0 = int(-c / (m+1e-6))
+            x_at_y_max = int((height - c) / (m+1e-6))
 
             y_at_x0 = int(c)
             y_at_x_max = int(m * width + c)
@@ -96,8 +96,8 @@ class LinePattern(Pattern):
             cv2.line(prior, start_point, end_point, 1.0, thickness)
 
         # Debug
-        cv2.imshow("prior", prior)
-        cv2.waitKey(0)
+        # cv2.imshow("prior", prior)
+        # cv2.waitKey(0)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
