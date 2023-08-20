@@ -53,4 +53,7 @@ if __name__ == '__main__':
     for i in range(n_generate):
         print(f"==== {i} ====")
         env.load_checkpoint(os.path.join(save_path, f"checkpoint_{i}.pkl"))
-        print(task.prompt)
+        # Run test here
+        obj_poses = env.get_obj_poses()
+        result = task.check_success(obj_poses)
+        print(f"Epoch {i}: {result.success}")

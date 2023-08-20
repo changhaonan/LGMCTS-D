@@ -74,7 +74,6 @@ class ObjectData:
     points: points of object.
     color: color of object.
     """
-
     name: str
     pos: np.ndarray  # center position
     pos_offset: np.ndarray
@@ -84,6 +83,16 @@ class ObjectData:
     color: Tuple[int, int, int]
     rot: np.ndarray = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)  # TODO: currently, rot is not implemented
     collision_mask: np.ndarray = None  # TODO: currently, collision mask is not implemented
+
+
+@dataclass
+class SampleData:
+    """Sample representation"""
+    pattern: str
+    obj_id: int
+    obj_ids: list[int]  # all included objects
+    obj_poses_pix: dict[int, np.ndarray]  # poses that are already sampled
+
 
 class Region2DSampler(Region2D):
     """Region2D sampler"""
@@ -455,6 +464,49 @@ class Region2DSampler(Region2D):
             vis_list.append(origin)
         o3d.visualization.draw_geometries(vis_list)
 
+
+################ LGMCTS related ################
+import lgmcts.utils.misc_utils as utils
+
+class Region2DSamplerLGMCTS(Region2DSampler):
+    """Region sampler wrapper for LGMCTS"""
+    def __init__(self, resolution: float, env):
+        bounds = env.bounds  # (3, 2)
+        grid_size = (int((env.bounds[0, 1] - env.bounds[0, 0]) / resolution), 
+            int((env.bounds[1, 1] - env.bounds[1, 0]) / resolution))
+        world2region = np.eye(4, dtype=np.float32)
+        world2region[:3, 3] = -bounds[:, 0]
+        super().__init__(resolution, grid_size, world2region=world2region)
+
+    def load_objs_from_env(self, env):
+        """Load objects from observation"""
+        obs = env.get_obs()
+        obj_pcds = obs["point_cloud"]["top"]
+        obj_poses = obs["poses"]["top"]
+        obj_lists = env.obj_ids["rigid"]
+        obj_names = [env.obj_id_reverse_mapping[obj_id]["obj_name"] for obj_id in obj_lists]
+        max_pcd_size = self.obs_img_size[0] * self.obs_img_size[1]
+        obj_lists, obj_pcd_list, obj_pose_list = utils.separate_pcd_pose(obj_lists, obj_pcds, obj_poses, max_pcd_size)
+        for i, (obj_id, obj_name, obj_pcd, obj_pose) in enumerate(zip(obj_lists, obj_names, obj_pcd_list, obj_pose_list)):
+            # compute the pos_ref
+            obj_pcd_center = obj_pcd.mean(axis=0)
+            obj_pcd -= obj_pcd_center
+            # pos_ref = obj_pose[:3] - obj_pcd_center
+            pos_ref = None
+            color = np.random.rand(3) * 255
+            # DEBUG
+            # misc_utils.plot_3d("test", obj_pcd, "red")
+            # add object to region sampler
+            self.add_object(
+                obj_id=obj_id,
+                points=obj_pcd, 
+                pos_ref=pos_ref,
+                name=obj_name,
+                color=color
+            )
+            # set object pose
+        self.set_object_pose(obj_id, obj_pose[:3])
+        
 
 if __name__ == "__main__":
     from lgmcts.utils import misc_utils as misc_utils

@@ -272,7 +272,7 @@ class BaseEnv:
             # Exit early if action times out. We still return an observation
             # so that we don't break the Gym API contract.
             if timeout:
-                obs = self._get_obs()
+                obs = self.get_obs()
                 return obs, 0.0, True, self._get_info()
 
         # Step simulator asynchronously until objects settle.
@@ -289,7 +289,7 @@ class BaseEnv:
         else:
             raise NotImplementedError()
         done = result_tuple.success
-        obs = self._get_obs()
+        obs = self.get_obs()
         return obs, 0, done, None, self._get_info()
     
     def step_simulation(self):
@@ -451,7 +451,7 @@ class BaseEnv:
         }
         return info
 
-    def _get_obs(self):
+    def get_obs(self):
         obs = {f"{modality}": {} for modality in self.modalities}  # sensing
         # obs["oracle"] = {}  # oracle information
         obs["point_cloud"] = {}  # point cloud
