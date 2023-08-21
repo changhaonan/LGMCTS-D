@@ -2,11 +2,18 @@
 
 ## How to run
 
+1. Generate data
+
 ```
-python lgmcts/scripts/data_generation/run.py
+python lgmcts/scripts/data_generation/gen_lgmcts.py
 ```
 
-The output will be show in `output`. Pointcloud and Pose will be saved inside `obs.pkl`.
+2. Run offline test
+
+```
+python lgmcts/scripts/eval/eval_lgmcts.py
+```
+
 
 ## Output format
 
