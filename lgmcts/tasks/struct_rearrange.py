@@ -183,7 +183,8 @@ class StructRearrange(BaseTask):
         pattern_info["obj_ids"] = pattern_obj_ids
         self.goals.append(pattern_info)
         ## Step 2: add some more objects & spatial relationship
-        max_num_add = int(self.max_num_obj/2)
+        # max_num_add = int(self.max_num_obj/4)
+        max_num_add = 1  #FIXME: only add one object for now
         added_obj_ids = self.add_objects_to_random(env, max_num_add, False, self.stack_prob)
         # randomly select one from pattern obj and added obj
         pair_obj_ids = env.rng.choice(pattern_obj_ids + added_obj_ids, 2)

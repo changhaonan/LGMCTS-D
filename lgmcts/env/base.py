@@ -480,10 +480,10 @@ class BaseEnv:
                 obj_mask = segm == obj_id
                 obj_pcd = scene_pcd[obj_mask].reshape(-1, 3)
                 # misc_utils.plot_3d(f"{view}-{obj_id}", obj_pcd, color='blue')
-                if obj_pcd.shape[0] == 0:
-                    cv2.imshow("color", color.transpose(1, 2, 0))
-                    cv2.waitKey(0)
-                assert obj_pcd.shape[0] > 0, f"obj_id {obj_id} has no point cloud"
+                # if obj_pcd.shape[0] == 0:
+                #     cv2.imshow("color", color.transpose(1, 2, 0))
+                #     cv2.waitKey(0)
+                # assert obj_pcd.shape[0] > 0, f"obj_id {obj_id} has no point cloud"
                 offset = counter * max_pcd_size
                 obj_pcds[offset:offset+obj_pcd.shape[0], :] = obj_pcd
 

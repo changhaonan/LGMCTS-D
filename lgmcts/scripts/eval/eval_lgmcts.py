@@ -22,6 +22,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     task_name = "struct_rearrange"
     resolution = 0.01
     n_samples = 1
+    num_save_digits = 6
 
     env = lgmcts.make(
         task_name=task_name, 
@@ -44,7 +45,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
         prompt_generator.reset()
         region_sampler.reset()
         # load from dataset
-        checkpoint_path = os.path.join(dataset_path, f"checkpoint_{i}.pkl")
+        checkpoint_path = os.path.join(dataset_path, f"checkpoint_{i:0{num_save_digits}d}.pkl")
         env.load_checkpoint(checkpoint_path)
         # update region sampler
         region_sampler.load_objs_from_env(env)
@@ -79,5 +80,5 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
 
 
 if __name__ == "__main__":
-    dataset_path = "/Users/haonanchang/Projects/LGMCTS-D/output/test/save_load"
+    dataset_path = "/Users/haonanchang/Projects/LGMCTS-D/output/struct_rearrange"
     eval_offline(dataset_path)
