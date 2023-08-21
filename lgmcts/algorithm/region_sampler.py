@@ -203,7 +203,7 @@ class Region2DSampler(Region2D):
         if obj_id in self.objects:
             mask_center_world = self._region2world(self.objects[obj_id].pos)
             pos_ref_world = mask_center_world - self.objects[obj_id].pos_offset
-            return pos_ref_world
+            return np.hstack([pos_ref_world, self.objects[obj_id].rot])
         else:
             raise ValueError("Object not found")
 
@@ -219,7 +219,7 @@ class Region2DSampler(Region2D):
     ) -> None:
         """Update object in scene"""
         assert obj_id in self.objects, "Object not found"
-        mask_center_world = obj_pos + self.objects[obj_id].pos_offset
+        mask_center_world = obj_pos[:3] + self.objects[obj_id].pos_offset  # position
         if obj_id in self.objects:
             self.objects[obj_id].pos = self._world2region(mask_center_world)
             if enable_vis:
@@ -339,6 +339,9 @@ class Region2DSampler(Region2D):
         samples_reg = np.concatenate([samples_reg, np.zeros((n_samples, 1))], axis=1)  # (N, 3)
         samples_wd = self._region2world(samples_reg)  # (N, 3)
         samples_wd = samples_wd + self.objects[obj_id].pos_offset.reshape(1, 3)
+        # FIXME: currently we don't support sample in rotation, so we set it to identity
+        rots = np.tile(np.array([0.0, 0.0, 0.0, 1.0-(1e-6)], dtype=np.float32), (n_samples, 1))
+        samples_wd = np.hstack([samples_wd, rots])
         # Assemble sample info
         sample_info = {
             "free_volume": np.sum(free_space),
@@ -455,8 +458,8 @@ class Region2DSampler(Region2D):
             pcd.paint_uniform_color(o3d_color)
             # transform obj to global pos
             obj_pose = self.get_object_pose(obj_id)
-            pcd.translate(obj_pose)
-            bbox.translate(obj_pose)
+            pcd.translate(obj_pose[3:])
+            bbox.translate(obj_pose[3:])
             vis_list.append(bbox)
             vis_list.append(pcd)
         if show_origin:
@@ -505,7 +508,7 @@ class Region2DSamplerLGMCTS(Region2DSampler):
                 color=color
             )
             # set object pose
-            self.set_object_pose(obj_id, obj_pose[:3])
+            self.set_object_pose(obj_id, obj_pose)
 
 
 if __name__ == "__main__":

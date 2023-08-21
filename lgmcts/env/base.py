@@ -137,9 +137,9 @@ class BaseEnv:
 
         # setup action space
         self.position_bounds = gym.spaces.Box(
-            low=np.array([0.25, -0.5], dtype=np.float32),
-            high=np.array([0.75, 0.50], dtype=np.float32),
-            shape=(2,),
+            low=np.array([0.20, -0.5, -1.0], dtype=np.float32),
+            high=np.array([0.80, 0.50, 1.0], dtype=np.float32),
+            shape=(3,),
             dtype=np.float32,
         )
         self.action_space = gym.spaces.Dict(

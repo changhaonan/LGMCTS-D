@@ -1,6 +1,7 @@
 """Planner interface for LGMCTS
 """
 from __future__ import annotations
+import numpy as np
 from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData
 
 class SamplingPlanner:
@@ -8,6 +9,9 @@ class SamplingPlanner:
     def __init__(self, sampler: Region2DSampler, **kwargs):
         self.sampler = sampler
         self.n_samples = kwargs.get("n_samples", 5)
+
+    def reset(self):
+        self.sampler.reset()
 
     def plan(self, goals: list[SampleData], algo: str, **kwargs):
         """Plan a sequence of goals
@@ -27,7 +31,8 @@ class SamplingPlanner:
         """
         prior_dict = kwargs.get("prior_dict", {})
         sampled_obj_poses_pix = {}  # keep track of sampled object poses
-        plan_result = []
+        action_list = []
+        cur_obj_poses = self.sampler.get_object_poses()
         for sample_data in goals:
             # the prior is where the joint sampling happens
             if sample_data.pattern in prior_dict:
@@ -43,10 +48,10 @@ class SamplingPlanner:
                 # update the pose in sampler
                 self.sampler.set_object_pose(sample_data.obj_id, pose_wd[0])
                 # add to plan result
-                plan_result.append({
+                action_list.append({
                     "obj_id": sample_data.obj_id,
-                    "pose": pose_wd[0],
-                    "sample_status": sample_status,
-                    "pattern_info": pattern_info
+                    "old_pose": cur_obj_poses[sample_data.obj_id].astype(np.float32),
+                    "new_pose": pose_wd[0].astype(np.float32),
                 })
-        return plan_result
+        return action_list
+
