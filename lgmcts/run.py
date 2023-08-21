@@ -52,7 +52,7 @@ if __name__ == '__main__':
         
         # reset the region sampler
         region_sampler.load_objs_from_env(env)
-        region_sampler.visualize()
+        # region_sampler.visualize()
 
         ## Step 1. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
         goals = task.goals

@@ -97,10 +97,11 @@ class LinePattern(Pattern):
             # Find points on the prior boundaries
             pt_candidate = [(x_at_y0, 0), (x_at_y_max, height-1), (0, y_at_x0), (width-1, y_at_x_max)]
             pt_candidate = [pt for pt in pt_candidate if 0 <= pt[0] <= width-1 and 0 <= pt[1] <= height-1]
-            assert len(pt_candidate) == 2, "Cannot find two points on the prior boundaries!"
+            # sort by x
+            pt_candidate = sorted(pt_candidate, key=lambda x: x[0])
             # Draw the line on the prior
             start_point = pt_candidate[0]
-            end_point = pt_candidate[1]
+            end_point = pt_candidate[-1]
             cv2.line(prior, pt_candidate[0], pt_candidate[1], 1.0, thickness)
 
         # Debug

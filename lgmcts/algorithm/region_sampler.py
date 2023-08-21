@@ -485,7 +485,7 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         obj_poses = obs["poses"]["top"]
         obj_lists = env.obj_ids["rigid"]
         obj_names = [env.obj_id_reverse_mapping[obj_id]["obj_name"] for obj_id in obj_lists]
-        max_pcd_size = self.obs_img_size[0] * self.obs_img_size[1]
+        max_pcd_size = env.obs_img_size[0] * env.obs_img_size[1]
         obj_lists, obj_pcd_list, obj_pose_list = utils.separate_pcd_pose(obj_lists, obj_pcds, obj_poses, max_pcd_size)
         for i, (obj_id, obj_name, obj_pcd, obj_pose) in enumerate(zip(obj_lists, obj_names, obj_pcd_list, obj_pose_list)):
             # compute the pos_ref
@@ -505,8 +505,8 @@ class Region2DSamplerLGMCTS(Region2DSampler):
                 color=color
             )
             # set object pose
-        self.set_object_pose(obj_id, obj_pose[:3])
-        
+            self.set_object_pose(obj_id, obj_pose[:3])
+
 
 if __name__ == "__main__":
     from lgmcts.utils import misc_utils as misc_utils
