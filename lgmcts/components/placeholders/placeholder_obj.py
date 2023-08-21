@@ -8,7 +8,7 @@ import numpy as np
 import pybullet as p
 
 from .base import Placeholder
-from lgmcts.utils.cameras import get_agent_cam_config
+from lgmcts.components.cameras import get_agent_cam_config
 from lgmcts.components.encyclopedia import TexturePedia, TextureEntry
 from lgmcts.utils import misc_utils as utils
 from lgmcts.utils.pybullet_utils import p_change_texture

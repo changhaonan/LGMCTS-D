@@ -163,13 +163,19 @@ class StructRearrange(BaseTask):
 
     def gen_goal_config(self, env, prompt: PromptGenerator):
         """Generate goal config"""
+        max_try = 3  # max try for sampling
         #TODO: add region prompt later, currently not supported
         ## Step 1: generate a random pattern
         pattern_type = env.rng.choice(self.pattern_types)
         max_num_pattern = int(self.max_num_obj/2)
-        pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
-        pattern_obj_ids = self.add_objects_to_pattern(env, max_num_pattern, pattern_prior, False, self.stack_prob)
-        assert len(pattern_obj_ids) > 0, "No object is added to the pattern"
+        for i in range(max_try):
+            try:
+                pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
+                pattern_obj_ids = self.add_objects_to_pattern(env, max_num_pattern, pattern_prior, False, self.stack_prob)
+                assert len(pattern_obj_ids) > 0, "No object is added to the pattern"
+                break
+            except:
+                continue
         # parse object names
         pattern_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pattern_obj_ids]
         prompt.gen_pattern_prompt(pattern_obj_names, pattern_type)

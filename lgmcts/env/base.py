@@ -23,7 +23,7 @@ from lgmcts.tasks.base import BaseTask
 from lgmcts.tasks import ALL_TASKS as _ALL_TASKS
 import lgmcts.utils.pybullet_utils as pybullet_utils
 import lgmcts.utils.misc_utils as misc_utils
-from lgmcts.utils.cameras import get_agent_cam_config, Oracle
+from lgmcts.components.cameras import get_agent_cam_config, Oracle
 from lgmcts.components.encyclopedia import ObjPedia, TexturePedia, ObjEntry, TextureEntry
 from lgmcts.components.end_effectors import Suction, Spatula
 
@@ -84,7 +84,7 @@ class BaseEnv:
 
         # Workspace bounds.
         self.pix_size = 0.003125  # 0.003125 m/pixel
-        self.bounds = np.array([[0.0, 1.0], [-0.5, 0.5], [0, 0.3]])  # Square bounds
+        self.bounds = np.array([[0.2, 1.2], [-0.5, 0.5], [0.0, 0.3]])  # Square bounds
         self.zone_bounds = np.copy(self.bounds)
         self.ws_map_size = (
             int(np.round((self.bounds[1, 1] - self.bounds[1, 0]) / self.pix_size)),
@@ -137,8 +137,8 @@ class BaseEnv:
 
         # setup action space
         self.position_bounds = gym.spaces.Box(
-            low=np.array([0.20, -0.5, -1.0], dtype=np.float32),
-            high=np.array([0.80, 0.50, 1.0], dtype=np.float32),
+            low=np.array([self.bounds[0, 0], self.bounds[1, 0], self.bounds[2, 0]], dtype=np.float32),
+            high=np.array([self.bounds[0, 1], self.bounds[1, 1], self.bounds[2, 1]], dtype=np.float32),
             shape=(3,),
             dtype=np.float32,
         )
@@ -480,6 +480,10 @@ class BaseEnv:
                 obj_mask = segm == obj_id
                 obj_pcd = scene_pcd[obj_mask].reshape(-1, 3)
                 # misc_utils.plot_3d(f"{view}-{obj_id}", obj_pcd, color='blue')
+                if obj_pcd.shape[0] == 0:
+                    cv2.imshow("color", color.transpose(1, 2, 0))
+                    cv2.waitKey(0)
+                assert obj_pcd.shape[0] > 0, f"obj_id {obj_id} has no point cloud"
                 offset = counter * max_pcd_size
                 obj_pcds[offset:offset+obj_pcd.shape[0], :] = obj_pcd
 
@@ -552,6 +556,7 @@ class BaseEnv:
                 return [None, None], None
             pix = misc_utils.sample_distribution(prob=free, rng=self._random)
             pos = misc_utils.pix_to_xyz(pix, hmap, self.bounds, self.pix_size)
+            # print(f"pos: {pos}")
             pos = (pos[0], pos[1], obj_size[2] / 2)
         theta = self._random.random() * 2 * np.pi
         rot = misc_utils.eulerXYZ_to_quatXYZW((0, 0, theta))

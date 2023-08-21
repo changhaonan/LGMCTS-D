@@ -479,6 +479,7 @@ class Region2DSamplerLGMCTS(Region2DSampler):
             int((env.bounds[1, 1] - env.bounds[1, 0]) / resolution))
         world2region = np.eye(4, dtype=np.float32)
         world2region[:3, 3] = -bounds[:, 0]
+        world2region[2, 3] -= 1e-3  # add a small offset to avoid numerical error
         super().__init__(resolution, grid_size, world2region=world2region)
 
     def load_objs_from_env(self, env):

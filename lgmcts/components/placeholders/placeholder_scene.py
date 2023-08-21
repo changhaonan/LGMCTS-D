@@ -8,7 +8,7 @@ import numpy as np
 import pybullet as p
 
 from .base import Placeholder
-from lgmcts.utils.cameras import get_agent_cam_config, Oracle
+from lgmcts.components.cameras import get_agent_cam_config, Oracle
 from lgmcts.utils import pybullet_utils, misc_utils as utils
 
 PLANE_URDF_PATH = "plane/plane.urdf"

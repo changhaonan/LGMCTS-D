@@ -17,10 +17,17 @@ def build_env_and_task(
     task_kwargs: dict | None,
     modalities,
     seed: int | None = None,
+    hide_arm_rgb: bool = False,
     debug: bool = False,
 ):
     env = lgmcts.make(
-        task_name=task_name, task_kwargs=task_kwargs, modalities=modalities, seed=seed, debug=debug, display_debug_window=debug,
+        task_name=task_name, 
+        task_kwargs=task_kwargs, 
+        modalities=modalities, 
+        seed=seed, 
+        debug=debug, 
+        display_debug_window=debug,
+        hide_arm_rgb=hide_arm_rgb,
     )
     task = env.task
     return env, task

@@ -94,7 +94,7 @@ class NearPerfectCamera256x256(object):
     front_position = (1000 + 0.5 - front_offset, 0, 1000)
     front_rotation = (np.pi / 4, np.pi, -np.pi / 2)
     front_rotation = p.getQuaternionFromEuler(front_rotation)
-    top_position = (0.5, 0, 1000.0)
+    top_position = (0.7, 0, 1000.0)
     top_rotation = (0, np.pi, -np.pi / 2)
     top_rotation = p.getQuaternionFromEuler(top_rotation)
 

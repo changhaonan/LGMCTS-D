@@ -15,22 +15,6 @@ from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 from lgmcts.components.patterns import PATTERN_DICT
 
 
-## Utils method
-
-def build_env_and_task(
-    task_name: str,
-    task_kwargs: dict | None,
-    modalities,
-    seed: int | None = None,
-    debug: bool = False,
-):
-    env = lgmcts.make(
-        task_name=task_name, task_kwargs=task_kwargs, modalities=modalities, seed=seed, debug=debug, display_debug_window=debug,
-    )
-    task = env.task
-    return env, task
-
-
 ## Eval method
 
 def eval_offline(dataset_path: str, n_samples: int = 10):
@@ -39,13 +23,17 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     resolution = 0.01
     n_samples = 1
 
-    env, task = build_env_and_task(
-        task_name,
-        PARTITION_TO_SPECS["train"][task_name],
-        modalities=["rgb", "segm", "depth"],
-        seed=0,
-        debug=True,
+    env = lgmcts.make(
+        task_name=task_name, 
+        task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name], 
+        modalities=["rgb", "segm", "depth"], 
+        seed=0, 
+        debug=True, 
+        display_debug_window=True,
+        hide_arm_rgb=False,
     )
+    task = env.task
+
     region_sampler = Region2DSamplerLGMCTS(resolution, env)
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
@@ -87,6 +75,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
         ## Step 4. evaluate the result
         exe_result = task.check_success(env.get_obj_poses())
         print(f"==== Episode {i} ====")
+        print(f"Success: {exe_result.success}")
 
 
 if __name__ == "__main__":

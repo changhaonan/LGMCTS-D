@@ -37,7 +37,7 @@ class BaseTask:
         self.seed = seed
         self.set_seed(seed)
         self.ee = Suction  # ee is bined to the task
-        self.primitive = PickPlace  # primitive is bined to the task
+        self.primitive = PickPlace()  # primitive is bined to the task
         self.prompt = ""
     
     def reset(self, env):
