@@ -1,6 +1,7 @@
 """Evaluate the performace of lgmcts system"""
 from __future__ import annotations
 import os
+import time
 import pickle
 import lgmcts
 import numpy as np
@@ -72,6 +73,8 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
             }
             # execute action
             env.step(action)
+            time.sleep(3.0)
+        # test the env & sampler alignment
 
         ## Step 4. evaluate the result
         exe_result = task.check_success(env.get_obj_poses())

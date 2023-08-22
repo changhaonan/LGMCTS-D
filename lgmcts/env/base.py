@@ -117,7 +117,7 @@ class BaseEnv:
         if display_debug_window:
             target = p.getDebugVisualizerCamera(physicsClientId=self.client_id)[11]
             p.resetDebugVisualizerCamera(
-                cameraDistance=1.1,
+                cameraDistance=1.5,
                 cameraYaw=90,
                 cameraPitch=-25,
                 cameraTargetPosition=target,

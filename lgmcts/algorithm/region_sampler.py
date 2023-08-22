@@ -11,6 +11,7 @@ from lgmcts.algorithm.region import Region, Region2D
 import numpy as np
 from typing import Tuple, List, Union, Dict
 from enum import Enum
+import math
 import cv2
 import copy
 import open3d as o3d
@@ -156,8 +157,12 @@ class Region2DSampler(Region2D):
         pos_ref: Union[None, np.ndarray] = None,
         name: str | None = None,
         color=(127, 127, 127),
+        mask_mode: str = "sphere"
     ):
-        """Add object to scene, create mask from points"""
+        """Add object to scene, create mask from points
+        Args:
+            mask_mode: "sphere" or "convex_hull". "sphere" is to provide clearance.
+        """
         assert points is not None, "points should not be None"
         if pos_ref is None:
             pos_ref = np.mean(points, axis=0)  # the ref position will be at center
@@ -167,24 +172,35 @@ class Region2DSampler(Region2D):
         lb_region = np.array(
             [points_region[:, 0].min(), points_region[:, 1].min(), points_region[:, 2].min()]
         )  # lb, lower bottom
-        mask_width = points_region[:, 0].max() - points_region[:, 0].min() + 1
-        mask_height = points_region[:, 1].max() - points_region[:, 1].min() + 1
-        # pad size to odd
-        if mask_width % 2 == 0:
-            mask_width += 1
-        if mask_height % 2 == 0:
-            mask_height += 1
-        mask = np.zeros((mask_width, mask_height), dtype=np.uint8)
-        pixels = (points_convex_hull.points[points_convex_hull.vertices]).astype(np.int32) - lb_region[:2]
-        # convert pixels to cv2 shape, cv2 is (y, x)
-        pixels = pixels[:, [1, 0]]
-        # pixels[0, :] = mask.shape[1] - pixels[0, :]  # flip y
-        cv2.fillConvexPoly(mask, pixels, 1,)
-        ## DEBUG start here
-        # contour = draw_convex_contour(mask, pixels)
-        # cv2.imshow("contour", mask * 255)
-        # cv2.waitKey(0)
-        ## DEBUG end here
+        if mask_mode == "sphere":
+            mask_width = points_region[:, 0].max() - points_region[:, 0].min() + 1
+            mask_height = points_region[:, 1].max() - points_region[:, 1].min() + 1
+            mask_size = math.ceil(math.sqrt(mask_height ** 2 + mask_width ** 2))
+            # pad size to odd
+            if mask_size % 2 == 0:
+                mask_size += 1
+            mask = np.zeros((mask_size, mask_size), dtype=np.uint8)
+            # draw a filled circle
+            cv2.circle(mask, (mask_size // 2, mask_size // 2), mask_size // 2, 1, thickness=-1)
+        elif mask_mode == "convex_hull":
+            mask_width = points_region[:, 0].max() - points_region[:, 0].min() + 1
+            mask_height = points_region[:, 1].max() - points_region[:, 1].min() + 1
+            # pad size to odd
+            if mask_width % 2 == 0:
+                mask_width += 1
+            if mask_height % 2 == 0:
+                mask_height += 1
+            mask = np.zeros((mask_width, mask_height), dtype=np.uint8)
+            pixels = (points_convex_hull.points[points_convex_hull.vertices]).astype(np.int32) - lb_region[:2]
+            # convert pixels to cv2 shape, cv2 is (y, x)
+            pixels = pixels[:, [1, 0]]
+            # pixels[0, :] = mask.shape[1] - pixels[0, :]  # flip y
+            cv2.fillConvexPoly(mask, pixels, 1,)
+            ## DEBUG start here
+            # contour = draw_convex_contour(mask, pixels)
+            # cv2.imshow("contour", mask * 255)
+            # cv2.waitKey(0)
+            ## DEBUG end here
         height = points_region[:, 2].max() - points_region[:, 2].min()
         # compute offset compared with pos_ref (reference position)
         mask_center = np.array([mask.shape[0] // 2, mask.shape[1] // 2, 0]) + lb_region
@@ -383,6 +399,7 @@ class Region2DSampler(Region2D):
         **kwargs,
     ):
         """Create region from instances"""
+        mask_mode = kwargs.get("mask_mode", "sphere")
         self.create_from_image(
             color_image=color_image,
             depth_image=depth_image,
@@ -395,7 +412,7 @@ class Region2DSampler(Region2D):
             obj_color = improve_saturation(color_rgb=obj_color, percent=0.5)
             obj_color = (obj_color[0] * 255.0, obj_color[1] * 255.0, obj_color[2] * 255.0)
             obj_points = np.array(pcd.points)
-            self.add_object(obj_id=obj_id, points=obj_points, color=obj_color, name=name)
+            self.add_object(obj_id=obj_id, points=obj_points, color=obj_color, name=name, mask_mode=mask_mode)
 
     # Debug related methods
     def visualize(self, **kwargs):
@@ -484,8 +501,9 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         world2region[2, 3] -= 1e-3  # add a small offset to avoid numerical error
         super().__init__(resolution, grid_size, world2region=world2region)
 
-    def load_objs_from_env(self, env):
+    def load_objs_from_env(self, env, **kwargs):
         """Load objects from observation"""
+        mask_mode = kwargs.get("mask_mode", "sphere")
         obs = env.get_obs()
         obj_pcds = obs["point_cloud"]["top"]
         obj_poses = obs["poses"]["top"]
@@ -503,13 +521,7 @@ class Region2DSamplerLGMCTS(Region2DSampler):
             # DEBUG
             # misc_utils.plot_3d("test", obj_pcd, "red")
             # add object to region sampler
-            self.add_object(
-                obj_id=obj_id,
-                points=obj_pcd, 
-                pos_ref=pos_ref,
-                name=obj_name,
-                color=color
-            )
+            self.add_object(obj_id=obj_id, points=obj_pcd, pos_ref=pos_ref, name=obj_name, color=color, mask_mode=mask_mode)
             # set object pose
             self.set_object_pose(obj_id, obj_pose)
 

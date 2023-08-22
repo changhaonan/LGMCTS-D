@@ -167,7 +167,8 @@ class StructRearrange(BaseTask):
         #TODO: add region prompt later, currently not supported
         ## Step 1: generate a random pattern
         pattern_type = env.rng.choice(self.pattern_types)
-        max_num_pattern = int(self.max_num_obj/2)
+        # max_num_pattern = int(self.max_num_obj/2)
+        max_num_pattern = 3
         for i in range(max_try):
             try:
                 pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
