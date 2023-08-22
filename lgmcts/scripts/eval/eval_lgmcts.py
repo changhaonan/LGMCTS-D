@@ -77,7 +77,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
         # test the env & sampler alignment
 
         ## Step 4. evaluate the result
-        exe_result = task.check_success(env.get_obj_poses())
+        exe_result = task.check_success(obj_poses=env.get_obj_poses())
         print(f"==== Episode {i} ====")
         print(f"Success: {exe_result.success}")
 

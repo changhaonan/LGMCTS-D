@@ -60,8 +60,8 @@ class SamplingPlanner:
                     "new_pose": pose_wd[0].astype(np.float32),
                 })
                 if debug:
-                    cv2.imshow("prior", prior)  # show prior
-                    cv2.waitKey(0)
+                    # cv2.imshow("prior", prior)  # show prior
+                    # cv2.waitKey(0)
                     self.sampler.visualize()  # show the new pose
         return action_list
 
