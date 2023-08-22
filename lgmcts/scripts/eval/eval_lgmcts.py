@@ -21,7 +21,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
     resolution = 0.01
-    n_samples = 1
+    n_samples = 5
     num_save_digits = 6
 
     env = lgmcts.make(
@@ -49,7 +49,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
         env.load_checkpoint(checkpoint_path)
         # update region sampler
         region_sampler.load_objs_from_env(env)
-        # region_sampler.visualize()
+        region_sampler.visualize()
 
         ## Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
         goals = task.goals
@@ -61,7 +61,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
                 L.append(sample_data)
 
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo="seq", prior_dict=PATTERN_DICT)
+        action_list = sampling_planner.plan(L, algo="seq", prior_dict=PATTERN_DICT, debug=True)
         for step in action_list:
             # assemble action
             action = {

@@ -64,14 +64,14 @@ class LinePattern(Pattern):
             # random pixel
             x0 = rng.integers(0, width)
             y0 = rng.integers(0, height)
-            x1 = rel_obj_poses_pix[0][0]
-            y1 = rel_obj_poses_pix[0][1]
+            x1 = rel_obj_poses_pix[0][1]
+            y1 = rel_obj_poses_pix[0][0]
         else:
             # if more than one object is sampled, we generate a line based on the objects
-            x0 = rel_obj_poses_pix[0][0]
-            y0 = rel_obj_poses_pix[0][1]
-            x1 = rel_obj_poses_pix[1][0]
-            y1 = rel_obj_poses_pix[1][1]
+            x0 = rel_obj_poses_pix[0][1]
+            y0 = rel_obj_poses_pix[0][0]
+            x1 = rel_obj_poses_pix[1][1]
+            y1 = rel_obj_poses_pix[1][0]
             # compute the line that passing (xc1, yc1) & (xc2, yc2), both sides ending at borders
         ## Draw lines & extend to the borders
         # calculate the line's equation: y = mx + c

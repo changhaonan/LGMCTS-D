@@ -2,7 +2,9 @@
 """
 from __future__ import annotations
 import numpy as np
-from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData
+import cv2
+from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData, SampleStatus
+
 
 class SamplingPlanner:
     """Sequential sampling, we provide a set of goals, and sample them one by one"""
@@ -30,6 +32,7 @@ class SamplingPlanner:
             goals: list of SampleData
         """
         prior_dict = kwargs.get("prior_dict", {})
+        debug = kwargs.get("debug", False)
         sampled_obj_poses_pix = {}  # keep track of sampled object poses
         action_list = []
         cur_obj_poses = self.sampler.get_object_poses()
@@ -42,6 +45,9 @@ class SamplingPlanner:
                     obj_ids=sample_data.obj_ids,
                     obj_poses_pix=sampled_obj_poses_pix)
                 pose_wd, pose_rg, sample_status, _ = self.sampler.sample(sample_data.obj_id, self.n_samples, prior)
+                if sample_status is not SampleStatus.SUCCESS:
+                    print(f"Sample {sample_data.obj_id} failed")
+                    continue
                 # use the first one
                 # mark this as sampled
                 sampled_obj_poses_pix[sample_data.obj_id] = pose_rg[0, :2]
@@ -53,5 +59,9 @@ class SamplingPlanner:
                     "old_pose": cur_obj_poses[sample_data.obj_id].astype(np.float32),
                     "new_pose": pose_wd[0].astype(np.float32),
                 })
+                if debug:
+                    cv2.imshow("prior", prior)  # show prior
+                    cv2.waitKey(0)
+                    self.sampler.visualize()  # show the new pose
         return action_list
 

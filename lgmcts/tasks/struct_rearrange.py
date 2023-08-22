@@ -184,30 +184,30 @@ class StructRearrange(BaseTask):
         self.goals.append(pattern_info)
         ## Step 2: add some more objects & spatial relationship
         # max_num_add = int(self.max_num_obj/4)
-        max_num_add = 1  #FIXME: only add one object for now
-        added_obj_ids = self.add_objects_to_random(env, max_num_add, False, self.stack_prob)
-        # randomly select one from pattern obj and added obj
-        pair_obj_ids = env.rng.choice(pattern_obj_ids + added_obj_ids, 2)
-        pair_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pair_obj_ids]
-        # compute spatial from the pair
-        aabb_1 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[0])
-        aabb_2 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[1])
-        pose_1 = spatial_utils.Points9.from_aabb(aabb_1[0], aabb_1[1])
-        pose_2 = spatial_utils.Points9.from_aabb(aabb_2[0], aabb_2[1])
-        spatial_label = spatial_utils.Points9.label(pose_1, pose_2)
-        spatial_str_list = spatial_utils.Points9.vocabulary(spatial_label)
-        if spatial_str_list[0] != "A has no relationship with B":
-            spatial_rel = self.rng.choice(spatial_str_list)
-            prompt.gen_pair_prompt(pair_obj_names[0], pair_obj_names[1], spatial_rel[4:-1].strip())
-            # update goal
-            self.goals.append(
-                {
-                "type": "pattern:spatial",
-                "obj_ids": pair_obj_ids,
-                "spatial_label": spatial_label,
-                "spatial_str": spatial_rel
-                }
-            )
+        # max_num_add = 1  #FIXME: only add one object for now
+        # added_obj_ids = self.add_objects_to_random(env, max_num_add, False, self.stack_prob)
+        # # randomly select one from pattern obj and added obj
+        # pair_obj_ids = env.rng.choice(pattern_obj_ids + added_obj_ids, 2)
+        # pair_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pair_obj_ids]
+        # # compute spatial from the pair
+        # aabb_1 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[0])
+        # aabb_2 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[1])
+        # pose_1 = spatial_utils.Points9.from_aabb(aabb_1[0], aabb_1[1])
+        # pose_2 = spatial_utils.Points9.from_aabb(aabb_2[0], aabb_2[1])
+        # spatial_label = spatial_utils.Points9.label(pose_1, pose_2)
+        # spatial_str_list = spatial_utils.Points9.vocabulary(spatial_label)
+        # if spatial_str_list[0] != "A has no relationship with B":
+        #     spatial_rel = self.rng.choice(spatial_str_list)
+        #     prompt.gen_pair_prompt(pair_obj_names[0], pair_obj_names[1], spatial_rel[4:-1].strip())
+        #     # update goal
+        #     self.goals.append(
+        #         {
+        #         "type": "pattern:spatial",
+        #         "obj_ids": pair_obj_ids,
+        #         "spatial_label": spatial_label,
+        #         "spatial_str": spatial_rel
+        #         }
+        #     )
         # Env step forward
         obs, _, _, _, _ = env.step()
         #

@@ -44,6 +44,9 @@ def improve_saturation(color_rgb: Tuple[int, int, int], percent: float) -> Tuple
 def sample_distribution(prob, rng, n_samples=1):
     """Sample data point from a custom distribution."""
     flat_prob = prob.flatten() / np.sum(prob)
+    # if nnz smaller than n_samples, we sample all of them
+    if np.count_nonzero(flat_prob) < n_samples:
+        n_samples = np.count_nonzero(flat_prob)
     rand_ind = rng.choice(
         np.arange(len(flat_prob)), n_samples, p=flat_prob, replace=False
     )
@@ -277,7 +280,7 @@ class Region2DSampler(Region2D):
 
     def get_occupancy(self, obj_list: list[int] | None = None) -> bool:
         """Update occupancy grid occupied by obj_list"""
-        occupancy_map = np.ones((self.grid_size[0], self.grid_size[1], 3), dtype=np.float32)
+        occupancy_map = np.ones((self.grid_size[0], self.grid_size[1], 1), dtype=np.float32)
         # objects
         if obj_list is None:
             obj_list = list(self.objects.keys())
@@ -330,17 +333,16 @@ class Region2DSampler(Region2D):
         # cv2.waitKey(0)
         if prior is not None:
             assert prior.shape[:2] == free_space.shape[:2], "prior shape must be the same as free shape"
-            if len(prior.shape) == 2:
-                prior = prior[:, :, None]
             free_space = np.multiply(free_space, prior)
         if np.sum(free_space) == 0:
-            return [], SampleStatus.NO_SPACE, {}
+            return [], [], SampleStatus.NO_SPACE, {}
         samples_reg, sample_probs = sample_distribution(prob=free_space, rng=self.rng, n_samples=n_samples)  # (N, 2)
-        samples_reg = np.concatenate([samples_reg, np.zeros((n_samples, 1))], axis=1)  # (N, 3)
+        #
+        samples_reg = np.concatenate([samples_reg, np.zeros((samples_reg.shape[0], 1))], axis=1)  # (N, 3)
         samples_wd = self._region2world(samples_reg)  # (N, 3)
         samples_wd = samples_wd + self.objects[obj_id].pos_offset.reshape(1, 3)
         # FIXME: currently we don't support sample in rotation, so we set it to identity
-        rots = np.tile(np.array([0.0, 0.0, 0.0, 1.0-(1e-6)], dtype=np.float32), (n_samples, 1))
+        rots = np.tile(np.array([0.0, 0.0, 0.0, 1.0-(1e-6)], dtype=np.float32), (samples_reg.shape[0], 1))
         samples_wd = np.hstack([samples_wd, rots])
         # Assemble sample info
         sample_info = {
@@ -437,7 +439,7 @@ class Region2DSampler(Region2D):
         # img_resized = np.flipud(img_resized)
         img_resized = np.transpose(img_resized, (1, 0, 2))
         img_resized = np.flipud(img_resized)
-        # cv2.imshow("Occupancy Grid with Grid Lines", img_resized)
+        cv2.imshow("Occupancy Grid with Grid Lines", img_resized)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
