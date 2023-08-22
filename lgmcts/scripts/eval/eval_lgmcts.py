@@ -24,7 +24,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     resolution = 0.01
     n_samples = 5
     num_save_digits = 6
-
+    debug = True  # control debug vis
     env = lgmcts.make(
         task_name=task_name, 
         task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name], 
@@ -63,7 +63,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
                 L.append(sample_data)
 
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo="seq", prior_dict=PATTERN_DICT, debug=True)
+        action_list = sampling_planner.plan(L, algo="seq", prior_dict=PATTERN_DICT, debug=debug)
         for step in action_list:
             # assemble action
             action = {
