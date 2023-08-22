@@ -44,7 +44,7 @@ class SamplingPlanner:
                     obj_id=sample_data.obj_id, 
                     obj_ids=sample_data.obj_ids,
                     obj_poses_pix=sampled_obj_poses_pix)
-                pose_wd, pose_rg, sample_status, _ = self.sampler.sample(sample_data.obj_id, self.n_samples, prior)
+                pose_wd, pose_rg, sample_status, _ = self.sampler.sample(sample_data.obj_id, self.n_samples, prior, allow_outside=False)
                 if sample_status is not SampleStatus.SUCCESS:
                     print(f"Sample {sample_data.obj_id} failed")
                     continue
