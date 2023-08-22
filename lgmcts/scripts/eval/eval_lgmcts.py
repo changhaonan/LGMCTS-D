@@ -41,6 +41,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
 
     for i in range(10):
+        print(f"==== Episode {i} ====")
         ## Step 1. init the env from dataset
         env.reset()
         prompt_generator.reset()
@@ -73,12 +74,11 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
             }
             # execute action
             env.step(action)
-            time.sleep(3.0)
+        time.sleep(1.0)  # stop a while for eyeballing
         # test the env & sampler alignment
 
         ## Step 4. evaluate the result
         exe_result = task.check_success(obj_poses=env.get_obj_poses())
-        print(f"==== Episode {i} ====")
         print(f"Success: {exe_result.success}")
 
 
