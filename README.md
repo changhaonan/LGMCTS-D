@@ -2,7 +2,7 @@
 
 ## How to run
 
-1. Generate data
+1. Generate data (LGMCTS)
 
 ```
 python lgmcts/scripts/data_generation/gen_lgmcts.py
@@ -14,6 +14,11 @@ python lgmcts/scripts/data_generation/gen_lgmcts.py
 python lgmcts/scripts/eval/eval_lgmcts.py
 ```
 
+## Generate data for StructDiffusion
+
+```
+python lgmcts/scripts/data_generation/gen_strdiff.py
+```
 
 ## Output format
 
@@ -29,7 +34,7 @@ Point cloud & pose are all padded with zero. Their shape is of (max_num_obj * ma
 
 ## BUG
 
-- I don't know why there is a white line?
+- Currently, the sequential sampling is not working. Need to be fixed.
 
 ## TODO:
 

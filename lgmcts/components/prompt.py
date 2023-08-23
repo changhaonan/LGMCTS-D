@@ -1,5 +1,6 @@
 """Template to generate prompt
 We majorly care three different prompts and their combination:
+0. Anchor: (Define a anchor objects)  # Object-selection
 1. Region: Put/Place/Leave {objs} at/in/on {region}
 2. Pattern: Put/Place/Leave {objs} at/in/on {pattern}
 3. Pair: Put/Place/Leave {obj1} {relation} {obj2}
@@ -26,6 +27,9 @@ class PromptGenerator:
         self.region_prompt = ""
         self.pattern_prompt = ""
         self.pair_prompt = ""
+
+    def gen_anchor_prompt(self):
+        pass
 
     def gen_pattern_prompt(self, pattern_objs: list[str], pattern: str):
         """Generate pattern prompt"""

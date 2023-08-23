@@ -114,6 +114,7 @@ class StructRearrange(BaseTask):
 
     def gen_goal_spec(self, env):
         """goal specification; used for StructDiffusion"""
+        #FIXME: what does these contents mean?
         spec = super().gen_goal_spec(env)
         # anchor object
         spec["anchor"] = {
@@ -143,10 +144,12 @@ class StructRearrange(BaseTask):
 
         # shape information (pattern)
         # append pattern information
-        self.goal_pattern_info["position"] = utils.pix_to_xyz(self.goal_pattern_info["position_pixel"], None, env.bounds, env.pix_size, True)
-        if "radius_pixel" in self.goal_pattern_info:
-            self.goal_pattern_info["radius"] = self.goal_pattern_info["radius_pixel"] * env.pix_size
-        spec["shape"] = self.goal_pattern_info
+        goal = self.goals[0]  # FIXME: currently we only support one goal for struct_diffusion
+        shape_info = {}
+        shape_info["position"] = utils.pix_to_xyz(goal["position_pixel"][:2], None, env.bounds, env.pix_size, True)
+        if "radius_pixel" in goal:
+            shape_info["radius"] = goal["radius_pixel"] * env.pix_size
+        spec["shape"] = shape_info
 
         return spec
 
@@ -161,13 +164,14 @@ class StructRearrange(BaseTask):
             type_vocabs["color"][color.name] = i
         return type_vocabs
 
-    def gen_goal_config(self, env, prompt: PromptGenerator):
+    def gen_goal_config(self, env, prompt: PromptGenerator) -> tuple[str, dict]:
         """Generate goal config"""
         max_try = 3  # max try for sampling
         #TODO: add region prompt later, currently not supported
         ## Step 1: generate a random pattern
         pattern_type = env.rng.choice(self.pattern_types)
-        max_num_pattern = int(self.max_num_obj/2)
+        # max_num_pattern = int(self.max_num_obj/2)
+        max_num_pattern = 3
         for i in range(max_try):
             try:
                 pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
@@ -184,37 +188,37 @@ class StructRearrange(BaseTask):
         self.goals.append(pattern_info)
         ## Step 2: add some more objects & spatial relationship
         # max_num_add = int(self.max_num_obj/4)
-        max_num_add = 1  #FIXME: only add one object for now
-        added_obj_ids = self.add_objects_to_random(env, max_num_add, False, self.stack_prob)
-        # randomly select one from pattern obj and added obj
-        pair_obj_ids = env.rng.choice(pattern_obj_ids + added_obj_ids, 2)
-        pair_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pair_obj_ids]
-        # compute spatial from the pair
-        aabb_1 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[0])
-        aabb_2 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[1])
-        pose_1 = spatial_utils.Points9.from_aabb(aabb_1[0], aabb_1[1])
-        pose_2 = spatial_utils.Points9.from_aabb(aabb_2[0], aabb_2[1])
-        spatial_label = spatial_utils.Points9.label(pose_1, pose_2)
-        spatial_str_list = spatial_utils.Points9.vocabulary(spatial_label)
-        if spatial_str_list[0] != "A has no relationship with B":
-            spatial_rel = self.rng.choice(spatial_str_list)
-            prompt.gen_pair_prompt(pair_obj_names[0], pair_obj_names[1], spatial_rel[4:-1].strip())
-            # update goal
-            self.goals.append(
-                {
-                "type": "pattern:spatial",
-                "obj_ids": pair_obj_ids,
-                "spatial_label": spatial_label,
-                "spatial_str": spatial_rel
-                }
-            )
+        # max_num_add = 1  #FIXME: only add one object for now
+        # added_obj_ids = self.add_objects_to_random(env, max_num_add, False, self.stack_prob)
+        # # randomly select one from pattern obj and added obj
+        # pair_obj_ids = env.rng.choice(pattern_obj_ids + added_obj_ids, 2)
+        # pair_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pair_obj_ids]
+        # # compute spatial from the pair
+        # aabb_1 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[0])
+        # aabb_2 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[1])
+        # pose_1 = spatial_utils.Points9.from_aabb(aabb_1[0], aabb_1[1])
+        # pose_2 = spatial_utils.Points9.from_aabb(aabb_2[0], aabb_2[1])
+        # spatial_label = spatial_utils.Points9.label(pose_1, pose_2)
+        # spatial_str_list = spatial_utils.Points9.vocabulary(spatial_label)
+        # if spatial_str_list[0] != "A has no relationship with B":
+        #     spatial_rel = self.rng.choice(spatial_str_list)
+        #     prompt.gen_pair_prompt(pair_obj_names[0], pair_obj_names[1], spatial_rel[4:-1].strip())
+        #     # update goal
+        #     self.goals.append(
+        #         {
+        #         "type": "pattern:spatial",
+        #         "obj_ids": pair_obj_ids,
+        #         "spatial_label": spatial_label,
+        #         "spatial_str": spatial_rel
+        #         }
+        #     )
         # Env step forward
         obs, _, _, _, _ = env.step()
         #
         self.prompt = prompt.prompt
         return self.prompt, obs
 
-    def gen_start_config(self, env):
+    def gen_start_config(self, env) -> dict:
         """Generate a random config using existing objects"""
         self.add_objects_to_random(env, self.max_num_obj, True, self.stack_prob)
 

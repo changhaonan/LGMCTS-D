@@ -17,6 +17,7 @@ import lgmcts
 import lgmcts.utils.file_utils as U
 import lgmcts.utils.misc_utils as utils
 from lgmcts import PARTITION_TO_SPECS
+from lgmcts.components.prompt import PromptGenerator
 
 MAX_TRIES_PER_SEED = 999
 
@@ -25,11 +26,11 @@ def _generate_data_for_one_task(
     task_kwargs: dict | None,
     modalities,
     num_episodes: int,
-    success_only: bool,
     save_path: str,
     num_save_digits: int,
     seed: int | None = None,
 ):
+    # prepare path
     save_path = U.f_join(save_path, task_name)
     save_path = os.path.join(save_path, "circle/result")
     os.makedirs(save_path, exist_ok=True)
@@ -40,11 +41,18 @@ def _generate_data_for_one_task(
     num_tried_this_seed = 0
     tbar = tqdm(total=num_episodes, desc=task_name, leave=True)
 
-    # Init env & task
+    # init
     env = lgmcts.make(
-        task_name=task_name, task_kwargs=task_kwargs, modalities=modalities, seed=seed
+        task_name=task_name, 
+        task_kwargs=task_kwargs, 
+        modalities=modalities, 
+        seed=seed, 
+        debug=False, 
+        display_debug_window=False,
+        hide_arm_rgb=True,
     )
     task = env.task
+    prompt_generator = PromptGenerator(env.rng)
     export_file_list = []
 
     while True:
@@ -52,28 +60,29 @@ def _generate_data_for_one_task(
             env.set_seed(seed + n_generated)
             num_tried_this_seed += 1
             obs_cache = []
-            action_cache = []
-            goal_specs = []
 
             step_t = 0
-            # Start-config
-            obs = env.reset()
-            obs_cache.append(obs)
-            elapsed_steps = 0
-            meta, prompt, prompt_assets, goal_spec = env.meta_info, env.prompt, env.prompt_assets, env.goal_specification
+            # reset
+            env.reset()
+            prompt_generator.reset()
 
-            # Set to start state
-            obs = task.start(env)
+            # generate goal
+            prompt_str, obs = task.gen_goal_config(env, prompt_generator)
             obs_cache.append(obs)
+
+            # generate start    
+            obs = task.gen_start_config(env)
+            goal_spec = task.gen_goal_spec(env)
+            obs_cache.append(obs)
+
             step_t += 1
-
-            # Run
         except Exception as e:
             print(e)
             seed += 1
             num_tried_this_seed = 0
             continue
-
+        
+        ## Process output data
         obs = U.stack_sequence_fields(obs_cache)
         # save data into hdf5, which is required by the data loader
         view = "top"
@@ -93,8 +102,8 @@ def _generate_data_for_one_task(
             depth = rearrange(depth[view], "t c h w -> t h w c")
             f.create_dataset("depth", data=depth)
             # depth_min & depth_max
-            depth_min = np.min(depth) * np.ones([2, 1], dtype=np.float32)
-            depth_max = np.max(depth) * np.ones([2, 1], dtype=np.float32)
+            depth_min = np.min(depth) * np.ones([2,], dtype=np.float32)
+            depth_max = np.max(depth) * np.ones([2,], dtype=np.float32)
             f.create_dataset("depth_min", data=depth_min)
             f.create_dataset("depth_max", data=depth_max)
             # camera related
@@ -129,14 +138,14 @@ def _generate_data_for_one_task(
             break
     tbar.close()
 
-    # Generate index
+    # generate index
     indices_all = []
     for i, file in enumerate(export_file_list):
         indices_all.append((file, i))
     with open(os.path.join(save_path, "index/test_arrangement_indices_file_all.txt"), "w") as f:
         json.dump(indices_all, f)
 
-    # Generate vocabulary
+    # generate vocabulary
     type_vocab = task.gen_type_vocabs()
     with open(os.path.join(save_path, "../type_vocabs_coarse.json"), "w") as f:
         json.dump(type_vocab, f)
@@ -149,7 +158,6 @@ if __name__ == '__main__':
         PARTITION_TO_SPECS["train"][task_name],
         modalities=["rgb", "segm", "depth"],
         num_episodes=10,
-        success_only=True,
         save_path="/Users/haonanchang/Projects/LGMCTS-D/output/struct_diffusion",
         num_save_digits=8,
         seed=0,

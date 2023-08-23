@@ -1,6 +1,7 @@
 """Evaluate the performace of lgmcts system"""
 from __future__ import annotations
 import os
+import time
 import pickle
 import lgmcts
 import numpy as np
@@ -21,9 +22,9 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
     resolution = 0.01
-    n_samples = 1
+    n_samples = 5
     num_save_digits = 6
-
+    debug = True  # control debug vis
     env = lgmcts.make(
         task_name=task_name, 
         task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name], 
@@ -40,6 +41,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
 
     for i in range(1):
+        print(f"==== Episode {i} ====")
         ## Step 1. init the env from dataset
         env.reset()
         prompt_generator.reset()
@@ -49,7 +51,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
         env.load_checkpoint(checkpoint_path)
         # update region sampler
         region_sampler.load_objs_from_env(env)
-        # region_sampler.visualize()
+        region_sampler.visualize()
 
         ## Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
         goals = task.goals
@@ -79,10 +81,11 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
             }
             # execute action
             env.step(action)
+        time.sleep(1.0)  # stop a while for eyeballing
+        # test the env & sampler alignment
 
         ## Step 4. evaluate the result
-        exe_result = task.check_success(env.get_obj_poses())
-        print(f"==== Episode {i} ====")
+        exe_result = task.check_success(obj_poses=env.get_obj_poses())
         print(f"Success: {exe_result.success}")
 
 

@@ -5,10 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Gen data",
+            "name": "Gen [lgmcts]",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_lgmcts.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Gen [strdiff]",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_strdiff.py",
             "console": "integratedTerminal",
             "justMyCode": false
         },
