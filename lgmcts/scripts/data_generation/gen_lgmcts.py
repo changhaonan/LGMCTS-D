@@ -66,7 +66,7 @@ if __name__ == '__main__':
         PARTITION_TO_SPECS["train"][task_name],
         modalities=["rgb", "segm"],
         num_episodes=10,
-        save_path="/Users/haonanchang/Projects/LGMCTS-D/output",
+        save_path="/home/kai/LLM_M/LGMCTS-D/output",
         num_save_digits=6,
         seed=0,
     )

@@ -3,6 +3,7 @@
 from __future__ import annotations
 import numpy as np
 from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData
+from lgmcts.algorithm.mcts import MCTS
 
 class SamplingPlanner:
     """Sequential sampling, we provide a set of goals, and sample them one by one"""
@@ -21,6 +22,8 @@ class SamplingPlanner:
         """
         if algo == "seq":
             return self.plan_seq(goals, **kwargs)
+        elif algo == "mcts":
+            return self.plan_mcts(goals, **kwargs)
         else:
             raise NotImplementedError
 
@@ -54,4 +57,30 @@ class SamplingPlanner:
                     "new_pose": pose_wd[0].astype(np.float32),
                 })
         return action_list
+
+
+
+    def plan_mcts(self, goals: list[SampleData], **kwargs):
+        """
+        Task planning with MCTS
+        Args:
+            goals: list of SampleData
+        Return:
+            action_list: list of actions
+        """
+        prior_dict = kwargs.get("prior_dict", {})
+        sampled_obj_poses_pix = {}  # keep track of sampled object poses
+        action_list = []
+        cur_obj_poses = self.sampler.get_object_poses()
+
+        sampler_planner = MCTS(
+            region_sampler=self.sampler,
+            L=goals,
+            prior_dict=prior_dict,
+            verbose=True,
+        )
+
+        sampler_planner.search()
+
+        return sampler_planner.action_list
 

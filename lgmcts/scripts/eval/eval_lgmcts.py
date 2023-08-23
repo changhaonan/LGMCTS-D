@@ -39,7 +39,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
 
-    for i in range(10):
+    for i in range(1):
         ## Step 1. init the env from dataset
         env.reset()
         prompt_generator.reset()
@@ -59,9 +59,16 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
             for goal_obj_id in goal_obj_ids:
                 sample_data = SampleData(goal["type"].split(":")[-1], goal_obj_id, goal["obj_ids"], {})
                 L.append(sample_data)
+        L = L[:-2]
+
+        L = [
+            SampleData('line', 5, [5,6,7], {}),
+            SampleData('line', 6, [5,6,7], {}),
+            SampleData('line', 7, [5,6,7], {}),
+        ]
 
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo="seq", prior_dict=PATTERN_DICT)
+        action_list = sampling_planner.plan(L, algo="mcts", prior_dict=PATTERN_DICT)
         for step in action_list:
             # assemble action
             action = {
@@ -80,5 +87,5 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
 
 
 if __name__ == "__main__":
-    dataset_path = "/Users/haonanchang/Projects/LGMCTS-D/output/struct_rearrange"
+    dataset_path = "/home/kai/LLM_M/LGMCTS-D/output/struct_rearrange"
     eval_offline(dataset_path)
