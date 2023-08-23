@@ -102,8 +102,8 @@ def _generate_data_for_one_task(
             depth = rearrange(depth[view], "t c h w -> t h w c")
             f.create_dataset("depth", data=depth)
             # depth_min & depth_max
-            depth_min = np.min(depth) * np.ones([2, 1], dtype=np.float32)
-            depth_max = np.max(depth) * np.ones([2, 1], dtype=np.float32)
+            depth_min = np.min(depth) * np.ones([2,], dtype=np.float32)
+            depth_max = np.max(depth) * np.ones([2,], dtype=np.float32)
             f.create_dataset("depth_min", data=depth_min)
             f.create_dataset("depth_max", data=depth_max)
             # camera related

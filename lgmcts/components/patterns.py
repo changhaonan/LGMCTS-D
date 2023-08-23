@@ -435,7 +435,7 @@ class SineCurvePattern(Pattern):
         return not (np.max(np.linalg.norm(dists)) > threshold)
 
 
-#TODO: we need to add more patterns here, e.g. circle, rectangle, spatial, etc. @Alex
+#TODO: we need to add more patterns here: 3D patterns, such as tower, random fitting pattern, such as dinner.
 
 
 ## PATTERN DICT
@@ -446,3 +446,8 @@ PATTERN_DICT = {
     "rectangle": RectanglePattern,
     "sine": SineCurvePattern
 }
+
+
+## Test code
+if __name__ == "__main__":
+    pass
