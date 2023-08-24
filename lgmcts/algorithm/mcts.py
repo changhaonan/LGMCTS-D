@@ -10,6 +10,7 @@ import numpy as np
 import math
 import random
 from typing import Union
+import cv2
 
 from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData, SampleStatus,\
     sample_distribution, ObjectData
@@ -43,6 +44,7 @@ class Node(object):
         num_sampling=1,
         prior_dict={},
         verbose=False,
+        rng = None
     ) -> None:
 
         self.node_id = node_id
@@ -62,6 +64,7 @@ class Node(object):
         self.num_sampling = num_sampling
         self.prior_dict = prior_dict
         self.verbose = verbose
+        self.rng = rng
 
         self.segmentation = None # segmentation of the workspace, will be generated only once when needed
 
@@ -100,7 +103,7 @@ class Node(object):
 
     def expansion(self):
         """expand the MCTS tree"""
-        sampler_id = random.choice(list(self.unvisited_actions.keys()))
+        sampler_id = self.rng.choice(list(self.unvisited_actions.keys()))
         trial_id = self.unvisited_actions[sampler_id].pop(0)
         if len(self.unvisited_actions[sampler_id]) == 0:
             del self.unvisited_actions[sampler_id]
@@ -185,13 +188,11 @@ class Node(object):
                 obj_id=sample_data.obj_id, 
                 obj_ids=sample_data.obj_ids,
                 obj_poses_pix=sampled_obj_poses_pix)
+            # cv2.imshow("prior", prior)
+            # cv2.waitKey(0)
             # sample
-            ret = region.sample(sample_data.obj_id, 1, prior)
-            if len(ret) == 4: # success
-                valid_pose, _, samples_status, _ = ret
-                valid_pose = valid_pose.reshape(-1)
-            else: # failure
-                _, samples_status, _ = ret
+            valid_pose, _, samples_status, _ = region.sample(sample_data.obj_id, 1, prior)
+            valid_pose = valid_pose.reshape(-1)
         else:
             raise NotImplementedError
         
@@ -250,11 +251,13 @@ class MCTS(object):
         UCB_scalar=1.0,
         prior_dict={},
         verbose: bool = False,
+        seed = 0
     ) -> None:
-
+        self.rng = np.random.default_rng(seed=seed)
         self.settings = {
             "UCB_scalar": UCB_scalar,
             "prior_dict": prior_dict,
+            "rng": self.rng
         }
         self.region_sampler = region_sampler
         self.sampler_dict = {s.obj_id: s for s in L}
@@ -279,6 +282,7 @@ class MCTS(object):
         self.num_iter = 0
         # config
         self.verbose = verbose
+        
 
     def reset(self):
         """reset the sampler planner"""
