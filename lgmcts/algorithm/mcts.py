@@ -192,7 +192,8 @@ class Node(object):
             # cv2.waitKey(0)
             # sample
             valid_pose, _, samples_status, _ = region.sample(sample_data.obj_id, 1, prior)
-            valid_pose = valid_pose.reshape(-1)
+            if valid_pose.shape[0] > 0:
+                valid_pose = valid_pose.reshape(-1)
         else:
             raise NotImplementedError
         

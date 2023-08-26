@@ -12,6 +12,7 @@ import lgmcts.utils.pybullet_utils as pb_utils
 from lgmcts.tasks import BaseTask
 from lgmcts.env.base import BaseEnv
 from lgmcts.components.prompt import PromptGenerator
+from lgmcts.components.obj_selector import ObjectSelector
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 from lgmcts.components.patterns import PATTERN_DICT
 
@@ -40,7 +41,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
 
-    for i in range(1):
+    for i in range(3):
         print(f"==== Episode {i} ====")
         ## Step 1. init the env from dataset
         env.reset()
@@ -90,5 +91,6 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
 
 
 if __name__ == "__main__":
-    dataset_path = "/home/kai/LLM_M/LGMCTS-D/output/struct_rearrange"
+    root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+    dataset_path = f"{root_path}/output/struct_rearrange"
     eval_offline(dataset_path)

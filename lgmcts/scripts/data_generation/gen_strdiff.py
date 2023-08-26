@@ -156,12 +156,13 @@ def _generate_data_for_one_task(
 
 if __name__ == '__main__':
     task_name = "struct_rearrange"
+    root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
     _generate_data_for_one_task(
         task_name,
         PARTITION_TO_SPECS["train"][task_name],
         modalities=["rgb", "segm", "depth"],
         num_episodes=10,
-        save_path="/Users/haonanchang/Projects/LGMCTS-D/output/struct_diffusion",
+        save_path=f"{root_path}/output/struct_diffusion",
         num_save_digits=8,
         seed=0,
     )

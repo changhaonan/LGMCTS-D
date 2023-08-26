@@ -355,7 +355,7 @@ class Region2DSampler(Region2D):
             assert prior.shape[:2] == free_space.shape[:2], "prior shape must be the same as free shape"
             free_space = np.multiply(free_space, prior)
         if np.sum(free_space) == 0:
-            return [], [], SampleStatus.NO_SPACE, {}
+            return np.array([]), np.array([]), SampleStatus.NO_SPACE, {}
         samples_reg, sample_probs = sample_distribution(prob=free_space, rng=self.rng, n_samples=n_samples)  # (N, 2)
         #
         samples_reg = np.concatenate([samples_reg, np.zeros((samples_reg.shape[0], 1))], axis=1)  # (N, 3)

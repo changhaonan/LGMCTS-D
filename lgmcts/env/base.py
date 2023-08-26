@@ -19,6 +19,8 @@ import gym
 from matplotlib import pyplot as plt
 from PIL import Image
 from anytree import Node, RenderTree
+from anytree.exporter import JsonExporter
+from anytree.importer import JsonImporter
 from lgmcts.tasks.base import BaseTask
 from lgmcts.tasks import ALL_TASKS as _ALL_TASKS
 import lgmcts.utils.pybullet_utils as pybullet_utils
@@ -738,11 +740,14 @@ class BaseEnv:
         env_state["obj_ids"] = self.obj_ids
         env_state["obj_dyn_info"] = self.obj_dyn_info
         env_state["obj_id_reverse_mapping"] = self.obj_id_reverse_mapping
-        env_state["obj_support_tree"] = self.obj_support_tree
         env_state["obj_poses"] = self.get_obj_poses()
         env_state["meta_info"] = self.meta_info
         # task related
         env_state["task_state"] = self.task.get_state()
+        # support tree
+        exporter = JsonExporter(indent=10, sort_keys=True)  # depth of 10
+        env_state["obj_support_tree"] = exporter.export(self.obj_support_tree)
+        # output
         with open(check_point_path, "wb") as f:
             pickle.dump(env_state, f)
 
@@ -762,8 +767,9 @@ class BaseEnv:
             obj_pose = (obj_poses[obj_id][:3], obj_poses[obj_id][3:7])  # tuple: (pos, rot)
             self.add_object_to_env(obj_entry, color=color_entry, size=obj_size, pose=obj_pose, category="rigid", retain_temp=False)
             # pybullet_utils.p_change_texture(obj_id, color_entry, self.client_id)
-        self.obj_support_tree = env_state["obj_support_tree"]
-
+        # support tree
+        self.obj_support_tree = JsonImporter().import_(env_state["obj_support_tree"])
+        print(RenderTree(self.obj_support_tree))
         # load task
         task_state = env_state["task_state"]
         self.task.set_state(task_state)
