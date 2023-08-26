@@ -309,6 +309,7 @@ class MCTS(object):
             current_node = self.selection()
             # an action in MCTS is represented by (sampler_id, trail_id), 
             # the index is according to L and the num_sample children list
+            #TODO: do K sampling at the same time @KAI
             action, moved_obj, new_position, solved_sampler_obj_id = current_node.expansion()
             if new_position is not None: # go to a new state
                 new_node = self.move(
@@ -338,6 +339,7 @@ class MCTS(object):
             current_node.children[action[0]].append(new_node)
 
             # update reward
+            #TODO: new reward function @KAI
             reward = self.reward_detection(new_node)
             self.back_propagation(new_node, reward)
             if reward == len(self.sampler_dict):

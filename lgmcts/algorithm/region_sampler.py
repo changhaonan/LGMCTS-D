@@ -16,6 +16,7 @@ import cv2
 import copy
 import open3d as o3d
 import colorsys
+import anytree
 
 
 class SampleStatus(Enum):
@@ -112,6 +113,7 @@ class Region2DSampler(Region2D):
     ):
         super().__init__(resolution, grid_size, world2region, name, **kwargs)
         self.objects : Dict[int, ObjectData] = {}
+        self.obj_support_tree: anytree.Node = None  # support structure
         self.rng = np.random.default_rng(seed=seed)
 
     def reset(self):
@@ -526,6 +528,7 @@ class Region2DSamplerLGMCTS(Region2DSampler):
             self.add_object(obj_id=obj_id, points=obj_pcd, pos_ref=pos_ref, name=obj_name, color=color, mask_mode=mask_mode)
             # set object pose
             self.set_object_pose(obj_id, obj_pose)
+        self.obj_support_tree = env.obj_support_tree
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ import lgmcts
 import lgmcts.utils.file_utils as U
 from lgmcts import PARTITION_TO_SPECS
 from lgmcts.components.prompt import PromptGenerator
+from lgmcts.components.obj_selector import ObjectSelector
 
 MAX_TRIES_PER_SEED = 999
 
@@ -40,6 +41,7 @@ def _generate_data_for_one_task(
     )
     task = env.task
     prompt_generator = PromptGenerator(env.rng)
+    obj_selector = ObjectSelector(env.rng)
     tbar = tqdm(total=num_episodes, desc=task_name, leave=True)
 
     print("Generate dataset...")
@@ -47,9 +49,10 @@ def _generate_data_for_one_task(
         # reset
         env.reset()
         prompt_generator.reset()
+        obj_selector.reset()
 
         # generate goal
-        task.gen_goal_config(env, prompt_generator)
+        task.gen_goal_config(env, prompt_generator, obj_selector)
         task.gen_start_config(env)
         
         # save

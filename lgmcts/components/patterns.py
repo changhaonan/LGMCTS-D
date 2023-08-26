@@ -8,24 +8,24 @@ from scipy.optimize import curve_fit
 import cv2
 
 
-class Pattern(ABC):
+class Pattern:
     """Base pattern type, needs to implement generate, check method
     """
     name: str = ""
 
-    @abstractclassmethod
+    @classmethod
     def gen_prior(cls, size, rng, **kwargs):
         """Generate a pattern prior:
         Args: 
             rng: random generator
         """
-        raise NotImplementedError
+        return None, None
     
-    @abstractclassmethod
+    @classmethod
     def check(cls, obj_poses: dict[int, np.ndarray], **kwargs):
         """Check if the object states meet the pattern requirement
         """
-        raise NotImplementedError
+        return True
 
 
 ## Implementation of patterns
@@ -441,6 +441,7 @@ class SineCurvePattern(Pattern):
 ## PATTERN DICT
 
 PATTERN_DICT = {
+    "uniform": Pattern,
     "line": LinePattern,
     "circle": CirclePattern,
     "rectangle": RectanglePattern,
