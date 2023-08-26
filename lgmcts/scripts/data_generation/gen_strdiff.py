@@ -18,6 +18,7 @@ import lgmcts.utils.file_utils as U
 import lgmcts.utils.misc_utils as utils
 from lgmcts import PARTITION_TO_SPECS
 from lgmcts.components.prompt import PromptGenerator
+from lgmcts.components.obj_selector import ObjectSelector
 
 MAX_TRIES_PER_SEED = 999
 
@@ -47,12 +48,13 @@ def _generate_data_for_one_task(
         task_kwargs=task_kwargs, 
         modalities=modalities, 
         seed=seed, 
-        debug=False, 
-        display_debug_window=False,
+        debug=True, 
+        display_debug_window=True,
         hide_arm_rgb=True,
     )
     task = env.task
     prompt_generator = PromptGenerator(env.rng)
+    obj_selector = ObjectSelector(env.rng)
     export_file_list = []
 
     while True:
@@ -65,9 +67,10 @@ def _generate_data_for_one_task(
             # reset
             env.reset()
             prompt_generator.reset()
+            obj_selector.reset()
 
             # generate goal
-            prompt_str, obs = task.gen_goal_config(env, prompt_generator)
+            prompt_str, obs = task.gen_goal_config(env, prompt_generator, obj_selector)
             obs_cache.append(obs)
 
             # generate start    

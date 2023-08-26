@@ -128,7 +128,7 @@ class Node(object):
             self.object_states,
             sampler,
         )
-        solved_sampler_obj_id,_ = action
+        solved_sampler_obj_id, _ = action
         if not success: # fails to complete the sampling, do 
             if obs is None:
                 # fails but not because of collision (e.g., out of workspace)
@@ -149,7 +149,6 @@ class Node(object):
                 solved_sampler_obj_id = None
         return action, moved_obj, new_position, solved_sampler_obj_id
 
-
     def sampling_function(
             self,
             region: Region2DSampler,
@@ -164,7 +163,7 @@ class Node(object):
         Params:
             RegionSampler, obj_name, origin_name, direction
         Returns: 
-            success, obs_name, action:(obj_name,new_pos)
+            success, obs_name, action:(obj_name, new_pos)
         """
         obj_id = sample_data.obj_id
         
@@ -173,12 +172,13 @@ class Node(object):
         
         # keep track of sampled object poses
         sampled_obj_poses_pix = {} 
-        pattern_objs = sample_data.obj_ids # objects involved in the sampling pattern
-        objs_away_from_goal = list(self.sampler_dict.keys()) # pattern objects away from goal
+        pattern_objs = sample_data.obj_ids  # objects involved in the sampling pattern
+        objs_away_from_goal = list(self.sampler_dict.keys())  # pattern objects away from goal
         objs_at_goal = [
             pattern_obj for pattern_obj in pattern_objs 
             if (pattern_obj != obj_id) and (pattern_obj not in objs_away_from_goal) 
             ] # pattern objects at goal
+        #FIXME: this could be a problem here, because there is an offset
         sampled_obj_poses_pix = {tuple(region._world2region(object_states[obj][:3])[:2]) for obj in objs_at_goal}
 
         # update prior
@@ -204,7 +204,7 @@ class Node(object):
         if not success: # find an obstacle
             # segmentation->sample on prior->find collision
             if self.segmentation is None:
-                self.segmentation = self.semetic_segmentation(region)
+                self.segmentation = self.semantic_segmentation(region)
             while 1:
                 samples_reg, sample_probs = sample_distribution(prob=prior, rng=region.rng, n_samples=1)  # (N, 2)
                 obs_id  = self.segmentation[samples_reg[0][0], samples_reg[0][1], 0]
@@ -216,10 +216,10 @@ class Node(object):
 
         return success, obs_id, action
 
-
-    def semetic_segmentation(self, region:Region2DSampler):
+    def semantic_segmentation(self, region:Region2DSampler):
+        #TODO: Merge this part into sampler
         # semetic segmentation of the workspace
-        segmentation = -1.0*np.ones((region.grid_size[0], region.grid_size[1], 3), dtype=np.float32)
+        segmentation = -1.0 * np.ones((region.grid_size[0], region.grid_size[1], 3), dtype=np.float32)
         # objects
         for obj_id, obj_data in region.objects.items():
             region._put_mask(
@@ -230,15 +230,13 @@ class Node(object):
             )
         return segmentation
 
-        
-    
+
 class MCTS(object):
     """
     Input:
     1. region_sampler: current arrangement of objects
     2. L: A list of samplers [SamplerData1, SamplerData2,...]
     3. 'UCB_scalar':(float) UCB coefficients
-
 
     Output:
     1. a sequence of actions (o_i, p_i)
@@ -282,7 +280,6 @@ class MCTS(object):
         self.num_iter = 0
         # config
         self.verbose = verbose
-        
 
     def reset(self):
         """reset the sampler planner"""
@@ -301,7 +298,6 @@ class MCTS(object):
         self.isfeasible = False
         self.num_iter = 0
 
-    
     def search(self, max_iter: int = 10000, log_step: int = 1000) -> bool:
         """search for a feasible plan"""
         num_iter = 0
@@ -378,7 +374,6 @@ class MCTS(object):
         if solved_sampler_obj_id is None:
             solved_sampler_obj_id = float("inf")
             
-
         new_sampler_dict = {obj_id:sampler for obj_id, sampler in current_node.sampler_dict.items() if obj_id != solved_sampler_obj_id}
         
         # If we are moving an obstacle, the moved object may be an object moved to goal, 
@@ -442,17 +437,11 @@ class MCTS(object):
             current_node = parent_node
         self.action_list.reverse()
 
-
-
 def deepcopy_class_object(obj):
     """fast way to deepcopy class objects, e.g., region sampler or sampler"""
     # return ujson.loads(ujson.dumps(obj))
     return copy.deepcopy(obj)
 
-
 def deepcopy_graph(g):
     """fast way to deepcopy a graph"""
     return {k: v for k, v in g.items()}
-
-
-

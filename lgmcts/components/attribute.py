@@ -55,7 +55,7 @@ class ObjectBag:
     color_value: list[float]
 
 
-def get_object_bag(obj_id: int, obj_entry: ObjEntry, texture_entry: TextureEntry) -> ObjectBag:
+def get_object_bag(obj_id, obj_entry: ObjEntry, texture_entry: TextureEntry) -> ObjectBag:
     """Get object bag"""
     obj_size = [obj_entry.size_range.high[0] - obj_entry.size_range.low[0],
                 obj_entry.size_range.high[1] - obj_entry.size_range.low[1], 
@@ -93,6 +93,6 @@ def compare_name(obj_1: ObjectBag, obj_2: ObjectBag) -> CompareRel:
 
 COMPARE_DICT = {
     "color": compare_color,
-    "size": compare_size,
-    "name": compare_name
+    # "size": compare_size,
+    # "name": compare_name
 }

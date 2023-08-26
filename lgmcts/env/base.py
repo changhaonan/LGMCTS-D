@@ -538,7 +538,7 @@ class BaseEnv:
             pos_stack, _ = pybullet_utils.get_obj_pose(self, obj_stack_id)
             obj_stack_size = self.obj_dyn_info["size"][obj_stack_id]
             obj_stack_base = np.array(pos_stack) + np.array([0, 0, obj_stack_size[2] / 2])
-            pos = obj_stack_base + np.array([0, 0, obj_size[2] / 2])
+            pos = obj_stack_base + np.array([0, 0, obj_size[2] / 2]) + np.array([0, 0, 0.01])  # 1cm above
         else:
             # Randomly sample an object pose within free-space pixels.
             free = np.ones(obj_mask.shape, dtype=np.uint8)

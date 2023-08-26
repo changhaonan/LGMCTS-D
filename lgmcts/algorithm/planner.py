@@ -69,8 +69,6 @@ class SamplingPlanner:
                     self.sampler.visualize()  # show the new pose
         return action_list
 
-
-
     def plan_mcts(self, goals: list[SampleData], **kwargs):
         """
         Task planning with MCTS
@@ -92,6 +90,4 @@ class SamplingPlanner:
         )
 
         sampler_planner.search()
-
         return sampler_planner.action_list
-

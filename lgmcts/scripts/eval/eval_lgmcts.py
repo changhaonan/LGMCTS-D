@@ -64,9 +64,9 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
         L = L[:-2]
 
         L = [
-            SampleData('line', 5, [5,6,7], {}),
-            SampleData('line', 6, [5,6,7], {}),
-            SampleData('line', 7, [5,6,7], {}),
+            SampleData('line', 5, [5, 6, 7], {}),
+            SampleData('line', 6, [5, 6, 7], {}),
+            SampleData('line', 7, [5, 6, 7], {}),
         ]
 
         ## Step 3. generate & exectue plan

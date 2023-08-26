@@ -10,33 +10,75 @@ class ObjectSelector:
     def __init__(self,  rng):
         self.rng = rng
         self.obj_bag_list = []
+        self.obj_list = []
+        self.texture_list = []
+        self.size_list = []  #FIXME: to implement it
 
     def reset(self):
         """Reset"""
-        self.obj_bag_list = []   
+        self.obj_bag_list = []
+        self.obj_list = []
+        self.texture_list = []
+        self.size_list = []
     
-    def set_objs(self, obj_id_list, obj_list: list[ObjEntry], texture_list: list[TextureEntry]):
+    def set_objs(self, obj_list: list[ObjEntry], texture_list: list[TextureEntry]):
         """Set objects"""
-        assert len(obj_list) == len(texture_list)
-        for obj_id, obj_entry, texture_entry in zip(obj_id_list, obj_list, texture_list):
-            self.obj_bag_list.append(get_object_bag(obj_id, obj_entry, texture_entry))
+        #TODO: add size and other pre-selection
+        self.obj_list = obj_list
+        self.texture_list = texture_list
+        assert len(obj_list) == len(texture_list), "Object and texture list should have the same length"
+        for id, (obj_entry, texture_entry) in enumerate(zip(obj_list, texture_list)):
+            self.obj_bag_list.append(get_object_bag(id, obj_entry.value, texture_entry.value))
 
     def select_obj(self, anchor_obj_bag: ObjectBag, attribute: str, compare_rel: CompareRel):
         """Select object based on attribute
         """
         assert attribute in COMPARE_DICT, f"Attribute {attribute} not supported"
-        selected_list = []
+        selected_obj = []
+        selected_color = []
+        selected_size = []
+        # check self-include
+        self_include = False
+        if compare_rel == EqualRel():
+            selected_obj.append(self.obj_list[anchor_obj_bag.obj_id])
+            selected_color.append(self.texture_list[anchor_obj_bag.obj_id])
+            # selected_size.append(self.size_list[anchor_obj_bag.size_id])
+            self_include = True
         for obj_bag in self.obj_bag_list:
             if compare_rel == COMPARE_DICT[attribute](obj_bag, anchor_obj_bag):
-                selected_list.append(obj_bag.obj_id)
-        return selected_list
+                selected_obj.append(self.obj_list[obj_bag.obj_id])
+                selected_color.append(self.texture_list[obj_bag.obj_id])
+                # selected_size.append(self.size_list[obj_bag.size_id])
+        return selected_obj, selected_color, selected_size, self_include
 
     def gen_anchor_obj_prompt(self):
         """Based on the obj we have, generate a valid anchor obj prompt"""
-        anchor_obj_bag = self.rng.choice(self.obj_bag_list)
-        anchor_obj = anchor_obj_bag.obj_name
-        attribute = self.rng.choice(COMPARE_DICT.keys())
-        compare_rel = self.rng.choice([EqualRel(), DifferentRel(), SmallerRel(), BiggerRel()])
-        compare_rel_str = self.rng.choice(compare_rel.words)
-        prompt_str = f"Objects {compare_rel_str} {attribute} {anchor_obj}"
-        return anchor_obj_bag, attribute, compare_rel, prompt_str
+        ## random select anchor
+        max_try = 10
+        for i in range(max_try):
+            anchor_obj_bag = self.rng.choice(self.obj_bag_list)
+            anchor_obj = anchor_obj_bag.obj_name
+            attribute = self.rng.choice(list(COMPARE_DICT.keys()))
+            if attribute == "color":
+                compare_rel = self.rng.choice([EqualRel(), DifferentRel()])
+            elif attribute == "size":
+                compare_rel = self.rng.choice([EqualRel(), DifferentRel(), SmallerRel(), BiggerRel()])
+            else:
+                raise ValueError("Attribute not supported")
+            compare_rel_str = self.rng.choice(compare_rel.words)
+            prompt_str = f"Objects {compare_rel_str} {attribute} {anchor_obj}"
+
+            ## select objects
+            selected_obj, selected_color, selected_size, self_include = self.select_obj(anchor_obj_bag, attribute, compare_rel)
+            
+            if len(selected_obj) > 0:
+                if not self_include:
+                    anchor_obj = self.obj_list[anchor_obj_bag.obj_id]
+                    anchor_color = self.texture_list[anchor_obj_bag.obj_id]
+                    anchor_size = None
+                else:
+                    anchor_obj = None
+                    anchor_color = None
+                    anchor_size = None
+                return prompt_str, anchor_obj, anchor_color, anchor_size, selected_obj, selected_color, selected_size
+        raise ValueError("Cannot generate a valid prompt")
