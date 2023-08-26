@@ -34,22 +34,24 @@ class ObjectSelector:
         """Select object based on attribute
         """
         assert attribute in COMPARE_DICT, f"Attribute {attribute} not supported"
-        selected_obj = []
-        selected_color = []
-        selected_size = []
+        in_obj, in_color, in_size, out_obj, out_color, out_size = [], [], [], [], [], []
         # check self-include
         self_include = False
         if compare_rel == EqualRel():
-            selected_obj.append(self.obj_list[anchor_obj_bag.obj_id])
-            selected_color.append(self.texture_list[anchor_obj_bag.obj_id])
+            in_obj.append(self.obj_list[anchor_obj_bag.obj_id])
+            in_color.append(self.texture_list[anchor_obj_bag.obj_id])
             # selected_size.append(self.size_list[anchor_obj_bag.size_id])
             self_include = True
         for obj_bag in self.obj_bag_list:
             if compare_rel == COMPARE_DICT[attribute](obj_bag, anchor_obj_bag):
-                selected_obj.append(self.obj_list[obj_bag.obj_id])
-                selected_color.append(self.texture_list[obj_bag.obj_id])
+                in_obj.append(self.obj_list[obj_bag.obj_id])
+                in_color.append(self.texture_list[obj_bag.obj_id])
                 # selected_size.append(self.size_list[obj_bag.size_id])
-        return selected_obj, selected_color, selected_size, self_include
+            else:
+                out_obj.append(self.obj_list[obj_bag.obj_id])
+                out_color.append(self.texture_list[obj_bag.obj_id])
+                # out_size.append(self.size_list[obj_bag.size_id])
+        return self_include, in_obj, in_color, in_size, out_obj, out_color, out_size
 
     def gen_anchor_obj_prompt(self):
         """Based on the obj we have, generate a valid anchor obj prompt"""
@@ -69,9 +71,9 @@ class ObjectSelector:
             prompt_str = f"Objects {compare_rel_str} {attribute} {anchor_obj}"
 
             ## select objects
-            selected_obj, selected_color, selected_size, self_include = self.select_obj(anchor_obj_bag, attribute, compare_rel)
+            self_include, in_obj, in_color, in_size, out_obj, out_color, out_size = self.select_obj(anchor_obj_bag, attribute, compare_rel)
             
-            if len(selected_obj) > 0:
+            if len(in_obj) > 0:
                 if not self_include:
                     anchor_obj = self.obj_list[anchor_obj_bag.obj_id]
                     anchor_color = self.texture_list[anchor_obj_bag.obj_id]
@@ -80,5 +82,16 @@ class ObjectSelector:
                     anchor_obj = None
                     anchor_color = None
                     anchor_size = None
-                return prompt_str, anchor_obj, anchor_color, anchor_size, selected_obj, selected_color, selected_size
+                return {
+                    "prompt_str": prompt_str,
+                    "anchor_obj": anchor_obj,
+                    "anchor_color": anchor_color,
+                    "anchor_size": anchor_size,
+                    "in_obj": in_obj,
+                    "in_color": in_color,
+                    "in_size": in_size,
+                    "out_obj": out_obj,
+                    "out_color": out_color,
+                    "out_size": out_size,
+                }
         raise ValueError("Cannot generate a valid prompt")

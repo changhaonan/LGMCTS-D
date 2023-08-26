@@ -71,13 +71,6 @@ class StructRearrange(BaseTask):
         self.rearrange_obj_ids = []
         self.distract_obj_ids = []
 
-    def start(self, env):
-        """Reset the env to start state"""
-        env.reset()  # Clear all objects
-        self.add_objects_to_random(env, self.max_num_obj, True, self.stack_prob) # Random Init
-        obs, _, _, _, _ = env.step()
-        return obs
-
     def add_objects_to_pattern(
         self, env, objs, colors, pattern_prior: np.ndarray, use_existing: bool=False, stack_prob: float=0.0):
         """Set objects to a line, use_existing decides whether to add new object or not"""
@@ -103,14 +96,23 @@ class StructRearrange(BaseTask):
             assert False, "No object is added to the pattern"
         return added_obj_ids, obj_status
 
-    def add_objects_to_random(self, env, max_num_obj: int, use_existing: bool=False, stack_prob :float=0.0):
-        """Set objects to random positions"""
+    def add_objects_to_random(self, env, max_num_obj: int, obj_candidates: list=[], color_candidates: list=[], use_existing: bool=False, stack_prob :float=0.0):
+        """Set objects to random positions
+        Args:
+            max_num_obj: maximum number of objects to add
+            obj_candidates: list of object candidates
+            color_candidates: list of color candidates
+            use_existing: whether to use existing objects, meaning moving existing objects to random positions
+            stack_prob: probability of stacking objects
+        """
+        obj_list = obj_candidates if len(obj_candidates) > 0 else self.obj_list
+        color_list = color_candidates if len(color_candidates) > 0 else self.color_list
         added_obj_ids = []
         if not use_existing:
             for i in range(max_num_obj):
                 obj_id, _, __ = env.add_random_object_to_env(
-                    obj_lists=self.obj_list,
-                    color_lists=self.color_list,
+                    obj_lists=obj_list,
+                    color_lists=color_list,
                     prior=None,
                     stack_prob=stack_prob,
                 )
@@ -191,20 +193,20 @@ class StructRearrange(BaseTask):
             type_vocabs["color"][color.name] = i
         return type_vocabs
 
-    def gen_goal_config(self, env, promptor: PromptGenerator, obj_selector: ObjectSelector):
+    def gen_goal_config(self, env, promptor: PromptGenerator, obj_selector: ObjectSelector, **kwargs):
         """Generate goal config"""
         ## Step 1: select object candidates
-        num_color = 2  # Each scene only has X colors
-        num_object = 8  # Each scene only has at most X objects
+        num_color = kwargs.get("num_color", 2)  # Each scene only has X colors
+        num_object = kwargs.get("num_object", 8)  # Each scene only has at most X objects for pattern
         selected_objs = self.rng.choice(self.obj_list, num_object, replace=False)
         color_candidates = self.rng.choice(self.color_list, num_color, replace=False)
         selected_colors = self.rng.choice(color_candidates, num_object, replace=True)
         obj_selector.set_objs(selected_objs, selected_colors)
-        obj_prompt_str, anchor_obj, anchor_color, anchor_size, selected_obj, selected_color, selected_size = obj_selector.gen_anchor_obj_prompt()
+        selection = obj_selector.gen_anchor_obj_prompt()
 
         ## Step 2: select pattern & add objects to scene
-        if anchor_obj is not None:
-            [self.anchor_id], _ = self.add_objects_to_pattern(env, [anchor_obj], [anchor_color], None, False, 0.0)  # add anchor object
+        if selection["anchor_obj"] is not None:
+            [self.anchor_id], _ = self.add_objects_to_pattern(env, [selection["anchor_obj"]], [selection["anchor_color"]], None, False, 0.0)  # add anchor object
         else:
             self.anchor_id = -1
         # generate pattern
@@ -215,7 +217,7 @@ class StructRearrange(BaseTask):
         for i in range(max_try):
             try:
                 pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
-                self.rearrange_obj_ids, obj_status = self.add_objects_to_pattern(env, selected_obj, selected_color, pattern_prior, False, 0.0)
+                self.rearrange_obj_ids, obj_status = self.add_objects_to_pattern(env, selection["in_obj"], selection["in_color"], pattern_prior, False, 0.0)
                 assert len(self.rearrange_obj_ids) > 0, "No object is added to the pattern"
                 break
             except:
@@ -225,12 +227,12 @@ class StructRearrange(BaseTask):
         
         ## Step 3: add distract objects
         num_distract = self.max_num_obj - len(self.rearrange_obj_ids) - 1
-        if num_distract > 0:
-            self.distract_obj_ids = self.add_objects_to_random(env, num_distract, False, 0.0)
+        if num_distract > 0 and len(selection["out_obj"]) > 0:  # exists unselected
+            self.distract_obj_ids = self.add_objects_to_random(env, num_distract, selection["out_obj"], selection["out_color"], False, 0.0)
         
         ## Step 4: assemble prompt and goal specific
         # gen prompt
-        promptor.gen_pattern_prompt(obj_prompt_str, pattern_type)
+        promptor.gen_pattern_prompt(selection["prompt_str"], pattern_type)
         self.prompt = promptor.prompt
         # update goals
         pattern_info["obj_ids"] = self.rearrange_obj_ids
@@ -307,7 +309,7 @@ class StructRearrange(BaseTask):
 
     def gen_start_config(self, env) -> dict:
         """Generate a random config using existing objects"""
-        self.add_objects_to_random(env, self.max_num_obj, True, self.stack_prob)
+        self.add_objects_to_random(env, self.max_num_obj, use_existing=True, stack_prob=self.stack_prob)
 
         # Env step forward
         obs, _, _, _, _ = env.step()
