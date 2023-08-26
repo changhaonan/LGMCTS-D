@@ -527,7 +527,7 @@ class BaseEnv:
         _, hmap, obj_mask = self.get_true_image()
 
         obj_stack_id = -1  # -1 is the base
-        if self.rng.random() < stack_prob:
+        if self.rng.random() < stack_prob and len(self.obj_support_tree.leaves) > 1:
             # select an object to stack up
             if len(self.obj_ids["rigid"]) == 0:
                 return [None, None], None

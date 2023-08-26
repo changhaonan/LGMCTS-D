@@ -37,7 +37,7 @@ dragged_obj:
 
 # ==== structure rearrange ====
 struct_rearrange:
-  stack_prob: 0.3
+  stack_prob: 0.5
   pattern_types: ["line"]  # support: "line", "circle"
   obj_list: ${dragged_obj}
   color_list: ${color_set_1}
