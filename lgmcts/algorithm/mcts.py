@@ -248,9 +248,9 @@ class Node(object):
                 counter -= 1
                 samples_reg, sample_probs = sample_distribution(prob=prior, rng=region.rng, n_samples=1)  # (N, 2)
                 obs_id  = self.segmentation[samples_reg[0][0], samples_reg[0][1], 0]
-                if (obs_id not in [-1, obj_id]) and (obj_id in leaf_objs):
+                if (obs_id not in [-1, obj_id]) and (obs_id in leaf_objs):
                     break
-            else:
+            if counter <= 0:
                 obs_id = None
         else:
             obs_id = None
