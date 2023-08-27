@@ -769,7 +769,6 @@ class BaseEnv:
             # pybullet_utils.p_change_texture(obj_id, color_entry, self.client_id)
         # support tree
         self.obj_support_tree = JsonImporter().import_(env_state["obj_support_tree"])
-        print(RenderTree(self.obj_support_tree))
         # load task
         task_state = env_state["task_state"]
         self.task.set_state(task_state)

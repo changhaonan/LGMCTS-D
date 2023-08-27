@@ -35,6 +35,7 @@ Point cloud & pose are all padded with zero. Their shape is of (max_num_obj * ma
 ## BUG
 
 - Currently, the sequential sampling is not working. Need to be fixed.
+- Is the sampling repeatable??
 
 ## TODO:
 
