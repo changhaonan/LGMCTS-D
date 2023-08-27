@@ -23,7 +23,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
     resolution = 0.01
-    n_samples = 1
+    n_samples = 5
     num_save_digits = 6
     debug = True  # control debug vis
     env = lgmcts.make(
@@ -41,7 +41,7 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
 
-    for i in [0,1,2,4,5,6,7,8,9]:
+    for i in range(10):
         print(f"==== Episode {i} ====")
         ## Step 1. init the env from dataset
         env.reset()

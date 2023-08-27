@@ -141,7 +141,7 @@ class Node(object):
             moved_obj = self.rng.choice(leaf_nodes).name
             # add a sampler to move the obstacle away
             buffer_sampler = SampleData(
-                pattern="uniform", 
+                pattern="line", 
                 obj_id = moved_obj, 
                 obj_ids = [moved_obj], 
                 obj_poses_pix = {})
@@ -168,7 +168,7 @@ class Node(object):
             else:
                 # add a sampler to move the obstacle away
                 buffer_sampler = SampleData(
-                    pattern="uniform", 
+                    pattern="line", 
                     obj_id = obs, 
                     obj_ids = [obs], 
                     obj_poses_pix = {})
@@ -243,9 +243,9 @@ class Node(object):
                 self.obj_support_tree, filter_=lambda node: not node.children
                 )
             leaf_objs = [n.name for n in leaf_nodes]
-            counting = 100
-            while (counting > 0):
-                counting -= 1
+            counter = 100
+            while (counter > 0):
+                counter -= 1
                 samples_reg, sample_probs = sample_distribution(prob=prior, rng=region.rng, n_samples=1)  # (N, 2)
                 obs_id  = self.segmentation[samples_reg[0][0], samples_reg[0][1], 0]
                 if (obs_id not in [-1, obj_id]) and (obj_id in leaf_objs):
@@ -359,7 +359,7 @@ class MCTS(object):
             # the index is according to L and the num_sample children list
             #TODO: do K sampling at the same time @KAI
             action, moved_obj, new_position, solved_sampler_obj_id = current_node.expansion()
-            if new_position is not None: # go to a new state
+            if (new_position.shape[0]>0): # go to a new state
                 new_node = self.move(
                     num_iter,
                     action,
