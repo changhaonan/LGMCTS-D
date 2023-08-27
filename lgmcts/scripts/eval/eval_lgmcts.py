@@ -4,6 +4,7 @@ import os
 import time
 import pickle
 import lgmcts
+import argparse
 import numpy as np
 from lgmcts import PARTITION_TO_SPECS
 import lgmcts.utils.file_utils as U
@@ -19,7 +20,7 @@ from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 
 ## Eval method
 
-def eval_offline(dataset_path: str, n_samples: int = 10):
+def eval_offline(dataset_path: str, method: str, n_samples: int = 10):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
     resolution = 0.01
@@ -65,7 +66,6 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
                 sample_data = SampleData(goal["type"].split(":")[-1], goal_obj_id, goal["obj_ids"], {})
                 L.append(sample_data)
         
-
         ## Step 3. generate & exectue plan
         action_list = sampling_planner.plan(L, algo="mcts", prior_dict=PATTERN_DICT)
         # action_list = sampling_planner.plan(L, algo="seq", prior_dict=PATTERN_DICT)
@@ -88,6 +88,13 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
 
 
 if __name__ == "__main__":
-    root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    dataset_path = f"{root_path}/output/struct_rearrange"
-    eval_offline(dataset_path)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset_path", type=str, default=None, help="Path to the dataset")
+    parser.add_argument("--method", type=str, default="mcts", help="Method to use")
+    args = parser.parse_args()
+    if args.dataset_path is not None:
+        dataset_path = args.dataset_path
+    else:
+        root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+        dataset_path = f"{root_path}/output/struct_rearrange"
+    eval_offline(dataset_path, args.method)

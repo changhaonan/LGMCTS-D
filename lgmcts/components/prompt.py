@@ -33,8 +33,14 @@ class PromptGenerator:
     ## Prompt generation
     def gen_pattern_prompt(self, obj_str: str, pattern: str):
         """Generate pattern prompt"""
-        self.pattern_prompt = f"{self.rng.choice(self.place_action_list)} {obj_str} {self.rng.choice(self.prep_list)} a {pattern} pattern"
-
+        prompt_type = self.rng.integers(0, 2)
+        if prompt_type == 0:
+            self.pattern_prompt = f"{self.rng.choice(self.place_action_list)} {obj_str} {self.rng.choice(self.prep_list)} a {pattern} pattern"
+        elif prompt_type == 1:
+            self.pattern_prompt = f"{self.rng.choice(self.place_action_list)} a {pattern} pattern {self.rng.choice(self.prep_list)} using {obj_str}"
+        else:
+            self.pattern_prompt = f"Select {obj_str}, and {self.rng.choice(self.place_action_list)} them {self.rng.choice(self.prep_list)} a {pattern} pattern"
+    
     def gen_region_prompt(self, obj_str: str, region: str):
         """Generate region prompt"""
         self.region_prompt = f"{self.rng.choice(self.place_action_list)} {obj_str} {self.rng.choice(self.prep_list)} {region}"
