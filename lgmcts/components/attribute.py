@@ -14,7 +14,7 @@ class CompareRel:
 
 class EqualRel(CompareRel):
     """Equal relationship"""
-    words = ["equal to", "same as", "identical to", "alike", "equivalent to"]
+    words = ["is equal to", "is same as", "is identical to", "is alike", "is equivalent to"]
 
     def __eq__(self, other):
         return isinstance(other, EqualRel)
@@ -22,7 +22,7 @@ class EqualRel(CompareRel):
 
 class DifferentRel(CompareRel):
     """Different relationship"""
-    words = ["different with", "not the same as", "not equal to", "not identical to", "not alike", "not equivalent to", "different from"]
+    words = ["is different with", "is not the same as", "is not equal to", "is not identical to", "is not alike", "is not equivalent to", "is different from"]
 
     def __eq__(self, other):
         """smaller, bigger is different, and verse versa"""
@@ -31,7 +31,7 @@ class DifferentRel(CompareRel):
 
 class SmallerRel(CompareRel):
     """Smaller relationship"""
-    words = ["smaller than", "less than", "shorter than", "narrower than", "smaller in size than"]
+    words = ["is smaller than", "is less than", "is shorter than", "is narrower than", "is smaller in size than"]
 
     def __eq__(self, other):
         return isinstance(other, SmallerRel) or isinstance(other, DifferentRel)
@@ -39,7 +39,7 @@ class SmallerRel(CompareRel):
 
 class BiggerRel(CompareRel):
     """Bigger relationship"""
-    words = ["bigger than", "larger than", "greater than", "taller than", "wider than", "bigger in size than"]
+    words = ["is bigger than", "is larger than", "is greater than", "is taller than", "is wider than", "is bigger in size than"]
 
     def __eq__(self, other):
         return isinstance(other, BiggerRel) or isinstance(other, DifferentRel)

@@ -68,12 +68,12 @@ class ObjectSelector:
             else:
                 raise ValueError("Attribute not supported")
             compare_rel_str = self.rng.choice(compare_rel.words)
-            prompt_str = f"Objects {compare_rel_str} {attribute} {anchor_obj}"
+            prompt_str = f"objects whose {attribute} {compare_rel_str} {anchor_obj}"
 
             ## select objects
             self_include, in_obj, in_color, in_size, out_obj, out_color, out_size = self.select_obj(anchor_obj_bag, attribute, compare_rel)
             
-            if len(in_obj) > 0:
+            if len(in_obj) >= 3:  # at least 3 objects to formulate a pattern
                 if not self_include:
                     anchor_obj = self.obj_list[anchor_obj_bag.obj_id]
                     anchor_color = self.texture_list[anchor_obj_bag.obj_id]
