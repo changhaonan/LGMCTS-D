@@ -386,3 +386,5 @@ class ObjPedia(Enum):
             if e.value.symmetry is not None
             and math.isclose(e.value.symmetry, 2 * math.pi, rel_tol=1e-6, abs_tol=1e-8)
         ]
+
+    ##TODO: Add more objects @Knowdi
