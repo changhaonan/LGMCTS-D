@@ -85,7 +85,9 @@ class SamplingPlanner:
         sampler_planner = MCTS(
             region_sampler=self.sampler,
             L=goals,
+            obj_support_tree=self.sampler.obj_support_tree,
             prior_dict=prior_dict,
+            n_samples=self.n_samples,
             verbose=True,
         )
 

@@ -8,24 +8,24 @@ from scipy.optimize import curve_fit
 import cv2
 
 
-class Pattern:
+class Pattern(ABC):
     """Base pattern type, needs to implement generate, check method
     """
     name: str = ""
 
-    @classmethod
+    @abstractclassmethod
     def gen_prior(cls, size, rng, **kwargs):
         """Generate a pattern prior:
         Args: 
             rng: random generator
         """
-        return None, None
+        raise NotImplementedError
     
-    @classmethod
+    @abstractclassmethod
     def check(cls, obj_poses: dict[int, np.ndarray], **kwargs):
         """Check if the object states meet the pattern requirement
         """
-        return True
+        raise NotImplementedError
 
 
 ## Implementation of patterns
@@ -435,19 +435,17 @@ class SineCurvePattern(Pattern):
         return not (np.max(np.linalg.norm(dists)) > threshold)
 
 
-#TODO: we need to add more patterns here: 3D patterns, such as tower, random fitting pattern, such as dinner.
+#TODO: we need to add more patterns here, e.g. circle, rectangle, spatial, etc. @Alex
 
 
 ## PATTERN DICT
 
 PATTERN_DICT = {
-    "uniform": Pattern,
     "line": LinePattern,
     "circle": CirclePattern,
     "rectangle": RectanglePattern,
     "sine": SineCurvePattern
 }
-
 
 ## Test code
 if __name__ == "__main__":
