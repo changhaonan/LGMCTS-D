@@ -41,7 +41,7 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
     sucess_count = 0
-    for i in range(n_epoches):
+    for i in n_epoches:
         print(f"==== Episode {i} ====")
         ## Step 1. init the env from dataset
         env.reset()
