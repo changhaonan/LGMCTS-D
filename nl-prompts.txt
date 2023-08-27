@@ -1,0 +1,9 @@
+Place Objects whose color is different from cross on a line pattern
+Put Objects whose color is equivalent to letter T in a line pattern
+Leave Objects whose color is same as letter G on a line pattern
+Place Objects whose color is not alike heart in a line pattern
+Leave Objects whose color is alike letter A on a line pattern
+Place Objects whose color is not identical to letter A at a line pattern
+Place Objects whose color is different from letter G on a line pattern
+Leave Objects whose color is not equal to L-shaped block at a line pattern
+Leave Objects whose color is not identical to letter A at a line pattern
