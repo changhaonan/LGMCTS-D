@@ -13,8 +13,8 @@ from lgmcts.tasks import BaseTask
 from lgmcts.env.base import BaseEnv
 from lgmcts.components.prompt import PromptGenerator
 from lgmcts.components.obj_selector import ObjectSelector
-from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 from lgmcts.components.patterns import PATTERN_DICT
+from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 
 
 ## Eval method
@@ -63,7 +63,6 @@ def eval_offline(dataset_path: str, n_samples: int = 10):
                 sample_data = SampleData(goal["type"].split(":")[-1], goal_obj_id, goal["obj_ids"], {})
                 L.append(sample_data)
         L = L[:-2]
-
         L = [
             SampleData('line', 5, [5, 6, 7], {}),
             SampleData('line', 6, [5, 6, 7], {}),
