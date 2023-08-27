@@ -8,9 +8,9 @@ from typing import List, Any
 import copy
 import numpy as np
 import math
-import random
 from typing import Union
 import cv2
+import anytree
 
 from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData, SampleStatus,\
     sample_distribution, ObjectData
@@ -42,6 +42,7 @@ class Node(object):
         updated_obj_id=None,
         UCB_scalar=1.0,
         num_sampling=1,
+        obj_support_tree:anytree.Node = None,
         prior_dict={},
         verbose=False,
         rng = None
@@ -62,6 +63,7 @@ class Node(object):
         self.total_reward = 0
         self.UCB_scalar = UCB_scalar
         self.num_sampling = num_sampling
+        self.obj_support_tree = obj_support_tree
         self.prior_dict = prior_dict
         self.verbose = verbose
         self.rng = rng
@@ -115,13 +117,42 @@ class Node(object):
         an action is represented by (sampler_id, trial_id), which is trying to 
         execute the sampler of object sampler_id for the trial_id-th time
         The the sampler of object sampler_id should has no pattern goal dependency
-        2D case should not have start dependency as well
-        The only thing that can go wrong is collision.
+        check collision and start dependency (graspability)
         If in collision, try moving an obstacle away
+        If not graspable, try moving a leaf on the subtree away
         Params:
             action: (sampler_id, trial_id)
-        Returns: (obj_id, pos)
+        Returns: 
+            action: (sampler_id, trial_id), 
+            moved_obj: moved obj (obj to goal or obstacle), or None
+            new_position: pose, 
+            solved_sampler_obj_id: sampler_id or None
         """
+        # check graspability
+        found_node = anytree.search.find(
+            self.obj_support_tree, lambda node: node.name == action[0]
+            )
+        if found_node and len(found_node.children) > 0:
+            # not graspable, move a leave on the subtree away
+            # Search for all leaf nodes
+            leaf_nodes = anytree.search.findall(
+                found_node, filter_=lambda node: not node.children
+                )
+            moved_obj = self.rng.choice(leaf_nodes).name
+            # add a sampler to move the obstacle away
+            buffer_sampler = SampleData(
+                pattern="uniform", 
+                obj_id = moved_obj, 
+                obj_ids = [moved_obj], 
+                obj_poses_pix = {})
+            success, _, (moved_obj, new_position) = self.sampling_function(
+                self.region_sampler,
+                self.object_states,
+                buffer_sampler
+            )
+            solved_sampler_obj_id = None
+            return action, moved_obj, new_position, solved_sampler_obj_id
+            
         sampler = self.sampler_dict[action[0]]
         success, obs, (moved_obj, new_position) = self.sampling_function(
             self.region_sampler,
@@ -137,9 +168,9 @@ class Node(object):
             else:
                 # add a sampler to move the obstacle away
                 buffer_sampler = SampleData(
-                    pattern="line", 
-                    obj_id = moved_obj, 
-                    obj_ids = [moved_obj], 
+                    pattern="uniform", 
+                    obj_id = obs, 
+                    obj_ids = [obs], 
                     obj_poses_pix = {})
                 success, _, (moved_obj, new_position) = self.sampling_function(
                     self.region_sampler,
@@ -179,7 +210,9 @@ class Node(object):
             if (pattern_obj != obj_id) and (pattern_obj not in objs_away_from_goal) 
             ] # pattern objects at goal
         #FIXME: this could be a problem here, because there is an offset
-        sampled_obj_poses_pix = {tuple(region._world2region(object_states[obj][:3])[:2]) for obj in objs_at_goal}
+        sampled_obj_poses_pix = {
+            obj:tuple(region._world2region(object_states[obj][:3]+region.objects[obj].pos_offset)[:2]) 
+            for obj in objs_at_goal}
 
         # update prior
         if sample_data.pattern in self.prior_dict:
@@ -191,7 +224,7 @@ class Node(object):
             # cv2.imshow("prior", prior)
             # cv2.waitKey(0)
             # sample
-            valid_pose, _, samples_status, _ = region.sample(sample_data.obj_id, 1, prior)
+            valid_pose, _, samples_status, _ = region.sample(sample_data.obj_id, 1, prior,allow_outside=False)
             if valid_pose.shape[0] > 0:
                 valid_pose = valid_pose.reshape(-1)
         else:
@@ -206,11 +239,19 @@ class Node(object):
             # segmentation->sample on prior->find collision
             if self.segmentation is None:
                 self.segmentation = self.semantic_segmentation(region)
-            while 1:
+            leaf_nodes = anytree.search.findall(
+                self.obj_support_tree, filter_=lambda node: not node.children
+                )
+            leaf_objs = [n.name for n in leaf_nodes]
+            counting = 100
+            while (counting > 0):
+                counting -= 1
                 samples_reg, sample_probs = sample_distribution(prob=prior, rng=region.rng, n_samples=1)  # (N, 2)
                 obs_id  = self.segmentation[samples_reg[0][0], samples_reg[0][1], 0]
-                if obs_id not in [-1, obj_id]:
+                if (obs_id not in [-1, obj_id]) and (obj_id in leaf_objs):
                     break
+            else:
+                obs_id = None
         else:
             obs_id = None
         action = (obj_id, valid_pose)
@@ -248,7 +289,9 @@ class MCTS(object):
         region_sampler: Region2DSampler,
         L: List[SampleData],
         UCB_scalar=1.0,
+        obj_support_tree:anytree.Node = None,
         prior_dict={},
+        n_samples = 1,
         verbose: bool = False,
         seed = 0
     ) -> None:
@@ -256,10 +299,12 @@ class MCTS(object):
         self.settings = {
             "UCB_scalar": UCB_scalar,
             "prior_dict": prior_dict,
-            "rng": self.rng
+            "rng": self.rng,
+            "num_sampling" : n_samples
         }
         self.region_sampler = region_sampler
         self.sampler_dict = {s.obj_id: s for s in L}
+        self.obj_support_tree = obj_support_tree # initial object support tree
         self.start_state = region_sampler.get_object_poses()
 
         # intialize MCTS tree
@@ -271,6 +316,7 @@ class MCTS(object):
             parent=None,
             action_from_parent=None,
             updated_obj_id=None,
+            obj_support_tree=self.obj_support_tree,
             verbose=verbose,
             **self.settings,
         )
@@ -292,6 +338,7 @@ class MCTS(object):
             parent=None,
             action_from_parent=None,
             updated_obj_id=None,
+            obj_support_tree=self.obj_support_tree,
             verbose=self.verbose,
             **self.settings,
         )
@@ -330,6 +377,7 @@ class MCTS(object):
                     parent=current_node,
                     action_from_parent=action,
                     updated_obj_id=moved_obj,
+                    obj_support_tree=copy_tree(current_node.obj_support_tree),
                     verbose=self.verbose,
                     **self.settings,
                 )
@@ -387,6 +435,18 @@ class MCTS(object):
                 if solved_sampler_obj_id in backtracked_node.sampler_dict.keys():
                     new_sampler_dict[solved_sampler_obj_id] = backtracked_node.sampler_dict[solved_sampler_obj_id]
                     break
+                backtracked_node = backtracked_node.parent
+
+        # update support tree
+        new_tree = copy_tree(current_node.obj_support_tree)
+        # check whether the object is in the support tree
+        found_node = anytree.search.find(new_tree, lambda node: node.name == obj)
+        if found_node:
+            # parent should be root, assuming that the new pose is on table
+            found_node.parent = new_tree
+            # it should have no children at this point since we are moving it
+            assert len(found_node.children) == 0
+
 
         new_node = Node(
             node_id,
@@ -396,6 +456,7 @@ class MCTS(object):
             parent=current_node,
             action_from_parent=action,
             updated_obj_id=obj,
+            obj_support_tree=new_tree,
             verbose=self.verbose,
             **self.settings,
         )
@@ -440,11 +501,13 @@ class MCTS(object):
             current_node = parent_node
         self.action_list.reverse()
 
-def deepcopy_class_object(obj):
-    """fast way to deepcopy class objects, e.g., region sampler or sampler"""
-    # return ujson.loads(ujson.dumps(obj))
-    return copy.deepcopy(obj)
 
-def deepcopy_graph(g):
-    """fast way to deepcopy a graph"""
-    return {k: v for k, v in g.items()}
+# copy anytree
+def copy_tree(node:anytree.Node):
+    copied_node = anytree.Node(copy.deepcopy(node.name))
+    
+    for child in node.children:
+        child_copy = copy_tree(child)
+        child_copy.parent = copied_node
+
+    return copied_node
