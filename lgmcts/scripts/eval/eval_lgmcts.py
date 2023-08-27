@@ -20,7 +20,7 @@ from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 
 ## Eval method
 
-def eval_offline(dataset_path: str, method: str, n_samples: int = 10):
+def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches: int = 10):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
     resolution = 0.01
@@ -41,21 +41,20 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10):
     region_sampler = Region2DSamplerLGMCTS(resolution, env)
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
-
-    for i in range(10):
+    sucess_count = 0
+    for i in range(n_epoches):
         print(f"==== Episode {i} ====")
         ## Step 1. init the env from dataset
         env.reset()
         prompt_generator.reset()
-        # region_sampler = Region2DSamplerLGMCTS(resolution, env)
-        # sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
         region_sampler.reset()
         # load from dataset
         checkpoint_path = os.path.join(dataset_path, f"checkpoint_{i:0{num_save_digits}d}.pkl")
         env.load_checkpoint(checkpoint_path)
-        # update region sampler
+        prompt_generator.prompt = task.prompt
         region_sampler.load_objs_from_env(env)
         # region_sampler.visualize()
+        prompt_generator.render()
 
         ## Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
         goals = task.goals
@@ -67,8 +66,7 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10):
                 L.append(sample_data)
         
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo="mcts", prior_dict=PATTERN_DICT)
-        # action_list = sampling_planner.plan(L, algo="seq", prior_dict=PATTERN_DICT)
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT)
         for step in action_list:
             # assemble action
             action = {
@@ -85,6 +83,13 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10):
         ## Step 4. evaluate the result
         exe_result = task.check_success(obj_poses=env.get_obj_poses())
         print(f"Success: {exe_result.success}")
+        if exe_result.success:
+            sucess_count += 1
+    # average result
+    print(f"Success rate: {float(sucess_count) / float(n_epoches)}")
+    # close
+    env.close()
+    prompt_generator.close()
 
 
 if __name__ == "__main__":

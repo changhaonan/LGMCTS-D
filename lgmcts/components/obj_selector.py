@@ -68,7 +68,7 @@ class ObjectSelector:
             else:
                 raise ValueError("Attribute not supported")
             compare_rel_str = self.rng.choice(compare_rel.words)
-            prompt_str = f"Objects whose {attribute} {compare_rel_str} {anchor_obj}"
+            prompt_str = f"objects whose {attribute} {compare_rel_str} {anchor_obj}"
 
             ## select objects
             self_include, in_obj, in_color, in_size, out_obj, out_color, out_size = self.select_obj(anchor_obj_bag, attribute, compare_rel)

@@ -78,13 +78,13 @@ class LinePattern(Pattern):
         ## Draw lines & extend to the borders
         # calculate the line's equation: y = mx + c
         if x1 - x0 == 0:  # vertical line
-            start_point = (x0, 0)
-            end_point = (x0, height-1)
-            cv2.line(prior, (x0, 0), (x0, height-1), 1.0, thickness)
+            start_point = (int(x0), 0)
+            end_point = (int(x0), int(height-1))
+            cv2.line(prior, start_point, end_point, 1.0, thickness)
         elif y1 - y0 == 0:  # horizontal line
-            start_point = (0, y0)
-            end_point = (width-1, y0)
-            cv2.line(prior, (0, y0), (width-1, y0), 1.0, thickness)
+            start_point = (0, int(y0))
+            end_point = (int(width-1), int(y0))
+            cv2.line(prior, start_point, end_point, 1.0, thickness)
         else:
             m = (y1 - y0) / (x1 - x0)
             c = y0 - m * x0

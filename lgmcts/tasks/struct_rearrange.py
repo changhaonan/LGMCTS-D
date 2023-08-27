@@ -233,6 +233,7 @@ class StructRearrange(BaseTask):
         ## Step 4: assemble prompt and goal specific
         # gen prompt
         promptor.gen_pattern_prompt(selection["prompt_str"], pattern_type)
+        promptor.gen_prompt()
         self.prompt = promptor.prompt
         # update goals
         pattern_info["obj_ids"] = self.rearrange_obj_ids
