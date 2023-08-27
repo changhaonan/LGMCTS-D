@@ -34,7 +34,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/eval/eval_lgmcts.py",
             "args": [
-                "--method=seq"
+                "--method=seq",
+                "--debug",
             ],
             "console": "integratedTerminal",
             "justMyCode": false

@@ -20,21 +20,20 @@ from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 
 ## Eval method
 
-def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches: int = 10):
+def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
     resolution = 0.01
     n_samples = 5
     num_save_digits = 6
-    debug = True  # control debug vis
     env = lgmcts.make(
         task_name=task_name, 
         task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name], 
         modalities=["rgb", "segm", "depth"], 
         seed=0, 
-        debug=True, 
-        display_debug_window=True,
-        hide_arm_rgb=False,
+        debug=debug, 
+        display_debug_window=debug,
+        hide_arm_rgb=(not debug),
     )
     task = env.task
 
@@ -54,7 +53,8 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
         prompt_generator.prompt = task.prompt
         region_sampler.load_objs_from_env(env)
         # region_sampler.visualize()
-        prompt_generator.render()
+        if debug:
+            prompt_generator.render()
 
         ## Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
         goals = task.goals
@@ -77,14 +77,17 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
             }
             # execute action
             env.step(action)
-        time.sleep(1.0)  # stop a while for eyeballing
-        # test the env & sampler alignment
 
         ## Step 4. evaluate the result
         exe_result = task.check_success(obj_poses=env.get_obj_poses())
         print(f"Success: {exe_result.success}")
         if exe_result.success:
             sucess_count += 1
+        
+        if debug:
+            prompt_generator.render(append=" [succes]" if exe_result.success else " [fail]")
+            time.sleep(3.0)  # stop a while for eyeballing
+
     # average result
     print(f"Success rate: {float(sucess_count) / float(n_epoches)}")
     # close
@@ -96,10 +99,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, default=None, help="Path to the dataset")
     parser.add_argument("--method", type=str, default="mcts", help="Method to use")
+    parser.add_argument("--n_samples", type=int, default=10, help="Number of samples")
+    parser.add_argument("--n_epoches", type=int, default=10, help="Number of epoches")
+    parser.add_argument("--debug", action="store_true", help="Debug mode")
     args = parser.parse_args()
     if args.dataset_path is not None:
         dataset_path = args.dataset_path
     else:
         root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
         dataset_path = f"{root_path}/output/struct_rearrange"
-    eval_offline(dataset_path, args.method)
+    eval_offline(dataset_path=dataset_path, method=args.method, n_samples=args.n_samples, n_epoches=args.n_epoches, debug=args.debug)

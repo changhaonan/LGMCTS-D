@@ -112,8 +112,8 @@ class PromptGenerator:
         )
         return text_img
 
-    def render(self):
-        prompt_img = self.get_prompt_img_from_text(self._prompt_str)
+    def render(self, append: str = ""):
+        prompt_img = self.get_prompt_img_from_text(self._prompt_str + append)
         self._display(prompt_img)
 
     def close(self):

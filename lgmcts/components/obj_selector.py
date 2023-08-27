@@ -73,7 +73,7 @@ class ObjectSelector:
             ## select objects
             self_include, in_obj, in_color, in_size, out_obj, out_color, out_size = self.select_obj(anchor_obj_bag, attribute, compare_rel)
             
-            if len(in_obj) > 0:
+            if len(in_obj) >= 3:  # at least 3 objects to formulate a pattern
                 if not self_include:
                     anchor_obj = self.obj_list[anchor_obj_bag.obj_id]
                     anchor_color = self.texture_list[anchor_obj_bag.obj_id]
