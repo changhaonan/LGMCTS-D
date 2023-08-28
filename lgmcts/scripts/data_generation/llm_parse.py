@@ -4,6 +4,7 @@ from lgmcts.components.llm_chatgpt import ChatGPTAPI
 
 
 if __name__ == "__main__":
+    root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
     api_key = "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"
     prompt_example_file = os.path.join(os.path.dirname(__file__), "prompt_example.txt")
     prompt_bg_file = os.path.join(os.path.dirname(__file__), "prompt_bg.txt")
@@ -12,7 +13,7 @@ if __name__ == "__main__":
     prompt_db += open(prompt_example_file, "r").read()
 
     prompts = []
-    with open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/nl-prompts.txt", "r") as fp:
+    with open(f"{root_path}/output/struct_rearrange/prompt_str_list.txt", "r") as fp:
         for line in fp.readlines():
             prompts.append(line.strip())
 

@@ -447,7 +447,6 @@ class MCTS(object):
             # it should have no children at this point since we are moving it
             assert len(found_node.children) == 0
 
-
         new_node = Node(
             node_id,
             region_sampler=self.region_sampler,
