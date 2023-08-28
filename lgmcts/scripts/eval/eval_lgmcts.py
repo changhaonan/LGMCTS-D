@@ -92,6 +92,8 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
             prompt_generator.render(append=" [succes]" if exe_result.success else " [fail]")
             time.sleep(3.0)  # stop a while for eyeballing
 
+    while 1:
+        time.sleep(0.5)
     # average result
     print(f"Success rate: {float(sucess_count) / float(n_epoches)}")
     # close
