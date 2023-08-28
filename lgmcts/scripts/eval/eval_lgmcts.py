@@ -56,7 +56,7 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
         prompt_generator.prompt = task.prompt
         region_sampler.load_objs_from_env(env)
         # DEBUG
-        region_sampler.visualize()
+        # region_sampler.visualize()
         if debug:
             prompt_generator.render()
 
