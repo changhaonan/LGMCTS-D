@@ -71,7 +71,7 @@ class ChatGPTAPI(LLM):
     #     conversation.append({"role": "assistant", "content": reply_content})
     #     return reply_content
 
-    def talk_prompt_list(self, prompt_list: List[Dict[str, Any]], batch_size: int = 4) -> List[str]:
+    def talk_prompt_list(self, prompt_list: List[Dict[str, Any]], batch_size: int = 100) -> List[str]:
         """prompt_list is a list of dict, each dict has one key and one value"""
         results = []
         errors = []
@@ -79,7 +79,7 @@ class ChatGPTAPI(LLM):
             # Create thread pool
             with ThreadPoolExecutor(max_workers=batch_size) as executor:
                 print("Batch Execution of prompts {} to {}".format(i, min(i+batch_size-1, len(prompt_list))))
-                future_to_prompt = {executor.submit(self._threaded_talk_prompt, prompt, max_retries=2): prompt for prompt in prompt_list[i:i+batch_size]}
+                future_to_prompt = {executor.submit(self._threaded_talk_prompt, prompt, max_retries=3): prompt for prompt in prompt_list[i:i+batch_size]}
                 for future in as_completed(future_to_prompt):
                     prompt = future_to_prompt[future]
                     try:
