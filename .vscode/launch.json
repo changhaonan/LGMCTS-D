@@ -34,7 +34,20 @@
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/eval/eval_lgmcts.py",
             "args": [
-                "--method=seq",
+                "--method=mcts",
+                "--debug",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Eval online (Debug)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/lgmcts/scripts/eval/eval_lgmcts.py",
+            "args": [
+                "--dataset_path=${workspaceFolder}/output/debug",
+                "--method=mcts",
                 "--debug",
             ],
             "console": "integratedTerminal",

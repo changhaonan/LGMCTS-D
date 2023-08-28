@@ -1,22 +1,36 @@
-from llm import LLM
-from lgmcts.utils.user import print_type_indicator
+"""Large language model chat with GPT API"""
+import time
 import openai
-from conception import Comment, Question, Check, Action, Flag
 from typing import Dict, Any, Tuple, Union, List
 from PIL import Image
 import numpy as np
+from lgmcts.utils.user import print_type_indicator
 from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
-import time
- 
+
+
+class LLM:
+    """Abstract class for large language model"""
+
+    def __init__(self):
+        self._is_api = False
+
+    @property
+    def is_api(self):
+        return self._is_api
+
+    @is_api.setter
+    def is_api(self, is_api):
+        self._is_api = is_api
+
 
 class ChatGPTAPI(LLM):
-    def __init__(self, db: str = None):
+    """Chat with GPT API"""
+    def __init__(self, model: str="gpt-4", api_key: str="", db: str = None):
         super().__init__()
         self.is_api = True
-        openai.api_key = "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"
-        self.gpt_model = "gpt-4"
+        openai.api_key = api_key
+        self.gpt_model = model
         self.system_prompt = {"role": "system", "content": db}
-        # self.conversation = [self.system_prompt]
 
     def chat(
         self,
@@ -31,7 +45,7 @@ class ChatGPTAPI(LLM):
         elif isinstance(str_msg, str):
             return self.talk_prompt_string(str_msg), True
         
-    def _threaded_talk_prompt(self, prompt: Dict[str, Any], max_retries: int =1) -> Tuple[str, Any]:
+    def _threaded_talk_prompt(self, prompt: Dict[str, Any], max_retries: int=1) -> Tuple[str, Any]:
         # print("Threaded execution of prompt: {}".format(prompt))
         retries = 0
         conversation = [self.system_prompt]
@@ -55,23 +69,8 @@ class ChatGPTAPI(LLM):
                     time.sleep(10) # Wait for 10 seconds before retrying
                 else:
                     return None, str(e)
-                
-    # def talk_prompt_string(self, msg: str) -> str:
-    #     if isinstance(msg, list):
-    #         msg = " ".join(msg)
-    #     conversation = [self.system_prompt]
-    #     # Send the message to OpenAI
-    #     conversation.append({"role": "user", "content": str(msg)})
-    #     reply = openai.ChatCompletion.create(
-    #         model=self.gpt_model,
-    #         messages=conversation,
-    #     )
-    #     reply_content = reply["choices"][0]["message"]["content"]
-    #     total_token = reply["usage"]["total_tokens"]
-    #     conversation.append({"role": "assistant", "content": reply_content})
-    #     return reply_content
 
-    def talk_prompt_list(self, prompt_list: List[Dict[str, Any]], batch_size: int = 4) -> List[str]:
+    def talk_prompt_list(self, prompt_list: List[Dict[str, Any]], batch_size: int=4) -> List[str]:
         """prompt_list is a list of dict, each dict has one key and one value"""
         results = []
         errors = []
@@ -95,15 +94,7 @@ class ChatGPTAPI(LLM):
             
         return results
 
-    def reset(self):
-        # Clear the conversation history
-        # conversation = [self.system_prompt]
-        pass
 
-    def clear_last(self):
-        # Clear the last message
-        # conversation.pop()
-        pass 
 # Main function
 if __name__ == "__main__":
     prompt_db = "Assume you are a language-based motion planner. You will parse user's requirement into goal configuration and constraints."

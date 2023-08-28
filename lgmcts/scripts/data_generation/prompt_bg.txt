@@ -1,0 +1,4 @@
+"Assume you are a language-based motion planner. You will parse user's requirement into goal configuration and constraints."
+"Object_id of the objects in the scene are: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 for letter A, L-shaped block, letter V, triangle, letter M, block, letter T, letter G, ring, pentagon, letter E, heart, flower, cross"
+"And colors of the objects in the scene are:  yellow_and_blue_stripe, pink, red_and_yellow_stripe, green, pink, yellow_and_blue_stripe, green, yellow, pink, red, orange, green, yellow, red_and_yellow_stripe for letter A, L-shaped block, letter V, triangle, letter M, block, letter T, letter G, ring, pentagon, letter E, heart, flower, cross"
+  
