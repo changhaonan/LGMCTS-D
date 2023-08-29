@@ -581,7 +581,8 @@ class BaseEnv:
         scaled_size = self._scale_size(size, scalar)
         if pose is None:
             pose, obj_stack_id = self.get_random_pose(scaled_size, prior=prior, stack_prob=stack_prob)
-        elif pose[0] is None or pose[1] is None:
+        
+        if (pose[0] is None) or (pose[1] is None):
             # reject sample because of no extra space to use (obj type & size) sampled outside this helper function
             return None, None, None
         else:
