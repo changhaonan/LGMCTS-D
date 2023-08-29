@@ -3,7 +3,7 @@ from functools import partial
 
 import numpy as np
 
-__all__ = ["container_replace_fn", "kit_obj_fn", "google_scanned_obj_fn"]
+__all__ = ["container_replace_fn", "kit_obj_fn", "google_scanned_obj_fn", "shapenet_obj_fn"]
 
 Z_SHRINK_FACTOR = 1.1
 XY_SHRINK_FACTOR = 1
@@ -83,6 +83,33 @@ def google_scanned_obj_fn(fname):
     return partial(_google_scanned_obj_common, fname=fname)
 
 
+
+
+def _shapenet_obj_common(*args, **kwargs):
+    fname = kwargs["fname"]
+    assets_root = kwargs["assets_root"]
+    fname = os.path.join(assets_root, "shapenet", "meshes", fname)
+    scale = get_scale_from_map(fname[:-4].split("/")[-1], _shapenet_obj_scale_map)
+    scaling = kwargs["scaling"]
+    if isinstance(scaling, float):
+        scale = [s * scaling for s in scale]
+    else:
+        scale = [s1 * s2 for s1, s2 in zip(scaling, scale)]
+    return {
+        "FNAME": (fname,),
+        "SCALE": [
+            scale[0] / XY_SHRINK_FACTOR,
+            scale[1] / XY_SHRINK_FACTOR,
+            scale[2] / Z_SHRINK_FACTOR,
+        ],
+        # "COLOR": (0.5, 0.5, 0.5),
+    }
+
+
+def shapenet_obj_fn(fname):
+    return partial(_shapenet_obj_common, fname=fname)
+
+
 def get_scale_from_map(key, map):
     scale = map.get(key)
     if isinstance(scale, float):
@@ -115,4 +142,50 @@ _kit_obj_scale_map = {
 
 _google_scanned_obj_scale_map = {
     "frypan": 0.275 * 3,
+}
+
+# _shapenet_obj_scale_map = {
+#     "mug": 0.175,
+#     "basket": 0.175,
+#     "basket1": 0.175,
+#     "basket3": 0.175,
+#     "beerbottle": 0.175,
+#     "beerbottle1": 0.175,
+#     "bottle": 0.175,
+#     "bottle2": 0.175,
+#     "bowl": 0.175,
+#     "cellphone": 0.175,
+#     "cellphone2": 0.175,
+#     "knife": 0.175,
+#     "mug1": 0.175,
+#     "mug2": 0.175,
+#     "pillbottle": 0.175,
+#     "pillbottle2": 0.175,
+#     "sodacan2": 0.175,
+#     "winebottle": 0.175,
+#     "winebottle1": 0.175,
+#     "winebottle2": 0.175
+# }
+
+_shapenet_obj_scale_map = {
+    "mug": 1.0,
+    "basket": 1.0,
+    "basket1": 2.0,
+    "basket3": 0.2,
+    "beerbottle": 0.3,
+    "beerbottle1": 0.3,
+    "bottle": 0.3,
+    "bottle2": 0.3,
+    "bowl": 0.7,
+    "cellphone": 1.0,
+    "cellphone2": 0.5,
+    "knife": 0.4,
+    "mug1": 0.3,
+    "mug2": 0.3,
+    "pillbottle": 0.3,
+    "pillbottle2": 0.3,
+    "sodacan2": 0.3,
+    "winebottle": 0.3,
+    "winebottle1": 0.3,
+    "winebottle2": 0.3
 }

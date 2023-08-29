@@ -21,7 +21,8 @@ class PromptGenerator:
         self.rng = rng
         self.place_action_list = ["Put", "Place", "Leave"]
         self.pattern_list = ["Circle", "Square"]
-        self.obj_list = ["Letter A", "Letter B", "Letter C"]
+        # self.obj_list = ["Letter A", "Letter B", "Letter C"]
+        self.obj_list = ["basket", "basket1", "basket3"]
         self.prep_list = ["at", "in", "on"]
         self.correlative_list = ["; then ", "; and ", "; while ", "; so ", "; "]
         self.region_prompt = ""

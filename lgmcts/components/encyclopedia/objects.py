@@ -1,7 +1,7 @@
 import math
 from enum import Enum
 from typing import List
-
+import json
 from .definitions import ObjEntry, SizeRange
 from .profiles import ProfilePedia
 from .replace_fns import *
@@ -362,6 +362,360 @@ class ObjPedia(Enum):
         assets="hanoi/disk-mod.urdf",
         size_range=SizeRange(low=(0.18, 0.18, 0.035), high=(0.18, 0.18, 0.035)),
         profile=ProfilePedia.CIRCLE_LIKE,
+    )
+     
+    # ShapeNet objects
+    SHAPENET_BASKET = ObjEntry(
+        name="basket",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/basket.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/basket.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("basket.obj"),
+        # symmetry=0,
+    )
+    
+    SHAPENET_BASKET1 = ObjEntry(
+        name="basket1",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/basket1.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/basket1.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("basket1.obj"),
+        # symmetry=0,
+    )
+    
+    SHAPENET_BASKET3 = ObjEntry(
+        name="basket3",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/basket3.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/basket3.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("basket3.obj"),
+        # symmetry=0,
+    )
+    
+    SHAPENET_BEERBOTTLE = ObjEntry(
+        name="beerbottle",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("beerbottle.obj"),
+        # symmetry=0,
+    )
+    
+    SHAPENET_BEERBOTTLE1 = ObjEntry(
+        name="beerbottle1",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle1.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle1.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("beerbottle1.obj"),
+        # symmetry=0,
+    )
+    
+    SHAPENET_BOTTLE = ObjEntry(
+        name="bottle",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bottle.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bottle.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("bottle.obj"),
+        # symmetry=0,
+    )
+
+    SHAPENET_BOTTLE2 = ObjEntry(
+        name="bottle2",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bottle2.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bottle2.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("bottle2.obj"),
+        # symmetry=0,
+    )
+
+    SHAPENET_BOWL = ObjEntry(
+        name="bowl",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("bowl.obj"),
+        # symmetry=0,
+    )
+
+    SHAPENET_CELLPHONE = ObjEntry(
+        name="cellphone",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/cellphone.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/cellphone.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("cellphone.obj"),
+        # symmetry=0,
+    )
+
+    SHAPENET_CELLPHONE2 = ObjEntry(
+        name="cellphone2",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/cellphone2.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/cellphone2.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("cellphone2.obj"),
+        # symmetry=0,
+    )
+
+
+    SHAPENET_KNIFE = ObjEntry(
+        name="knife",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/knife.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/knife.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("knife.obj"),
+        # symmetry=0,
+    )
+
+    SHAPENET_MUG = ObjEntry(
+        name="mug",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("mug.obj"),
+        # symmetry=0,
+    )
+
+
+
+    SHAPENET_MUG1 = ObjEntry(
+        name="mug1",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug1.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug1.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("mug1.obj"),
+        # symmetry=0,
+    )
+
+
+    SHAPENET_MUG2 = ObjEntry(
+        name="mug2",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug2.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug2.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("mug2.obj"),
+        # symmetry=0,
+    )
+
+    # For pillbottle
+    SHAPENET_PILLBOTTLE = ObjEntry(
+        name="pillbottle",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/pillbottle.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/pillbottle.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("pillbottle.obj"),
+    )
+
+    # For pillbottle2
+    SHAPENET_PILLBOTTLE2 = ObjEntry(
+        name="pillbottle2",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/pillbottle2.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/pillbottle2.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("pillbottle2.obj"),
+    )
+
+    # For sodacan2
+    SHAPENET_SODACAN2 = ObjEntry(
+        name="sodacan2",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/sodacan2.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/sodacan2.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("sodacan2.obj"),
+    )
+
+    # For winebottle
+    SHAPENET_WINEBOTTLE = ObjEntry(
+        name="winebottle",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/winebottle.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/winebottle.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("winebottle.obj"),
+    )
+
+    # For winebottle1
+    SHAPENET_WINEBOTTLE1 = ObjEntry(
+        name="winebottle1",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/winebottle1.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/winebottle1.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("winebottle1.obj"),
+    )
+
+    # For winebottle2
+    SHAPENET_WINEBOTTLE2 = ObjEntry(
+        name="winebottle2",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/winebottle2.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/winebottle2.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("winebottle2.obj"),
+    )
+
+        # For mug3
+    SHAPENET_MUG3 = ObjEntry(
+        name="mug3",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug3.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug3.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("mug3.obj"),
+    )
+
+    # For mug4
+    SHAPENET_MUG4 = ObjEntry(
+        name="mug4",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug4.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug4.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("mug4.obj"),
+    )
+
+    # For mug5
+    SHAPENET_MUG5 = ObjEntry(
+        name="mug5",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug5.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/mug5.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("mug5.obj"),
+    )
+
+    # For cellphone4
+    SHAPENET_CELLPHONE4 = ObjEntry(
+        name="cellphone4",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/cellphone4.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/cellphone4.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("cellphone4.obj"),
+    )
+
+    # For bowl1
+    SHAPENET_BOWL1 = ObjEntry(
+        name="bowl1",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl1.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl1.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("bowl1.obj"),
+    )
+
+    # For beerbottle2
+    SHAPENET_BEERBOTTLE2 = ObjEntry(
+        name="beerbottle2",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle2.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle2.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("beerbottle2.obj"),
+    )
+
+    # For bowl3
+    SHAPENET_BOWL3 = ObjEntry(
+        name="bowl3",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl3.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl3.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("bowl3.obj"),
+    )
+
+    # For bowl4
+    SHAPENET_BOWL4 = ObjEntry(
+        name="bowl4",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl4.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl4.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("bowl4.obj"),
+    )
+
+    # For bowl5
+    SHAPENET_BOWL5 = ObjEntry(
+        name="bowl5",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl5.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl5.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("bowl5.obj"),
+    )
+
+    # For bowl6
+    SHAPENET_BOWL6 = ObjEntry(
+        name="bowl6",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl6.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bowl6.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("bowl6.obj"),
+    )
+
+    # For bottle3
+    SHAPENET_BOTTLE3 = ObjEntry(
+        name="bottle3",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bottle3.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/bottle3.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("bottle3.obj"),
+    )
+    # For beerbottle3
+    SHAPENET_BEERBOTTLE3 = ObjEntry(
+        name="beerbottle3",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle3.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle3.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("beerbottle3.obj"),
+    )
+
+    # For beerbottle4
+    SHAPENET_BEERBOTTLE4 = ObjEntry(
+        name="beerbottle4",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle4.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle4.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("beerbottle4.obj"),
+    )
+
+    # For beerbottle5
+    SHAPENET_BEERBOTTLE5 = ObjEntry(
+        name="beerbottle5",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle5.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle5.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("beerbottle5.obj"),
+    )
+
+    # For beerbottle6
+    SHAPENET_BEERBOTTLE6 = ObjEntry(
+        name="beerbottle6",
+        assets="shapenet/object-template.urdf",
+        size_range=SizeRange(low=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle6.json"))["min"]), high=tuple(json.load(open("/media/exx/T7 Shield/ICLR23/LGMCTS-D/lgmcts/assets/shapenet/meshes/beerbottle6.json"))["max"])),
+        profile=ProfilePedia.CIRCLE_LIKE,
+        from_template=True,
+        replace_fn=shapenet_obj_fn("beerbottle6.obj"),
     )
 
     @classmethod

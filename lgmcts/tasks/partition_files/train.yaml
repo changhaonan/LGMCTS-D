@@ -18,22 +18,68 @@ color_set_1:
   - red paisley
   - yellow paisley
   - green paisley
+  - purple paisley
 
 dragged_obj:
-  - letter A
-  - letter E
-  - letter G
-  - letter M
-  - letter T
-  - letter V
-  - block
-  - cross
-  - triangle
-  - flower
-  - heart
-  - ring
-  - pentagon
-  - L-shaped block
+  # - basket
+  - basket1
+  - basket3
+  - beerbottle
+  - beerbottle1
+  - bottle
+  - bottle2
+  - bowl
+  - cellphone
+  # - cellphone2  
+  - knife
+  - mug
+  - mug1
+  - mug2
+  - pillbottle
+  - pillbottle2
+  - sodacan2
+  - winebottle
+  - winebottle1
+  - winebottle2
+
+
+
+
+
+
+  # - bottle3
+  # - beerbottle2
+  # - beerbottle3
+  # - beerbottle4
+  # - beerbottle5
+  # - beerbottle6
+
+  # - bowl1
+  # - bowl3
+  # - bowl4
+  # - bowl5
+  # - bowl6
+  # - cellphone4  
+
+  # - mug3
+  # - mug4
+  # - mug5
+
+  # - letter A
+  # - letter E
+  # - letter G
+  # - letter M
+  # - letter T
+  # - letter V
+  # - block
+  # - cross
+  # - triangle
+  # - flower
+  # - heart
+  # - ring
+  # - pentagon
+  # - L-shaped block
+
 
 # ==== structure rearrange ====
 struct_rearrange:
