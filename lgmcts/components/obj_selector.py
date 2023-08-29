@@ -48,6 +48,8 @@ class ObjectSelector:
                 in_color.append(self.texture_list[obj_bag.obj_id])
                 # selected_size.append(self.size_list[obj_bag.size_id])
             else:
+                if obj_bag.obj_id == anchor_obj_bag.obj_id:
+                    continue  # jump anchor for outlist
                 out_obj.append(self.obj_list[obj_bag.obj_id])
                 out_color.append(self.texture_list[obj_bag.obj_id])
                 # out_size.append(self.size_list[obj_bag.size_id])

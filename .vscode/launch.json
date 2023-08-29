@@ -35,6 +35,7 @@
             "program": "${workspaceFolder}/lgmcts/scripts/eval/eval_lgmcts.py",
             "args": [
                 "--method=mcts",
+                "--n_epoches=1",
                 "--debug",
             ],
             "console": "integratedTerminal",

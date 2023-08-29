@@ -42,3 +42,4 @@ Point cloud & pose are all padded with zero. Their shape is of (max_num_obj * ma
 ## TODO:
 
 - [ ] Theoretically, the action part should have bug, but what kind of bug is still unknown.
+- [ ] Include the spatial pattern into pipeline.
