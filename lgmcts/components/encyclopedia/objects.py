@@ -25,6 +25,7 @@ class ObjPedia(Enum):
         symmetry=0,
         profile=ProfilePedia.CIRCLE_LIKE,
     )
+
     BLOCK = ObjEntry(
         name="block",
         alias=["cube"],
@@ -37,6 +38,7 @@ class ObjPedia(Enum):
         symmetry=1 / 4 * math.pi,
         profile=ProfilePedia.SQUARE_LIKE,
     )
+
     SHORTER_BLOCK = ObjEntry(
         name="shorter block",
         alias=["cube"],
@@ -49,6 +51,7 @@ class ObjPedia(Enum):
         symmetry=1 / 4 * math.pi,
         profile=ProfilePedia.SQUARE_LIKE,
     )
+
     PALLET = ObjEntry(
         name="pallet",
         assets="pallet/pallet.urdf",
@@ -58,6 +61,7 @@ class ObjPedia(Enum):
         ),
         profile=ProfilePedia.SQUARE_LIKE,
     )
+
     FRAME = ObjEntry(
         name="frame",
         novel_name=["zone"],
@@ -68,6 +72,7 @@ class ObjPedia(Enum):
         ),
         profile=ProfilePedia.SQUARE_LIKE,
     )
+
     CONTAINER = ObjEntry(
         name="container",
         assets="container/container-template.urdf",
@@ -79,6 +84,7 @@ class ObjPedia(Enum):
         replace_fn=container_replace_fn,
         profile=ProfilePedia.SQUARE_LIKE,
     )
+
     THREE_SIDED_RECTANGLE = ObjEntry(
         name="three-sided rectangle",
         assets="square/square-template.urdf",
@@ -89,6 +95,7 @@ class ObjPedia(Enum):
         from_template=True,
         replace_fn=container_replace_fn,
     )
+
     SMALL_BLOCK = ObjEntry(
         name="small block",
         assets="block/small.urdf",
@@ -98,6 +105,7 @@ class ObjPedia(Enum):
         ),
         from_template=True,  # this will activate the replace dict, i.e. (SIZE here)
     )
+
     LINE = ObjEntry(
         name="line",
         assets="line/line-template.urdf",
@@ -107,6 +115,7 @@ class ObjPedia(Enum):
         ),
         from_template=True,  # this will activate the replace dict, i.e. (SIZE here)
     )
+
     SQUARE = ObjEntry(
         name="square",
         assets="square/square-template-allsides.urdf",
@@ -489,8 +498,6 @@ class ObjPedia(Enum):
         # symmetry=0,
     )
 
-
-
     SHAPENET_MUG1 = ObjEntry(
         name="mug1",
         assets="shapenet/object-template.urdf",
@@ -572,7 +579,7 @@ class ObjPedia(Enum):
         replace_fn=shapenet_obj_fn("winebottle2.obj"),
     )
 
-        # For mug3
+    # For mug3
     SHAPENET_MUG3 = ObjEntry(
         name="mug3",
         assets="shapenet/object-template.urdf",

@@ -435,8 +435,123 @@ class SineCurvePattern(Pattern):
         return not (np.max(np.linalg.norm(dists)) > threshold)
 
 
-#TODO: we need to add more patterns here, e.g. circle, rectangle, spatial, etc. @Alex
+class SpatialPattern:
+    """Spatial pattern, describing spatial relationship"""
+    name: "spatial"
 
+    @classmethod
+    def gen_prior(cls, img_size, rng, **kwargs):
+        obj_poses_pix = kwargs.get("obj_poses_pix", {})
+        obj_id = kwargs.get("obj_id", -1)
+        obj_ids = kwargs.get("obj_ids", [])
+        # extract relative obj & poses
+        rel_obj_ids = []
+        rel_obj_poses_pix = []
+        anchor_sampled = True
+        for id in obj_ids:
+            if id != obj_id:
+                if id in obj_poses_pix:
+                    rel_obj_ids.append(id)
+                    rel_obj_poses_pix.append(obj_poses_pix[id])
+                else:
+                    anchor_sampled = False
+
+        prior = np.zeros(img_size, dtype=np.float32)
+        # compute anchor
+        if len(rel_obj_poses_pix) > 0:
+            assert len(rel_obj_poses_pix) == 1, "Only one anchor object is allowed!"
+            anchor = rel_obj_poses_pix[0]
+        else:
+            if anchor_sampled:
+                # if no object is anchor, we use the center of the image
+                anchor = [img_size[0]/2, img_size[1]/2]
+            else:
+                warnings.warn("Anchor object exists, but not sampled!")
+                return prior, {}
+
+        # parse spatial label 
+        spatial_label = kwargs.get("spatial_label", [0, 0, 0, 0])  # [left, right, front, back]
+        if spatial_label == [1, 0, 0, 0]:
+            # left
+            prior[:, int(anchor[0]):] = 1.0
+            spatial_str = "left"
+        elif spatial_label == [0, 1, 0, 0]:
+            # right
+            prior[:, :int(anchor[0])] = 1.0
+            spatial_str = "right"
+        elif spatial_label == [0, 0, 1, 0]:
+            # front
+            prior[int(anchor[1]):, :] = 1.0
+            spatial_str = "front"
+        elif spatial_label == [0, 0, 0, 1]:
+            # back
+            prior[:int(anchor[1]), :] = 1.0
+            spatial_str = "back"
+        elif spatial_label == [1, 0, 1, 0]:
+            # left & front
+            prior[int(anchor[1]):, int(anchor[0]):] = 1.0
+            spatial_str = "left & front"
+        elif spatial_label == [1, 0, 0, 1]:
+            # left & back
+            prior[:int(anchor[1]), int(anchor[0]):] = 1.0
+            spatial_str = "left & back"
+        elif spatial_label == [0, 1, 1, 0]:
+            # right & front
+            prior[int(anchor[1]):, :int(anchor[0])] = 1.0
+            spatial_str = "right & front"
+        elif spatial_label == [0, 1, 0, 1]:
+            # right & back
+            prior[:int(anchor[1]), :int(anchor[0])] = 1.0
+            spatial_str = "right & back"
+        else:
+            raise NotImplementedError("Spatial label {} not implemented!".format(spatial_label))
+
+        # Pattern info
+        pattern_info = {}
+        pattern_info["type"] = "pattern:spatial"
+        pattern_info["obj_id"] = obj_id
+        pattern_info["obj_ids"] = obj_ids
+        pattern_info["spatial_label"] = spatial_label
+        pattern_info["spatial_str"] = spatial_str
+        return prior, pattern_info
+
+    @classmethod
+    def check(cls, obj_poses: dict[int, np.ndarray], pattern_info, **kwargs):
+        """Check if obj poses meet the spatial pattern"""
+        obj_id = pattern_info["obj_id"]
+        obj_ids = pattern_info["obj_ids"]
+        # extract relative obj & poses
+        rel_obj_ids = []
+        rel_obj_poses = []
+        for id in obj_ids:
+            if id != obj_id:
+                if id in obj_poses:
+                    rel_obj_ids.append(id)
+                    rel_obj_poses.append(obj_poses[id][:3])
+                else:
+                    return False
+        rel_obj_pose = rel_obj_poses[0]
+        obj_pose = obj_poses[obj_id][:3]
+        # check spatial relationship
+        spatial_label = pattern_info["spatial_label"]
+        if spatial_label[0] == 1:
+            # left
+            if rel_obj_pose[0] > obj_pose[0]:
+                return False
+        if spatial_label[1] == 1:
+            # right
+            if rel_obj_pose[0] < obj_pose[0]:
+                return False
+        if spatial_label[2] == 1:
+            # front
+            if rel_obj_pose[1] > obj_pose[1]:
+                return False
+        if spatial_label[3] == 1:
+            # back
+            if rel_obj_pose[1] < obj_pose[1]:
+                return False
+        return True
+        
 
 ## PATTERN DICT
 
@@ -444,9 +559,16 @@ PATTERN_DICT = {
     "line": LinePattern,
     "circle": CirclePattern,
     "rectangle": RectanglePattern,
-    "sine": SineCurvePattern
+    "sine": SineCurvePattern,
+    "spatial": SpatialPattern
 }
 
 ## Test code
 if __name__ == "__main__":
-    pass
+    # test spatial
+    spatial_label = [0, 1, 0, 1]
+    anchor = [50, 50]
+    img_size = [200, 200]
+    prior, pattern_info = SpatialPattern.gen_prior(img_size, None, spatial_label=spatial_label, anchor=anchor)
+    cv2.imshow("prior", prior)
+    cv2.waitKey(0)
