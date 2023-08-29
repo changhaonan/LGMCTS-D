@@ -529,10 +529,7 @@ class BaseEnv:
         _, hmap, obj_mask = self.get_true_image()
 
         obj_stack_id = -1  # -1 is the base
-        if self.rng.random() < stack_prob and len(self.obj_support_tree.leaves) > 1:
-            # select an object to stack up
-            if len(self.obj_ids["rigid"]) == 0:
-                return [None, None], None
+        if self.rng.random() < stack_prob and len(self.obj_support_tree.leaves) > 1 and (len(self.obj_ids["rigid"]) > 0):
             leaf_nodes = self.obj_support_tree.leaves
             leaf_obj_ids = [leaf_node.name for leaf_node in leaf_nodes]
             obj_stack_id = self.rng.choice(leaf_obj_ids)

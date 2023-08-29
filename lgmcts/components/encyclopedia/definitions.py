@@ -59,6 +59,7 @@ class ObjEntry(NamedTuple):
     template_file: Optional[str] = None
     symmetry: Optional[float] = None
     profile: Optional[ProfilePedia] = ProfilePedia.UNDETERMINED
+    init_ori: Optional[List[float]] = None
 
 
 # defines the data structure of each entry in the texture encyclopedia
