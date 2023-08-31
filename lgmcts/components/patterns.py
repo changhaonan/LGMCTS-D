@@ -7,6 +7,19 @@ import warnings
 from scipy.optimize import curve_fit
 import cv2
 
+## PATTERN CONSTANTS HERE
+
+#TODO: add pattern constants here @Alex
+PATTERN_CONSTANTS = {
+    "cricle": {
+        "radius": {
+            "L" : [0.5, 0.7],
+            "M" : [0.3, 0.5],
+            "S" : [0.1, 0.3]
+        }
+    }
+}
+
 
 class Pattern(ABC):
     """Base pattern type, needs to implement generate, check method
@@ -164,6 +177,8 @@ class CirclePattern(Pattern):
         obj_id = kwargs.get("obj_id", -1)
         obj_ids = kwargs.get("obj_ids", [])
         thickness = kwargs.get("thickness", 1)
+        #TODO: new parameters here: radius, center @Alex
+        # radius: str, L, M, S
         # extract relative obj & poses
         rel_obj_ids = []
         rel_obj_poses_pix = []
@@ -551,7 +566,24 @@ class SpatialPattern:
             if rel_obj_pose[1] < obj_pose[1]:
                 return False
         return True
-        
+
+##TODO: Arbitrary pattern @Alex
+
+#Example: structformer has a pattern called dinner
+# folk at left, plate at center, knife at right
+
+class DataDrivenPattern:
+    name: "data_driven"
+
+    @classmethod
+    def gen_prior(cls, img_size, rng, **kwargs):
+        pattern_name = kwargs.get("pattern_name", "dinner")
+        obj_poses_pix = kwargs.get("obj_poses_pix", {})
+        obj_id = kwargs.get("obj_id", -1)
+        obj_ids = kwargs.get("obj_ids", [])
+        obj_semantic_labels = kwargs.get("obj_semantic_labels", [])
+        #TODO: finish this @Alex
+
 
 ## PATTERN DICT
 
