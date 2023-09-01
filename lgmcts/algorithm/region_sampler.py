@@ -374,7 +374,9 @@ class Region2DSampler(Region2D):
         samples_reg = np.concatenate([samples_reg, np.zeros((samples_reg.shape[0], 1))], axis=1)  # (N, 3)
         samples_wd = self._region2world(samples_reg)  # (N, 3)
         samples_wd = samples_wd + self.objects[obj_id].pos_offset.reshape(1, 3)
-        # FIXME: currently we don't support sample in rotation, so we set it to identity
+        #FIXME: fix the z-value currently
+        samples_wd[:, 2] = 0.000
+        #FIXME: currently we don't support sample in rotation, so we set it to identity
         rots = np.tile(np.array([0.0, 0.0, 0.0, 1.0-(1e-6)], dtype=np.float32), (samples_reg.shape[0], 1))
         samples_wd = np.hstack([samples_wd, rots])
         # Assemble sample info
