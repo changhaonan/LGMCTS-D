@@ -42,6 +42,7 @@ def _generate_data_for_one_task(
     task = env.task
     prompt_generator = PromptGenerator(env.rng)
     obj_selector = ObjectSelector(env.rng)
+    prompt_str_list = []
     tbar = tqdm(total=num_episodes, desc=task_name, leave=True)
 
     print("Generate dataset...")
@@ -56,10 +57,14 @@ def _generate_data_for_one_task(
         task.gen_start_config(env)
         
         # save
+        prompt_str_list.append(task.prompt)
         env.save_checkpoint(os.path.join(save_path, task_name, f"checkpoint_{i:0{num_save_digits}d}.pkl"))
         tbar.update(1)
 
     tbar.close()
+    # save the prompt string list
+    with open(os.path.join(save_path, task_name, "prompt_str_list.txt"), "w") as f:
+        f.write("\n".join(prompt_str_list))
 
 
 if __name__ == '__main__':

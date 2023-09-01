@@ -36,7 +36,10 @@ Point cloud & pose are all padded with zero. Their shape is of (max_num_obj * ma
 
 - Currently, the sequential sampling is not working. Need to be fixed.
 - Is the sampling repeatable??
+- The current loading is not OS-free.
+- BUG: collision, is it because the movement action has error?? Because movement has a shift.
 
 ## TODO:
 
 - [ ] Theoretically, the action part should have bug, but what kind of bug is still unknown.
+- [ ] Include the spatial pattern into pipeline.

@@ -72,7 +72,7 @@ class StructRearrange(BaseTask):
         self.distract_obj_ids = []
 
     def add_objects_to_pattern(
-        self, env, objs, colors, pattern_prior: np.ndarray, use_existing: bool=False, stack_prob: float=0.0):
+        self, env, objs, colors, pattern_prior: np.ndarray | None, use_existing: bool=False, stack_prob: float=0.0):
         """Set objects to a line, use_existing decides whether to add new object or not"""
         # Add object
         added_obj_ids = []
@@ -91,9 +91,10 @@ class StructRearrange(BaseTask):
         else:
             raise NotImplementedError("Not implemented yet")
         if len(added_obj_ids) == 0:
-            cv2.imshow("prior", pattern_prior)
-            cv2.waitKey(0)
-            assert False, "No object is added to the pattern"
+            if pattern_prior is not None:
+                cv2.imshow("prior", pattern_prior)
+                cv2.waitKey(0)
+            # assert False, "No object is added to the pattern"
         return added_obj_ids, obj_status
 
     def add_objects_to_random(self, env, max_num_obj: int, obj_candidates: list=[], color_candidates: list=[], use_existing: bool=False, stack_prob :float=0.0):

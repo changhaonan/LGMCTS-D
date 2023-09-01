@@ -203,6 +203,19 @@ class Region2DSampler(Region2D):
             # cv2.imshow("contour", mask * 255)
             # cv2.waitKey(0)
             ## DEBUG end here
+        elif mask_mode == "raw_mask":
+            mask_width = points_region[:, 0].max() - points_region[:, 0].min() + 1
+            mask_height = points_region[:, 1].max() - points_region[:, 1].min() + 1
+            # pad size to odd
+            if mask_width % 2 == 0:
+                mask_width += 1
+            if mask_height % 2 == 0:
+                mask_height += 1
+            mask = np.zeros((mask_width, mask_height), dtype=np.uint8)
+            pixels = points_region[:, :2].astype(np.int32) - lb_region[:2]
+            # convert pixels to cv2 shape, cv2 is (y, x)
+            # pixels = pixels[:, [1, 0]]
+            mask[pixels[:, 0], pixels[:, 1]] = 1
         height = points_region[:, 2].max() - points_region[:, 2].min()
         # compute offset compared with pos_ref (reference position)
         mask_center = np.array([mask.shape[0] // 2, mask.shape[1] // 2, 0]) + lb_region

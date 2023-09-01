@@ -11,9 +11,13 @@ import numpy as np
 from .definitions import TextureEntry
 
 
+# def _texture_fpath(fname):
+#     with importlib_resources.files("lgmcts.assets.textures") as p:
+#         return os.path.join(str(p), fname)
+
+#FIXME: VIMA was using absolute path, LGMCTS changes it to relative path
 def _texture_fpath(fname):
-    with importlib_resources.files("lgmcts.assets.textures") as p:
-        return os.path.join(str(p), fname)
+    return fname
 
 
 def convert_to_darker_color(color: TextureEntry, offset=0.3) -> TextureEntry:

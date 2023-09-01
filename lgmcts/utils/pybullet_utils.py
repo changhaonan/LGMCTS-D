@@ -9,6 +9,7 @@ from typing import Dict, Optional, Any, Union, List
 
 import numpy as np
 import pybullet as p
+import importlib_resources
 
 from lgmcts.components.encyclopedia.definitions import ObjEntry, TextureEntry
 from lgmcts.components.encyclopedia.replace_fns import default_replace_fn
@@ -164,9 +165,8 @@ def load_urdf(pybullet_client, file_path, *args, **kwargs):
     # Handles most general file open case.
     try:
         return pybullet_client.loadURDF(file_path, *args, **kwargs)
-    except pybullet_client.error:
-        pass
-
+    except pybullet_client.error as e:
+        print(f"error: {e}, for file: {file_path}")
 
 # END GOOGLE-EXTERNAL
 
@@ -283,10 +283,12 @@ def p_change_texture(obj_id: int, texture_entry: TextureEntry, client_id: int):
             physicsClientId=client_id,
         )
     else:
+        with importlib_resources.files("lgmcts.assets.textures") as asset_root:
+            texture_path = os.path.join(str(asset_root), texture_entry.texture_asset)
         p.changeVisualShape(
             obj_id,
             -1,
-            textureUniqueId=p.loadTexture(texture_entry.texture_asset, client_id),
+            textureUniqueId=p.loadTexture(texture_path, client_id),
             physicsClientId=client_id,
         )
     

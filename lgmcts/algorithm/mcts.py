@@ -126,7 +126,7 @@ class Node(object):
             action: (sampler_id, trial_id), 
             moved_obj: moved obj (obj to goal or obstacle), or None
             new_position: pose, 
-            solved_sampler_obj_id: sampler_id or None
+            solved_sampler_obj_id: sampler_id or float('inf')
         """
         # check graspability
         found_node = anytree.search.find(
@@ -135,9 +135,7 @@ class Node(object):
         if found_node and len(found_node.children) > 0:
             # not graspable, move a leave on the subtree away
             # Search for all leaf nodes
-            leaf_nodes = anytree.search.findall(
-                found_node, filter_=lambda node: not node.children
-                )
+            leaf_nodes = found_node.leaves
             moved_obj = self.rng.choice(leaf_nodes).name
             # add a sampler to move the obstacle away
             buffer_sampler = SampleData(
@@ -150,7 +148,7 @@ class Node(object):
                 self.object_states,
                 buffer_sampler
             )
-            solved_sampler_obj_id = None
+            solved_sampler_obj_id = float('inf')
             return action, moved_obj, new_position, solved_sampler_obj_id
             
         sampler = self.sampler_dict[action[0]]
@@ -163,7 +161,7 @@ class Node(object):
         if not success: # fails to complete the sampling, do 
             if obs is None:
                 # fails but not because of collision (e.g., out of workspace)
-                solved_sampler_obj_id = None
+                solved_sampler_obj_id = float('inf')
                 moved_obj = None
             else:
                 # add a sampler to move the obstacle away
@@ -177,7 +175,7 @@ class Node(object):
                     self.object_states,
                     buffer_sampler
                 )
-                solved_sampler_obj_id = None
+                solved_sampler_obj_id = float('inf')
         return action, moved_obj, new_position, solved_sampler_obj_id
 
     def sampling_function(
@@ -236,21 +234,18 @@ class Node(object):
         # print(f"sample status: {samples_status.name}, valid_pose: {valid_pose}")
 
         if not success: # find an obstacle
-            # segmentation->sample on prior->find collision
             if self.segmentation is None:
                 self.segmentation = self.semantic_segmentation(region)
-            leaf_nodes = anytree.search.findall(
-                self.obj_support_tree, filter_=lambda node: not node.children
-                )
+            leaf_nodes = self.obj_support_tree.leaves
             leaf_objs = [n.name for n in leaf_nodes]
             counter = 100
             while (counter > 0):
                 counter -= 1
                 samples_reg, sample_probs = sample_distribution(prob=prior, rng=region.rng, n_samples=1)  # (N, 2)
                 obs_id  = self.segmentation[samples_reg[0][0], samples_reg[0][1], 0]
-                if (obs_id not in [-1, obj_id]) and (obj_id in leaf_objs):
+                if (obs_id not in [-1, obj_id]) and (obs_id in leaf_objs):
                     break
-            else:
+            if counter <= 0:
                 obs_id = None
         else:
             obs_id = None
@@ -422,9 +417,6 @@ class MCTS(object):
         }
         # print(f"id: {node_id}, obj_states: {new_object_states}, target: {target}")
 
-        if solved_sampler_obj_id is None:
-            solved_sampler_obj_id = float("inf")
-            
         new_sampler_dict = {obj_id:sampler for obj_id, sampler in current_node.sampler_dict.items() if obj_id != solved_sampler_obj_id}
         
         # If we are moving an obstacle, the moved object may be an object moved to goal, 
@@ -432,8 +424,8 @@ class MCTS(object):
         if solved_sampler_obj_id == float("inf"):
             backtracked_node = current_node
             while backtracked_node is not None:
-                if solved_sampler_obj_id in backtracked_node.sampler_dict.keys():
-                    new_sampler_dict[solved_sampler_obj_id] = backtracked_node.sampler_dict[solved_sampler_obj_id]
+                if obj in backtracked_node.sampler_dict.keys():
+                    new_sampler_dict[obj] = backtracked_node.sampler_dict[obj]
                     break
                 backtracked_node = backtracked_node.parent
 
@@ -446,7 +438,6 @@ class MCTS(object):
             found_node.parent = new_tree
             # it should have no children at this point since we are moving it
             assert len(found_node.children) == 0
-
 
         new_node = Node(
             node_id,

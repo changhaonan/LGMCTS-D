@@ -41,17 +41,21 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
     sucess_count = 0
-    for i in range(n_epoches):
+
+    checkpoint_list = list(filter(lambda f: f.endswith(".pkl"), os.listdir(dataset_path)))
+    checkpoint_list.sort()
+    for i in range(min(n_epoches, len(checkpoint_list))):
         print(f"==== Episode {i} ====")
         ## Step 1. init the env from dataset
         env.reset()
         prompt_generator.reset()
         region_sampler.reset()
         # load from dataset
-        checkpoint_path = os.path.join(dataset_path, f"checkpoint_{i:0{num_save_digits}d}.pkl")
+        checkpoint_path = os.path.join(dataset_path, checkpoint_list[i])
         env.load_checkpoint(checkpoint_path)
         prompt_generator.prompt = task.prompt
         region_sampler.load_objs_from_env(env)
+        # DEBUG
         # region_sampler.visualize()
         if debug:
             prompt_generator.render()
