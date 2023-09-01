@@ -45,7 +45,7 @@ class ObjectSelector:
         for obj_bag in self.obj_bag_list:
             if compare_rel == COMPARE_DICT[attribute](obj_bag, anchor_obj_bag):
                 if anchor_obj_bag.obj_id == obj_bag.obj_id:
-                    print("Duplicate here..........")
+                    continue
                 else:
                     in_obj.append(self.obj_list[obj_bag.obj_id])
                     in_color.append(self.texture_list[obj_bag.obj_id])
@@ -56,7 +56,6 @@ class ObjectSelector:
                 out_obj.append(self.obj_list[obj_bag.obj_id])
                 out_color.append(self.texture_list[obj_bag.obj_id])
                 # out_size.append(self.size_list[obj_bag.size_id])
-        print("in_obj:", in_obj)
         return self_include, in_obj, in_color, in_size, out_obj, out_color, out_size
 
     def gen_anchor_obj_prompt(self):
@@ -78,7 +77,6 @@ class ObjectSelector:
 
             ## select objects
             self_include, in_obj, in_color, in_size, out_obj, out_color, out_size = self.select_obj(anchor_obj_bag, attribute, compare_rel)
-            print("self_include:", self_include, "in_obj_size:", len(in_obj))
             if len(in_obj) >= 3:  # at least 3 objects to formulate a pattern
                 if not self_include:
                     anchor_obj = self.obj_list[anchor_obj_bag.obj_id]

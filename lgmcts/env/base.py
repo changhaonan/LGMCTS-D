@@ -521,14 +521,9 @@ class BaseEnv:
         """Get random collision-free object pose within workspace bounds.
         Object has a chance of stack_prob to be stacked upon other objects.
         """
-
         # Get erosion size of object in pixels.
-        print("***********Check START*************")
-        print(f"obj_size: {obj_size}")
         max_size = np.sqrt(obj_size[0] ** 2 + obj_size[1] ** 2)
-        print(f"max_size: {max_size}")
         erode_size = int(np.round(max_size / self.pix_size))
-
         _, hmap, obj_mask = self.get_true_image()
 
         obj_stack_id = -1  # -1 is the base
@@ -579,25 +574,15 @@ class BaseEnv:
         **kwargs,
     ):
         """helper function for adding object to env."""
-        print("***********Check STOP*************")
         scaled_size = self._scale_size(size, scalar)
-        print(f"scaled_size: {scaled_size}")
         if pose is None:
-            print("Calling get_random_pose...")
             pose, obj_stack_id = self.get_random_pose(scaled_size, prior=prior, stack_prob=stack_prob)
-        
         if pose[0] is None or pose[1] is None:
             # reject sample because of no extra space to use (obj type & size) sampled outside this helper function
             return None, None, None
         else:
             obj_stack_id = None
-        
-        print(f"obj_entry: {obj_entry}")
-        print(f"pose: {pose}")
-        
-        print(f"scaling: {scalar}")
-        print(f"retain_temp: {retain_temp}")
-        print(f"category: {category}")
+
         obj_id, urdf_full_path = pybullet_utils.add_any_object(
             env=self,
             obj_entry=obj_entry,
@@ -608,8 +593,6 @@ class BaseEnv:
             category=category,
             **kwargs,
         )
-        print(f"obj_id: {obj_id}")
-        print(f"urdf_full_path: {urdf_full_path}")
         if obj_id is None:  # pybullet loaded error.
             return None, urdf_full_path, pose
         # update support tree
@@ -651,9 +634,6 @@ class BaseEnv:
             sampled_obj_color = color_lists[0].value
         else:
             sampled_obj_color = None
-        print(f"sampled_obj: {sampled_obj}")
-        print(f"sampled_obj_size: {sampled_obj_size}")
-        print(f"sampled_obj_color: {sampled_obj_color}")
         return self.add_object_to_env(
             sampled_obj,
             sampled_obj_color,
@@ -680,7 +660,7 @@ class BaseEnv:
         pose, obj_stack_id = self.get_random_pose(obj_size, prior, stack_prob=stack_prob)
         if pose[0] is None or pose[1] is None:
             return None
-        pybullet_utils.move_obj(self, obj_id, pose[0], pose[1])
+        pybullet_utils.move_obj(self, obj_id, pose[0], None)  #FIXME: when we use movement, we fix the orientation
         self._update_support_tree(obj_id, obj_stack_id)
 
     def _update_support_tree(self, obj_id, obj_stack_id):

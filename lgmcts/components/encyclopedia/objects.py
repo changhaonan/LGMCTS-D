@@ -376,7 +376,7 @@ class ObjPedia(Enum):
         profile=ProfilePedia.CIRCLE_LIKE,
     )
      
-    # ShapeNet objects
+    ## ShapeNet objects
     SHAPENET_BASKET = ObjEntry(
         name="basket",
         assets="shapenet/object-template.urdf",
@@ -477,7 +477,6 @@ class ObjPedia(Enum):
         # symmetry=0,
     )
 
-
     SHAPENET_KNIFE = ObjEntry(
         name="knife",
         assets="shapenet/object-template.urdf",
@@ -507,7 +506,6 @@ class ObjPedia(Enum):
         replace_fn=shapenet_obj_fn("mug1.obj"),
         # symmetry=0,
     )
-
 
     SHAPENET_MUG2 = ObjEntry(
         name="mug2",
