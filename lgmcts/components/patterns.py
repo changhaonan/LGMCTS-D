@@ -107,8 +107,8 @@ class LinePattern(Pattern):
             cv2.line(prior, pt_candidate[0], pt_candidate[1], 1.0, thickness)
 
         # Debug
-        # cv2.imshow("prior", prior)
-        # cv2.waitKey(0)
+        cv2.imshow("prior", prior)
+        cv2.waitKey(0)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"

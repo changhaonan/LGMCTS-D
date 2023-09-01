@@ -425,7 +425,7 @@ class Region2D(Region):
             # create window
             cv2.namedWindow(self.name)
             cv2.imshow(self.name, img_vis)
-            cv2.waitKey(1)
+            cv2.waitKey(100)
             if cv2.getWindowProperty(self.name, cv2.WND_PROP_VISIBLE) < 1:
                 raise ValueError("Window is not created")
 
@@ -439,7 +439,7 @@ class Region2D(Region):
             # Wait for the user to mark occupancy
             while True:
                 cv2.imshow(self.name, img_vis)
-                key = cv2.waitKey(1) & 0xFF
+                key = cv2.waitKey(100) & 0xFF
                 # If the 'Enter' key is pressed, exit the loop
                 if key == 13:
                     break

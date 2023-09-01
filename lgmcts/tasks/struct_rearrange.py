@@ -191,6 +191,7 @@ class StructRearrange(BaseTask):
         type_vocabs["color"] = {}
         for i, color in enumerate(self.color_list):
             type_vocabs["color"][color.name] = i
+        print("type_vocabs:", type_vocabs)
         return type_vocabs
 
     def gen_goal_config(self, env, promptor: PromptGenerator, obj_selector: ObjectSelector, **kwargs):
@@ -203,12 +204,17 @@ class StructRearrange(BaseTask):
         selected_colors = self.rng.choice(color_candidates, num_object, replace=True)
         obj_selector.set_objs(selected_objs, selected_colors)
         selection = obj_selector.gen_anchor_obj_prompt()
-
+        print('prompt_str:', selection["prompt_str"])
+        print("anchor_obj:", selection["anchor_obj"])
+        print("in_obj_size:", len(selection["in_obj"]))
+        print("anchor_obj:", selection["anchor_obj"])
         ## Step 2: select pattern & add objects to scene
         if selection["anchor_obj"] is not None:
             [self.anchor_id], _ = self.add_objects_to_pattern(env, [selection["anchor_obj"]], [selection["anchor_color"]], None, False, 0.0)  # add anchor object
         else:
             self.anchor_id = -1
+        print('anchor_id', self.anchor_id)
+        print("******************************************\n")
         # generate pattern
         pattern_type = env.rng.choice(self.pattern_types)
         max_try = 3
@@ -223,7 +229,7 @@ class StructRearrange(BaseTask):
             except:
                 continue
         if self.anchor_id == -1:
-            self.anchor_id = self.rearrange_obj_ids[0]
+           self.anchor_id = self.rearrange_obj_ids[0]
         
         ## Step 3: add distract objects
         num_distract = self.max_num_obj - len(self.rearrange_obj_ids) - 1

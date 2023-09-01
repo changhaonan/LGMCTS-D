@@ -211,7 +211,7 @@ class Cv2Display:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         time.sleep(self._step_sleep)
         cv2.imshow(self._window_name, img)
-        cv2.waitKey(1)
+        cv2.waitKey(100)
 
         if display_var is not None:
             os.environ["DISPLAY"] = display_var
