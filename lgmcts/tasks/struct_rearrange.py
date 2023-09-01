@@ -94,7 +94,7 @@ class StructRearrange(BaseTask):
             if pattern_prior is not None:
                 cv2.imshow("prior", pattern_prior)
                 cv2.waitKey(0)
-            assert False, "No object is added to the pattern"
+            # assert False, "No object is added to the pattern"
         return added_obj_ids, obj_status
 
     def add_objects_to_random(self, env, max_num_obj: int, obj_candidates: list=[], color_candidates: list=[], use_existing: bool=False, stack_prob :float=0.0):

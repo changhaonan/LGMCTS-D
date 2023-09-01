@@ -83,8 +83,6 @@ def google_scanned_obj_fn(fname):
     return partial(_google_scanned_obj_common, fname=fname)
 
 
-
-
 def _shapenet_obj_common(*args, **kwargs):
     fname = kwargs["fname"]
     assets_root = kwargs["assets_root"]
