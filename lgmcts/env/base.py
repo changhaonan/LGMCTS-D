@@ -660,7 +660,8 @@ class BaseEnv:
         pose, obj_stack_id = self.get_random_pose(obj_size, prior, stack_prob=stack_prob)
         if pose[0] is None or pose[1] is None:
             return None
-        pybullet_utils.move_obj(self, obj_id, pose[0], None)  #FIXME: when we use movement, we fix the orientation
+        print(pose[0])
+        pybullet_utils.move_obj(self, obj_id, pose[0], pose[1])
         self._update_support_tree(obj_id, obj_stack_id)
 
     def _update_support_tree(self, obj_id, obj_stack_id):
