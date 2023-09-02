@@ -193,16 +193,16 @@ class Region2DSampler(Region2D):
                 mask_width += 1
             if mask_height % 2 == 0:
                 mask_height += 1
-            mask = np.zeros((mask_width, mask_height), dtype=np.uint8)
+            mask = np.zeros((mask_height, mask_width), dtype=np.uint8)
             pixels = (points_convex_hull.points[points_convex_hull.vertices]).astype(np.int32) - lb_region[:2]
             # convert pixels to cv2 shape, cv2 is (y, x)
-            pixels = pixels[:, [1, 0]]
+            # pixels = pixels[:, [1, 0]]
             # pixels[0, :] = mask.shape[1] - pixels[0, :]  # flip y
             cv2.fillConvexPoly(mask, pixels, 1,)
             ## DEBUG start here
-            # contour = draw_convex_contour(mask, pixels)
-            # cv2.imshow("contour", mask * 255)
-            # cv2.waitKey(0)
+            contour = draw_convex_contour(mask, pixels)
+            cv2.imshow("contour", mask * 255)
+            cv2.waitKey(0)
             ## DEBUG end here
         elif mask_mode == "raw_mask":
             mask_width = points_region[:, 0].max() - points_region[:, 0].min() + 1
@@ -372,6 +372,8 @@ class Region2DSampler(Region2D):
                 - sample_probs: probability of each sample
         """
         free_space = self.get_free_space(obj_id, allow_outside).astype(np.float32)  # free is 1, occupied is 0
+        cv2.imshow("free", free_space)
+        cv2.waitKey(0)
         if prior is not None:
             assert prior.shape[:2] == free_space.shape[:2], "prior shape must be the same as free shape"
             free_space = np.multiply(free_space, prior)

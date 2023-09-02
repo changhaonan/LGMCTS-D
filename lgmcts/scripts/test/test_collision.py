@@ -53,13 +53,18 @@ def test_collision(dataset_path: str, method: str, n_samples: int = 10, n_epoche
     checkpoint_path = os.path.join(dataset_path, checkpoint_list[i])
     env.load_checkpoint(checkpoint_path)
     prompt_generator.prompt = task.prompt
-    region_sampler.load_objs_from_env(env, mask_mode="raw_mask")
+    region_sampler.load_objs_from_env(env, mask_mode="convex_hull")
     # DEBUG
     # region_sampler.visualize()
     if debug:
         prompt_generator.render()
         region_sampler.visualize()
 
+    ## test movement
+    # pose = np.array([0.5, 0.2, 0.0])
+    # pose_rg = region_sampler._world2region(pose)
+    # pose_wd = region_sampler._region2world(pose_rg)
+    # print(f"pose: {pose}; pose_rg: {pose_rg}; pose_wd: {pose_wd}")
     # close
     env.close()
     prompt_generator.close()

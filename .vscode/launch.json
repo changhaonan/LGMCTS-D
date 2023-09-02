@@ -34,7 +34,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/eval/eval_lgmcts.py",
             "args": [
-                "--method=mcts",
+                "--method=seq",
                 "--n_epoches=10",
                 "--debug",
             ],

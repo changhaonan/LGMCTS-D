@@ -23,7 +23,7 @@ from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
-    resolution = 0.01
+    resolution = 0.002
     n_samples = 5
     num_save_digits = 6
     env = lgmcts.make(
@@ -54,9 +54,9 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
         checkpoint_path = os.path.join(dataset_path, checkpoint_list[i])
         env.load_checkpoint(checkpoint_path)
         prompt_generator.prompt = task.prompt
-        region_sampler.load_objs_from_env(env)
+        region_sampler.load_objs_from_env(env, mask_mode="convex_hull")
         # DEBUG
-        # region_sampler.visualize()
+        region_sampler.visualize()
         if debug:
             prompt_generator.render()
 
@@ -70,7 +70,7 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
                 L.append(sample_data)
         
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT)
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=True)
         for step in action_list:
             # assemble action
             action = {
