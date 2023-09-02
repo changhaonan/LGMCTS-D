@@ -60,11 +60,6 @@ def test_collision(dataset_path: str, method: str, n_samples: int = 10, n_epoche
         prompt_generator.render()
         region_sampler.visualize()
 
-    ## test movement
-    # pose = np.array([0.5, 0.2, 0.0])
-    # pose_rg = region_sampler._world2region(pose)
-    # pose_wd = region_sampler._region2world(pose_rg)
-    # print(f"pose: {pose}; pose_rg: {pose_rg}; pose_wd: {pose_wd}")
     # close
     env.close()
     prompt_generator.close()

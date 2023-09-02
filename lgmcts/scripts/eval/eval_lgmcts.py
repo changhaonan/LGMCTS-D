@@ -57,8 +57,8 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         prompt_generator.prompt = task.prompt
         region_sampler.load_objs_from_env(env, mask_mode=mask_mode)
         # DEBUG
-        region_sampler.visualize()
         if debug:
+            region_sampler.visualize()
             prompt_generator.render()
 
         ## Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
@@ -71,11 +71,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 L.append(sample_data)
         
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=True)
-        ## DEBUG
-        for step in action_list:
-            region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
-        region_sampler.visualize()
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
 
         for step in action_list:
             # assemble action
