@@ -140,8 +140,10 @@ class Suction(Gripper):
         """
         super().__init__(assets_root)
 
+        # Get the pose of the end effector
+        ee_pose = p.getLinkState(robot, 9)[0]  # 9 is the end effector link
         # Load suction gripper base model (visual only).
-        pose = ((0.487, 0.109, 0.438), p.getQuaternionFromEuler((np.pi, 0, 0)))
+        pose = ((ee_pose[0], ee_pose[1], ee_pose[2]), p.getQuaternionFromEuler((np.pi, 0, 0)))
         base = pybullet_utils.load_urdf(
             p,
             os.path.join(self.assets_root, SUCTION_BASE_URDF),
@@ -176,7 +178,7 @@ class Suction(Gripper):
 
         # Load suction tip model (visual and collision) with compliance.
         # urdf = 'assets/ur5/suction/suction-head.urdf'
-        pose = ((0.487, 0.109, 0.347), p.getQuaternionFromEuler((np.pi, 0, 0)))
+        pose = ((ee_pose[0], ee_pose[1], ee_pose[2] - 0.081), p.getQuaternionFromEuler((np.pi, 0, 0)))
         self.body = pybullet_utils.load_urdf(
             p,
             os.path.join(self.assets_root, SUCTION_HEAD_URDF),

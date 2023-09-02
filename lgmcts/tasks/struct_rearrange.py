@@ -29,7 +29,7 @@ class StructRearrange(BaseTask):
     def __init__(
         self, 
         # ==== task specific ====
-        max_num_obj: int = 12,
+        max_num_obj: int = 8,
         stack_prob: float = 0.0,
         pattern_types: list[str] = ["line", "circle"],
         obj_express_types: Literal["name", "image"] = "name",
@@ -199,7 +199,7 @@ class StructRearrange(BaseTask):
         """Generate goal config"""
         ## Step 1: select object candidates
         num_color = kwargs.get("num_color", 2)  # Each scene only has X colors
-        num_object = kwargs.get("num_object", 8)  # Each scene only has at most X objects for pattern
+        num_object = kwargs.get("num_object", 6)  # Each scene only has at most X objects for pattern
         selected_objs = self.rng.choice(self.obj_list, num_object, replace=False)
         color_candidates = self.rng.choice(self.color_list, num_color, replace=False)
         selected_colors = self.rng.choice(color_candidates, num_object, replace=True)

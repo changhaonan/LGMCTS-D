@@ -20,10 +20,11 @@ from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 
 ## Eval method
 
-def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
+def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
-    resolution = 0.002
+    resolution = 0.01
+    mask_padding = 0.04  # padding for clearance
     n_samples = 5
     num_save_digits = 6
     env = lgmcts.make(
@@ -37,7 +38,7 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
     )
     task = env.task
 
-    region_sampler = Region2DSamplerLGMCTS(resolution, env)
+    region_sampler = Region2DSamplerLGMCTS(resolution, mask_padding, env)
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
     sucess_count = 0
@@ -54,7 +55,7 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
         checkpoint_path = os.path.join(dataset_path, checkpoint_list[i])
         env.load_checkpoint(checkpoint_path)
         prompt_generator.prompt = task.prompt
-        region_sampler.load_objs_from_env(env, mask_mode="convex_hull")
+        region_sampler.load_objs_from_env(env, mask_mode=mask_mode)
         # DEBUG
         region_sampler.visualize()
         if debug:
@@ -70,7 +71,12 @@ def eval_offline(dataset_path: str, method: str, n_samples: int = 10, n_epoches:
                 L.append(sample_data)
         
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=True)
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT)
+        ## DEBUG
+        for step in action_list:
+            region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
+        region_sampler.visualize()
+
         for step in action_list:
             # assemble action
             action = {
@@ -105,6 +111,7 @@ if __name__ == "__main__":
     parser.add_argument("--method", type=str, default="mcts", help="Method to use")
     parser.add_argument("--n_samples", type=int, default=10, help="Number of samples")
     parser.add_argument("--n_epoches", type=int, default=10, help="Number of epoches")
+    parser.add_argument("--mask_mode", type=str, default="convex_hull", help="Mask mode")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
     args = parser.parse_args()
     if args.dataset_path is not None:
@@ -112,4 +119,4 @@ if __name__ == "__main__":
     else:
         root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
         dataset_path = f"{root_path}/output/struct_rearrange"
-    eval_offline(dataset_path=dataset_path, method=args.method, n_samples=args.n_samples, n_epoches=args.n_epoches, debug=args.debug)
+    eval_offline(dataset_path=dataset_path, method=args.method, mask_mode=args.mask_mode, n_samples=args.n_samples, n_epoches=args.n_epoches, debug=args.debug)

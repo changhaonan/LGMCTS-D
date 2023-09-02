@@ -108,6 +108,7 @@ class Region2DSampler(Region2D):
         resolution: float,
         grid_size: Union[List[int], None] = None,
         world2region: np.ndarray = np.eye(4, dtype=np.float32),
+        mask_padding: float = 0.02,
         name: str = "region",
         seed: int = 0,
         **kwargs,
@@ -116,6 +117,7 @@ class Region2DSampler(Region2D):
         self.objects : Dict[int, ObjectData] = {}
         self.obj_support_tree: anytree.Node = None  # support structure
         self.rng = np.random.default_rng(seed=seed)
+        self.pix_padding = int(mask_padding / resolution)  # padding in pixel
 
     def reset(self):
         """Reset sampler"""
@@ -171,7 +173,6 @@ class Region2DSampler(Region2D):
             pos_ref = np.mean(points, axis=0)  # the ref position will be at center
         # project points to region plane
         points_region = self._world2region(points)
-        points_convex_hull = ConvexHull(points_region[:, :2])
         lb_region = np.array(
             [points_region[:, 0].min(), points_region[:, 1].min(), points_region[:, 2].min()]
         )  # lb, lower bottom
@@ -194,15 +195,16 @@ class Region2DSampler(Region2D):
             if mask_height % 2 == 0:
                 mask_height += 1
             mask = np.zeros((mask_height, mask_width), dtype=np.uint8)
+            points_convex_hull = ConvexHull(points_region[:, :2])
             pixels = (points_convex_hull.points[points_convex_hull.vertices]).astype(np.int32) - lb_region[:2]
             # convert pixels to cv2 shape, cv2 is (y, x)
             # pixels = pixels[:, [1, 0]]
             # pixels[0, :] = mask.shape[1] - pixels[0, :]  # flip y
             cv2.fillConvexPoly(mask, pixels, 1,)
             ## DEBUG start here
-            contour = draw_convex_contour(mask, pixels)
-            cv2.imshow("contour", mask * 255)
-            cv2.waitKey(0)
+            # contour = draw_convex_contour(mask, pixels)
+            # cv2.imshow("contour", mask * 255)
+            # cv2.waitKey(0)
             ## DEBUG end here
         elif mask_mode == "raw_mask":
             mask_width = points_region[:, 0].max() - points_region[:, 0].min() + 1
@@ -230,6 +232,11 @@ class Region2DSampler(Region2D):
         mask_center_world = self._region2world(mask_center)
         pos_offset = mask_center_world - pos_ref
         name = name if name is not None else f"obj_{obj_id}"
+        # apply a safety padding to mask
+        mask = cv2.copyMakeBorder(mask, self.pix_padding, self.pix_padding, self.pix_padding, self.pix_padding, cv2.BORDER_CONSTANT, value=0)
+        mask = cv2.dilate(mask, np.ones((self.pix_padding, self.pix_padding), dtype=np.uint8), iterations=1)
+        # cv2.imshow("mask", mask * 255)
+        # cv2.waitKey(0)
         self.objects[obj_id] = ObjectData(name=name, pos=mask_center, mask=mask, height=height, color=color, points=points, pos_offset=pos_offset)
 
     def remove_object(self, obj_id: int) -> None:
@@ -372,8 +379,8 @@ class Region2DSampler(Region2D):
                 - sample_probs: probability of each sample
         """
         free_space = self.get_free_space(obj_id, allow_outside).astype(np.float32)  # free is 1, occupied is 0
-        cv2.imshow("free", free_space)
-        cv2.waitKey(0)
+        # cv2.imshow("free", free_space)
+        # cv2.waitKey(0)
         if prior is not None:
             assert prior.shape[:2] == free_space.shape[:2], "prior shape must be the same as free shape"
             free_space = np.multiply(free_space, prior)
@@ -521,7 +528,7 @@ import lgmcts.utils.misc_utils as utils
 
 class Region2DSamplerLGMCTS(Region2DSampler):
     """Region sampler wrapper for LGMCTS"""
-    def __init__(self, resolution: float, env):
+    def __init__(self, resolution: float, mask_padding: float, env):
         bounds = env.bounds  # (3, 2)
         grid_size = (int((env.bounds[0, 1] - env.bounds[0, 0]) / resolution), 
             int((env.bounds[1, 1] - env.bounds[1, 0]) / resolution))
@@ -529,11 +536,10 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         world2region[:3, :3] = R.from_euler("xyz", [0.0, 0.0, 0.0]).as_matrix()  # top-down
         world2region[:3, 3] = -bounds[:, 0]
         world2region[2, 3] -= 1e-3  # add a small offset to avoid numerical error
-        super().__init__(resolution, grid_size, world2region=world2region)
+        super().__init__(resolution, grid_size, world2region=world2region, mask_padding=mask_padding)
 
-    def load_objs_from_env(self, env, **kwargs):
+    def load_objs_from_env(self, env, mask_mode: str, **kwargs):
         """Load objects from observation"""
-        mask_mode = kwargs.get("mask_mode", "sphere")
         obs = env.get_obs()
         obj_pcds = obs["point_cloud"]["top"]
         obj_poses = obs["poses"]["top"]

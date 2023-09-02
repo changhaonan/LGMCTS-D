@@ -64,7 +64,7 @@ class BaseEnv:
         self.obj_support_tree = Node(-1)  # -1 refers to the base
 
         # Configure pybullet
-        self.homej = np.array([-1, -0.5, 0.5, -0.5, -0.5, 0]) * np.pi
+        self.homej = np.array([0.5, -0.5, 0.5, -0.5, -0.5, 0]) * np.pi
         self.dt = 1 / 480
         self.sim_step = 0
 
@@ -195,19 +195,6 @@ class BaseEnv:
             os.path.join(self.assets_root, UR5_URDF_PATH),
             physicsClientId=self.client_id,
         )
-        if self._hide_arm_rgb:
-            pybullet_utils.set_visibility_bullet(
-                self.client_id, self.ur5, pybullet_utils.INVISIBLE_ALPHA
-            )  #FIXME: this hidden will still shown in segm image
-        self.ee = self.task.ee(
-            self.assets_root,
-            self.ur5,
-            9,
-            self.obj_ids,
-            self.client_id,
-        )
-        self.ee.is_visible = not self._hide_arm_rgb
-        self.ee_tip = 10  # Link ID of suction cup.
 
         # Get revolute joint indices of robot (skip fixed joints).
         n_joints = p.getNumJoints(self.ur5, physicsClientId=self.client_id)
@@ -222,6 +209,20 @@ class BaseEnv:
             p.resetJointState(
                 self.ur5, self.joints[i], self.homej[i], physicsClientId=self.client_id
             )
+        
+        if self._hide_arm_rgb:
+            pybullet_utils.set_visibility_bullet(
+                self.client_id, self.ur5, pybullet_utils.INVISIBLE_ALPHA
+            )  #FIXME: this hidden will still shown in segm image
+        self.ee = self.task.ee(
+            self.assets_root,
+            self.ur5,
+            9,
+            self.obj_ids,
+            self.client_id,
+        )
+        self.ee.is_visible = not self._hide_arm_rgb
+        self.ee_tip = 10  # Link ID of suction cup.
 
         # Reset end effector.
         self.ee.release()
