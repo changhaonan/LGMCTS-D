@@ -21,7 +21,7 @@ from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 def test_collision(dataset_path: str, method: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
-    resolution = 0.01
+    resolution = 0.002
     n_samples = 5
     num_save_digits = 6
     env = lgmcts.make(
@@ -31,8 +31,7 @@ def test_collision(dataset_path: str, method: str, n_samples: int = 10, n_epoche
         seed=0, 
         debug=debug, 
         display_debug_window=debug,
-        hide_arm_rgb=(not debug),
-    )
+        hide_arm_rgb=True)
     task = env.task
 
     region_sampler = Region2DSamplerLGMCTS(resolution, env)

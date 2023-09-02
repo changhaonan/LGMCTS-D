@@ -6,6 +6,7 @@ Sampling using corrosion now & probability summary now.
 FIXME: Currently, there is still a very small error here. Making the result not fully collsion free
 """
 from scipy.spatial import ConvexHull
+from scipy.spatial.transform import Rotation as R
 from dataclasses import dataclass
 from lgmcts.algorithm.region import Region, Region2D
 import numpy as np
@@ -211,11 +212,18 @@ class Region2DSampler(Region2D):
                 mask_width += 1
             if mask_height % 2 == 0:
                 mask_height += 1
-            mask = np.zeros((mask_width, mask_height), dtype=np.uint8)
+            mask = np.zeros((mask_height, mask_width), dtype=np.uint8)
             pixels = points_region[:, :2].astype(np.int32) - lb_region[:2]
-            # convert pixels to cv2 shape, cv2 is (y, x)
-            # pixels = pixels[:, [1, 0]]
-            mask[pixels[:, 0], pixels[:, 1]] = 1
+            mask[pixels[:, 1], pixels[:, 0]] = 1
+        # ##DEBUG: check mask
+        # pcd = o3d.geometry.PointCloud()
+        # pcd.points = o3d.utility.Vector3dVector(points)
+        # pcd.paint_uniform_color([1.0, 0.0, 0.0])
+        # o3d.visualization.draw_geometries([pcd])
+        # # resize the height to 500
+        # mask_vis = cv2.resize(mask, (mask.shape[1] * 500 // mask.shape[0], 500), interpolation=cv2.INTER_NEAREST)
+        # cv2.imshow("mask", mask_vis * 255)
+        # cv2.waitKey(0)
         height = points_region[:, 2].max() - points_region[:, 2].min()
         # compute offset compared with pos_ref (reference position)
         mask_center = np.array([mask.shape[0] // 2, mask.shape[1] // 2, 0]) + lb_region
@@ -473,8 +481,8 @@ class Region2DSampler(Region2D):
         # img_resized = cv2.cvtColor(img_resized, cv2.COLOR_RGB2BGR)
         # flip
         # img_resized = np.flipud(img_resized)
-        img_resized = np.transpose(img_resized, (1, 0, 2))
-        img_resized = np.flipud(img_resized)
+        # img_resized = np.transpose(img_resized, (1, 0, 2))
+        # img_resized = np.flipud(img_resized)
         cv2.imshow("Occupancy Grid with Grid Lines", img_resized)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
@@ -516,6 +524,7 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         grid_size = (int((env.bounds[0, 1] - env.bounds[0, 0]) / resolution), 
             int((env.bounds[1, 1] - env.bounds[1, 0]) / resolution))
         world2region = np.eye(4, dtype=np.float32)
+        world2region[:3, :3] = R.from_euler("xyz", [0.0, 0.0, 0.0]).as_matrix()  # top-down
         world2region[:3, 3] = -bounds[:, 0]
         world2region[2, 3] -= 1e-3  # add a small offset to avoid numerical error
         super().__init__(resolution, grid_size, world2region=world2region)

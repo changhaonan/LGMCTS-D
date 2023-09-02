@@ -21,15 +21,15 @@ color_set_1:
   - purple paisley
 
 dragged_obj:
-  - basket1
-  - beerbottle
-  - bottle
-  - bottle2
-  - shapenet_bowl
-  - sodacan2
-  - winebottle
-  - winebottle1
-  - winebottle2
+  # - basket1
+  # - beerbottle
+  # - bottle
+  # - bottle2
+  # - shapenet_bowl
+  # - sodacan2
+  # - winebottle
+  # - winebottle1
+  # - winebottle2
   # - basket
   # - basket3
   # - beerbottle1
@@ -60,20 +60,20 @@ dragged_obj:
   # - mug4
   # - mug5
 
-  # - heart
-  # - ring
-  # - pentagon
-  # - L-shaped block
-  # - letter A
-  # - letter E
-  # - block
-  # - cross
-  # - triangle
-  # - flower
-  # - letter G
-  # - letter M
-  # - letter T
-  # - letter V
+  - heart
+  - ring
+  - pentagon
+  - L-shaped block
+  - letter A
+  - letter E
+  - block
+  - cross
+  - triangle
+  - flower
+  - letter G
+  - letter M
+  - letter T
+  - letter V
 
  
 

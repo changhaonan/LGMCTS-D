@@ -198,7 +198,7 @@ class BaseEnv:
         if self._hide_arm_rgb:
             pybullet_utils.set_visibility_bullet(
                 self.client_id, self.ur5, pybullet_utils.INVISIBLE_ALPHA
-            )
+            )  #FIXME: this hidden will still shown in segm image
         self.ee = self.task.ee(
             self.assets_root,
             self.ur5,

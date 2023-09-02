@@ -131,10 +131,6 @@ def recover_obj_and_texture_from_mapping_info(mapping_dict, obj_id):
             if k.startswith("texture_")
         }
     )
-    print("///////////////////////////////////////")
-    print("obj_entry:", obj_entry)
-    print("texture_entry:", texture_entry)
-    print("///////////////////////////////////////")
     return obj_entry, texture_entry
 
 
