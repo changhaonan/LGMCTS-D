@@ -24,7 +24,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
     resolution = 0.01
-    mask_padding = 0.04  # padding for clearance
+    pix_padding = 2  # padding for clearance
     n_samples = 5
     num_save_digits = 6
     env = lgmcts.make(
@@ -38,7 +38,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     )
     task = env.task
 
-    region_sampler = Region2DSamplerLGMCTS(resolution, mask_padding, env)
+    region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, env)
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
     sucess_count = 0
@@ -71,7 +71,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 L.append(sample_data)
         
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT)
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=True)
         ## DEBUG
         for step in action_list:
             region_sampler.set_object_pose(step["obj_id"], step["new_pose"])

@@ -86,7 +86,7 @@ class BaseEnv:
 
         # Workspace bounds.
         self.pix_size = 0.003125  # 0.003125 m/pixel
-        self.bounds = np.array([[0.2, 1.0], [-0.4, 0.4], [0.0, 0.3]])  # Square bounds
+        self.bounds = np.array([[0.3, 0.7], [-0.4, 0.4], [0.0, 0.3]])  # Square bounds
         self.zone_bounds = np.copy(self.bounds)
         self.ws_map_size = (
             int(np.round((self.bounds[1, 1] - self.bounds[1, 0]) / self.pix_size)),

@@ -108,16 +108,21 @@ class Region2DSampler(Region2D):
         resolution: float,
         grid_size: Union[List[int], None] = None,
         world2region: np.ndarray = np.eye(4, dtype=np.float32),
-        mask_padding: float = 0.02,
+        pix_padding: int = 0,
+        pose_boundary: np.ndarray = np.array([[-1.0, 1.0], [-1.0, 1.0], [-1.0, 1.0]], dtype=np.float32),
         name: str = "region",
         seed: int = 0,
         **kwargs,
     ):
+        """Args:
+            pose_boundary: the boundary of pose, used for sampling. Pose can not exceed this boundary.
+        """
         super().__init__(resolution, grid_size, world2region, name, **kwargs)
         self.objects : Dict[int, ObjectData] = {}
         self.obj_support_tree: anytree.Node = None  # support structure
         self.rng = np.random.default_rng(seed=seed)
-        self.pix_padding = int(mask_padding / resolution)  # padding in pixel
+        self.pix_padding = pix_padding  # padding in pixel
+        self.pose_boundary = pose_boundary  # (3, 2) min, max
 
     def reset(self):
         """Reset sampler"""
@@ -252,6 +257,8 @@ class Region2DSampler(Region2D):
         if obj_id in self.objects:
             mask_center_world = self._region2world(self.objects[obj_id].pos)
             pos_ref_world = mask_center_world - self.objects[obj_id].pos_offset
+            # clip by boundary
+            pos_ref_world = np.clip(pos_ref_world, a_max=self.pose_boundary[:, 1], a_min=self.pose_boundary[:, 0])
             return np.hstack([pos_ref_world, self.objects[obj_id].rot])
         else:
             raise ValueError("Object not found")
@@ -316,6 +323,8 @@ class Region2DSampler(Region2D):
         mask_max_x = min(mask_x, self.grid_size[0] - pos[0] + mask_half_x)
         mask_min_y = max(0, mask_half_y - pos[1])
         mask_max_y = min(mask_y, self.grid_size[1] - pos[1] + mask_half_y)
+        if mask_max_x <= mask_min_x or mask_max_y <= mask_min_y:
+            return False  # no mask in region
         mask_in_region = mask[mask_min_x:mask_max_x, mask_min_y:mask_max_y]
         assert len(occupancy_map.shape) == 3, "Only support 3D occupancy map"
         occupancy_map[
@@ -323,6 +332,7 @@ class Region2DSampler(Region2D):
             pos[1] - mask_half_y + mask_min_y : pos[1] - mask_half_y + mask_max_y,
             :,
         ][mask_in_region == 1] = value
+        return True
 
     def get_occupancy(self, obj_list: list[int] | None = None) -> bool:
         """Update occupancy grid occupied by obj_list"""
@@ -353,10 +363,10 @@ class Region2DSampler(Region2D):
             occupancy_map[:, 0, :] = 0
             occupancy_map[:, -1, :] = 0
         # get free space, free is 1, occupied is 0
-        # TODO: use the collision mask instead of using the mask
-        # cv2.imshow("occ", occupancy_map)
-        # cv2.waitKey(0)
-        free_space = cv2.erode(occupancy_map, mask, iterations=1)
+        # print(f"mask shape: {mask.shape}")
+        kernel_size = max(mask.shape[0], mask.shape[1])
+        kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        free_space = cv2.erode(occupancy_map, kernel, iterations=1)
         # cv2.imshow("free", free_space)
         # cv2.waitKey(0)
         return free_space
@@ -379,8 +389,6 @@ class Region2DSampler(Region2D):
                 - sample_probs: probability of each sample
         """
         free_space = self.get_free_space(obj_id, allow_outside).astype(np.float32)  # free is 1, occupied is 0
-        # cv2.imshow("free", free_space)
-        # cv2.waitKey(0)
         if prior is not None:
             assert prior.shape[:2] == free_space.shape[:2], "prior shape must be the same as free shape"
             free_space = np.multiply(free_space, prior)
@@ -391,8 +399,8 @@ class Region2DSampler(Region2D):
         samples_reg = np.concatenate([samples_reg, np.zeros((samples_reg.shape[0], 1))], axis=1)  # (N, 3)
         samples_wd = self._region2world(samples_reg)  # (N, 3)
         samples_wd = samples_wd + self.objects[obj_id].pos_offset.reshape(1, 3)
-        #FIXME: fix the z-value currently
-        samples_wd[:, 2] = 0.000
+        samples_wd = np.clip(samples_wd, a_max=self.pose_boundary[:, 1], a_min=self.pose_boundary[:, 0])
+
         #FIXME: currently we don't support sample in rotation, so we set it to identity
         rots = np.tile(np.array([0.0, 0.0, 0.0, 1.0-(1e-6)], dtype=np.float32), (samples_reg.shape[0], 1))
         samples_wd = np.hstack([samples_wd, rots])
@@ -528,7 +536,7 @@ import lgmcts.utils.misc_utils as utils
 
 class Region2DSamplerLGMCTS(Region2DSampler):
     """Region sampler wrapper for LGMCTS"""
-    def __init__(self, resolution: float, mask_padding: float, env):
+    def __init__(self, resolution: float, pix_padding: int, env):
         bounds = env.bounds  # (3, 2)
         grid_size = (int((env.bounds[0, 1] - env.bounds[0, 0]) / resolution), 
             int((env.bounds[1, 1] - env.bounds[1, 0]) / resolution))
@@ -536,7 +544,9 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         world2region[:3, :3] = R.from_euler("xyz", [0.0, 0.0, 0.0]).as_matrix()  # top-down
         world2region[:3, 3] = -bounds[:, 0]
         world2region[2, 3] -= 1e-3  # add a small offset to avoid numerical error
-        super().__init__(resolution, grid_size, world2region=world2region, mask_padding=mask_padding)
+        # pose boundary
+        pose_boundary = env.bounds
+        super().__init__(resolution, grid_size, world2region=world2region, pix_padding=pix_padding, pose_boundary=pose_boundary)
 
     def load_objs_from_env(self, env, mask_mode: str, **kwargs):
         """Load objects from observation"""

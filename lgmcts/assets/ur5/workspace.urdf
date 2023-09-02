@@ -13,7 +13,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="plane.obj" scale="0.0333 0.0333 1"/>
+        <mesh filename="plane.obj" scale="0.0167 0.0333 1"/>
       </geometry>
       <material name="DarkGrey">
         <color rgba="0.2 0.2 0.2 1"/>

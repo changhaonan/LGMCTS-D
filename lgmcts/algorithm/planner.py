@@ -66,6 +66,7 @@ class SamplingPlanner:
                 if debug:
                     # cv2.imshow("prior", prior)  # show prior
                     # cv2.waitKey(0)
+                    print(f"pose_rg: {pose_rg[0]}; pose_wd: {pose_wd[0]}")
                     self.sampler.visualize()  # show the new pose
         return action_list
 
