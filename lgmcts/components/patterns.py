@@ -689,7 +689,7 @@ class SpatialPattern:
                 return prior, {}
 
         # parse spatial label 
-        spatial_label = sample_info["spatial_label"]  # [left, right, front, back]
+        spatial_label = list(sample_info["spatial_label"])  # [left, right, front, back]
         if spatial_label == [1, 0, 0, 0]:
             # left
             prior[:, int(anchor[0]):] = 1.0

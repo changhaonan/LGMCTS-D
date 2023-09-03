@@ -78,11 +78,13 @@ class Node(object):
         """
         no_sample_objs = set() # objects that cannot be sampled because of ordering
         for obj_id, sampler in self.sampler_dict.items(): # check ordering
-            if obj_id in no_sample_objs:
-                continue
             if sampler.pattern in ORDERED_PATTERNS:
-                post_obj = sampler.obj_ids[sampler.obj_ids.index(obj_id)+1:]
-                no_sample_objs = no_sample_objs.union(set(post_obj))
+                prior_objs = sampler.obj_ids[:sampler.obj_ids.index(obj_id)]
+                for prior_obj in prior_objs:
+                    if prior_obj in self.sampler_dict:
+                        no_sample_objs.add(obj_id)
+                        break
+            
         return [obj_id for obj_id in self.sampler_dict.keys() if obj_id not in no_sample_objs]
 
     def UCB(self):
@@ -218,9 +220,15 @@ class Node(object):
                 region.grid_size, region.rng, 
                 obj_id=sample_data.obj_id, 
                 obj_ids=sample_data.obj_ids,
-                obj_poses_pix=sampled_obj_poses_pix)
+                obj_poses_pix=sampled_obj_poses_pix,
+                sample_info = sample_data.sample_info
+                )
             # cv2.imshow("prior", prior)
             # cv2.waitKey(0)
+            # the prior object is too close to the boundary so that no sampling is possible
+            if np.sum(prior) <= 0:
+                obs = self.rng.choice([obj for obj in sample_data.obj_ids if obj != obj_id])
+                return False, obs, (obj_id, None)
             # sample
             valid_pose, _, samples_status, _ = region.sample(sample_data.obj_id, 1, prior,allow_outside=False)
             if valid_pose.shape[0] > 0:

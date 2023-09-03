@@ -45,7 +45,8 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
 
     checkpoint_list = list(filter(lambda f: f.endswith(".pkl"), os.listdir(dataset_path)))
     checkpoint_list.sort()
-    for i in range(min(n_epoches, len(checkpoint_list))):
+    # for i in range(min(n_epoches, len(checkpoint_list))):
+    for i in range(n_epoches):
         print(f"==== Episode {i} ====")
         ## Step 1. init the env from dataset
         env.reset()
