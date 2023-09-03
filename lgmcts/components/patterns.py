@@ -153,7 +153,10 @@ class LinePattern(Pattern):
         o = hi_pose
         # 
         dists = cls.dist_p2l(obj_poses_pattern[:, :2], o[None, :], k[None, :])
-        return not(np.max(dists) > threshold)
+        status = not(np.max(dists) > threshold)
+        if not status:
+            print("Line pattern check failed!")
+        return status
 
     @classmethod
     def dist_p2l(cls, p, o, k):
@@ -679,7 +682,7 @@ class SpatialPattern:
         # compute anchor
         if len(rel_obj_poses_pix) > 0:
             assert len(rel_obj_poses_pix) == 1, "Only one anchor object is allowed!"
-            anchor = rel_obj_poses_pix[0]
+            anchor = [rel_obj_poses_pix[0][1], rel_obj_poses_pix[0][0]]
         else:
             if anchor_sampled:
                 # if no object is anchor, we use the center of the image
@@ -692,35 +695,47 @@ class SpatialPattern:
         spatial_label = list(sample_info["spatial_label"])  # [left, right, front, back]
         if spatial_label == [1, 0, 0, 0]:
             # left
-            prior[:, int(anchor[0]):] = 1.0
+            anchor[0] = np.max([anchor[0] - 1, 0])
+            prior[:, :int(anchor[0])] = 1.0
             spatial_str = "left"
         elif spatial_label == [0, 1, 0, 0]:
             # right
-            prior[:, :int(anchor[0])] = 1.0
+            anchor[0] = np.min([anchor[0] + 1, img_size[1] - 1])
+            prior[:, int(anchor[0]):] = 1.0
             spatial_str = "right"
         elif spatial_label == [0, 0, 1, 0]:
             # front
+            anchor[1] = np.min([anchor[1] + 1, img_size[0] - 1])
             prior[int(anchor[1]):, :] = 1.0
             spatial_str = "front"
         elif spatial_label == [0, 0, 0, 1]:
             # back
+            anchor[1] = np.max([anchor[1] - 1, 0])
             prior[:int(anchor[1]), :] = 1.0
             spatial_str = "back"
         elif spatial_label == [1, 0, 1, 0]:
             # left & front
-            prior[int(anchor[1]):, int(anchor[0]):] = 1.0
+            anchor[0] = np.max([anchor[0] - 1, 0])
+            anchor[1] = np.min([anchor[1] + 1, img_size[0] - 1])
+            prior[int(anchor[1]):, :int(anchor[0])] = 1.0
             spatial_str = "left & front"
         elif spatial_label == [1, 0, 0, 1]:
             # left & back
-            prior[:int(anchor[1]), int(anchor[0]):] = 1.0
+            anchor[0] = np.max([anchor[0] - 1, 0])
+            anchor[1] = np.max([anchor[1] - 1, 0])
+            prior[:int(anchor[1]), :int(anchor[0])] = 1.0
             spatial_str = "left & back"
         elif spatial_label == [0, 1, 1, 0]:
             # right & front
-            prior[int(anchor[1]):, :int(anchor[0])] = 1.0
+            anchor[0] = np.min([anchor[0] + 1, img_size[1] - 1])
+            anchor[1] = np.min([anchor[1] + 1, img_size[0] - 1])
+            prior[int(anchor[1]):, int(anchor[0]):] = 1.0
             spatial_str = "right & front"
         elif spatial_label == [0, 1, 0, 1]:
             # right & back
-            prior[:int(anchor[1]), :int(anchor[0])] = 1.0
+            anchor[0] = np.min([anchor[0] + 1, img_size[1] - 1])
+            anchor[1] = np.max([anchor[1] - 1, 0])
+            prior[:int(anchor[1]), int(anchor[0]):] = 1.0
             spatial_str = "right & back"
         else:
             raise NotImplementedError("Spatial label {} not implemented!".format(spatial_label))
@@ -732,11 +747,17 @@ class SpatialPattern:
         pattern_info["obj_ids"] = obj_ids
         pattern_info["spatial_label"] = spatial_label
         pattern_info["spatial_str"] = spatial_str
+        # cv2.imshow("prior", prior)
+        # cv2.waitKey(0)
         return prior, pattern_info
 
     @classmethod
     def check(cls, obj_poses: dict[int, np.ndarray], pattern_info, **kwargs):
-        """Check if obj poses meet the spatial pattern"""
+        """Check if obj poses meet the spatial pattern, spatial pattern is relevant with coordinate"""
+        coordinate = kwargs.get("coordinate", np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]]))
+        x_axis = coordinate[0]
+        y_axis = coordinate[1]
+
         obj_id = pattern_info["obj_ids"][-1]  # the second one is to be checked
         obj_ids = pattern_info["obj_ids"]
         # extract relative obj & poses
@@ -751,23 +772,28 @@ class SpatialPattern:
                     return False
         rel_obj_pose = rel_obj_poses[0]
         obj_pose = obj_poses[obj_id][:3]
+        pos_diff = obj_pose - rel_obj_pose
         # check spatial relationship
         spatial_label = pattern_info["spatial_label"]
         if spatial_label[0] == 1:
             # left
-            if rel_obj_pose[0] > obj_pose[0]:
+            if pos_diff.dot(x_axis) > 0:
+                print("Spatial check failed: left")
                 return False
-        if spatial_label[1] == 1:
+        elif spatial_label[1] == 1:
             # right
-            if rel_obj_pose[0] < obj_pose[0]:
+            if pos_diff.dot(x_axis) < 0:
+                print("Spatial check failed: right")
                 return False
-        if spatial_label[2] == 1:
+        elif spatial_label[2] == 1:
             # front
-            if rel_obj_pose[1] > obj_pose[1]:
+            if pos_diff.dot(y_axis) < 0:
+                print("Spatial check failed: front")
                 return False
-        if spatial_label[3] == 1:
+        elif spatial_label[3] == 1:
             # back
-            if rel_obj_pose[1] < obj_pose[1]:
+            if pos_diff.dot(y_axis) > 0:
+                print("Spatial check failed: back")
                 return False
         return True
 

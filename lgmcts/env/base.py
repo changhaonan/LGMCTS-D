@@ -66,6 +66,7 @@ class BaseEnv:
 
         # Configure pybullet
         self.homej = np.array([0.5, -0.5, 0.5, -0.5, -0.5, 0]) * np.pi
+        self.starj = np.array([-1.0, -0.5, 0.5, -0.5, -0.5, 0]) * np.pi
         self.dt = 1 / 480
         self.sim_step = 0
 
@@ -252,6 +253,13 @@ class BaseEnv:
         obs, _, _, _, _ = self.step()
 
         return obs
+
+    def prepare(self):
+        """Set robot to start position"""
+        for i in range(len(self.joints)):
+            p.resetJointState(
+                self.ur5, self.joints[i], self.starj[i], physicsClientId=self.client_id
+            )
 
     def step(self, action=None):
         if action is not None:

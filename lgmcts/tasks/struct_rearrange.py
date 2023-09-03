@@ -265,13 +265,13 @@ class StructRearrange(BaseTask):
                 aabb_2 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[1])
                 pose_1 = spatial_utils.Points9.from_aabb(aabb_1[0], aabb_1[1])
                 pose_2 = spatial_utils.Points9.from_aabb(aabb_2[0], aabb_2[1])
-                spatial_label = spatial_utils.Points9.label(pose_1, pose_2)
+                spatial_label = spatial_utils.Points9.label(pose_2, pose_1)
                 spatial_str_list = spatial_utils.Points9.vocabulary(spatial_label)
                 # FIXME: orignal spatial_label has 8 dim, but in LGMCTS, we only use 4 dim
                 spatial_label = spatial_label[:4]
                 if spatial_str_list[0] != "A has no relationship with B":
                     spatial_rel = self.rng.choice(spatial_str_list)
-                    promptor.gen_pair_prompt(pair_obj_names[0], pair_obj_names[1], spatial_rel[4:-1].strip())
+                    promptor.gen_pair_prompt(pair_obj_names[1], pair_obj_names[0], spatial_rel[4:-1].strip())
                     # update goal
                     self.goals.append(
                         {

@@ -59,7 +59,7 @@ class PromptGenerator:
         self.region_prompt = f"{self.rng.choice(self.place_action_list)} {obj_str} {self.rng.choice(self.prep_list)} {region}"
 
     def gen_pair_prompt(self, obj1: str, obj2: str, relation: str):
-        """Generate pair prompt"""
+        """Generate pair prompt, obj1 is the action obj, and the obj2 is the anchor obj"""
         self.pair_prompt = f"{self.rng.choice(self.place_action_list)} {obj1} {relation} {obj2}"
 
     @property

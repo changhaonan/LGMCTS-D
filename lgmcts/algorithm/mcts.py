@@ -230,8 +230,13 @@ class Node(object):
                 obs = self.rng.choice([obj for obj in sample_data.obj_ids if obj != obj_id])
                 return False, obs, (obj_id, None)
             # sample
-            valid_pose, _, samples_status, _ = region.sample(sample_data.obj_id, 1, prior,allow_outside=False)
+            valid_pose, _, samples_status, _ = region.sample(sample_data.obj_id, 1, prior, allow_outside=False)
             if valid_pose.shape[0] > 0:
+                # if sample_data.pattern == "spatial":
+                #     print(objs_at_goal)
+                #     print([object_states[obj][:3] for obj in objs_at_goal])
+                #     print(valid_pose)
+                #     print(region._world2region(valid_pose[0,:3]+region.objects[obj_id].pos_offset)[:2])
                 valid_pose = valid_pose.reshape(-1)
         else:
             raise NotImplementedError
@@ -362,7 +367,7 @@ class MCTS(object):
             # the index is according to L and the num_sample children list
             #TODO: do K sampling at the same time @KAI
             action, moved_obj, new_position, solved_sampler_obj_id = current_node.expansion()
-            if (new_position.shape[0]>0): # go to a new state
+            if (new_position.shape[0] > 0): # go to a new state
                 new_node = self.move(
                     num_iter,
                     action,

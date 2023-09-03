@@ -67,8 +67,9 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         L = []
         for goal in goals:
             goal_obj_ids = goal["obj_ids"]
+            goal_pattern = goal["type"].split(":")[-1]
+            print(f"Goal: {goal_pattern}; {goal_obj_ids}")
             for _i, goal_obj_id in enumerate(goal_obj_ids):
-                goal_pattern = goal["type"].split(":")[-1]
                 sample_info = {}
                 if goal_pattern == "spatial":
                     # spatial only sample the second obj
@@ -81,7 +82,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         
         ## Step 3. generate & exectue plan
         action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
-
+        env.prepare()
         for step in action_list:
             # assemble action
             action = {
@@ -90,6 +91,8 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 "pose1_position": step["new_pose"][:3],
                 "pose1_rotation": step["new_pose"][3:],
             }
+            if debug:
+                print(f"{step['obj_id']}: {step['new_pose'][:3]}")
             # execute action
             env.step(action)
 

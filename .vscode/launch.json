@@ -50,6 +50,7 @@
             "args": [
                 "--dataset_path=${workspaceFolder}/output/debug",
                 "--method=mcts",
+                "--mask_mode=raw_mask",
                 "--debug",
             ],
             "console": "integratedTerminal",
