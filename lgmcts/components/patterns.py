@@ -662,6 +662,7 @@ class SpatialPattern:
         obj_poses_pix = kwargs.get("obj_poses_pix", {})
         obj_id = kwargs.get("obj_id", -1)
         obj_ids = kwargs.get("obj_ids", [])
+        sample_info = kwargs.get("sample_info", {"spatial_label": [0, 0, 0, 0]})
         # extract relative obj & poses
         rel_obj_ids = []
         rel_obj_poses_pix = []
@@ -688,7 +689,7 @@ class SpatialPattern:
                 return prior, {}
 
         # parse spatial label 
-        spatial_label = kwargs.get("spatial_label", [0, 0, 0, 0])  # [left, right, front, back]
+        spatial_label = sample_info["spatial_label"]  # [left, right, front, back]
         if spatial_label == [1, 0, 0, 0]:
             # left
             prior[:, int(anchor[0]):] = 1.0
