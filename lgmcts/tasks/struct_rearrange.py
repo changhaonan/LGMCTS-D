@@ -196,7 +196,7 @@ class StructRearrange(BaseTask):
     def gen_goal_config(self, env, promptor: PromptGenerator, obj_selector: ObjectSelector, **kwargs):
         """Generate goal config"""
         num_color = kwargs.get("num_color", 2)  # Each scene only has X colors
-        num_patterns = 3 if self.enable_multi_prompt else 1
+        num_patterns = 2 if self.enable_multi_prompt else 1
         num_added_objs = 0
 
         obj_list = self.rng.choice(self.obj_list, min(self.max_num_obj, len(self.obj_list)), replace=False)   # current candidate
@@ -248,33 +248,33 @@ class StructRearrange(BaseTask):
         else:
             self.distract_obj_ids = []
         ## Step 4: 
-        # if self.enable_multi_prompt:
-        #     # 4.1 add a spatial prompt
-        #     # randomly select one from pattern obj and added obj
-        #     pair_obj_ids = env.rng.choice(rearrange_obj_ids + self.distract_obj_ids, 2, replace=False)
-        #     pair_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pair_obj_ids]
-        #     # compute spatial from the pair
-        #     aabb_1 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[0])
-        #     aabb_2 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[1])
-        #     pose_1 = spatial_utils.Points9.from_aabb(aabb_1[0], aabb_1[1])
-        #     pose_2 = spatial_utils.Points9.from_aabb(aabb_2[0], aabb_2[1])
-        #     spatial_label = spatial_utils.Points9.label(pose_1, pose_2)
-        #     spatial_str_list = spatial_utils.Points9.vocabulary(spatial_label)
-        #     if spatial_str_list[0] != "A has no relationship with B":
-        #         spatial_rel = self.rng.choice(spatial_str_list)
-        #         promptor.gen_pair_prompt(pair_obj_names[0], pair_obj_names[1], spatial_rel[4:-1].strip())
-        #         # update goal
-        #         self.goals.append(
-        #             {
-        #                 "type": "pattern:spatial",
-        #                 "obj_ids": pair_obj_ids,
-        #                 "spatial_label": spatial_label,
-        #                 "spatial_str": spatial_rel
-        #             }
-        #         )
-        #     # 4.2 add another pattern prompt
-        #     # take one from existing pattern as anchor
-        #     anchor_id = env.rng.choice(rearrange_obj_ids)          
+        if self.enable_multi_prompt:
+            if len(self.goals) < num_patterns and num_distract > 0:  # not enough pattern
+                # 4.1 add a spatial prompt
+                # randomly select one from pattern obj and added obj
+                anchor_id = env.rng.choice(rearrange_obj_ids)
+                place_id = env.rng.choice(self.distract_obj_ids)
+                pair_obj_ids = [anchor_id, place_id]
+                pair_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pair_obj_ids]
+                # compute spatial from the pair
+                aabb_1 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[0])
+                aabb_2 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[1])
+                pose_1 = spatial_utils.Points9.from_aabb(aabb_1[0], aabb_1[1])
+                pose_2 = spatial_utils.Points9.from_aabb(aabb_2[0], aabb_2[1])
+                spatial_label = spatial_utils.Points9.label(pose_1, pose_2)
+                spatial_str_list = spatial_utils.Points9.vocabulary(spatial_label)
+                if spatial_str_list[0] != "A has no relationship with B":
+                    spatial_rel = self.rng.choice(spatial_str_list)
+                    promptor.gen_pair_prompt(pair_obj_names[0], pair_obj_names[1], spatial_rel[4:-1].strip())
+                    # update goal
+                    self.goals.append(
+                        {
+                            "type": "pattern:spatial",
+                            "obj_ids": pair_obj_ids,
+                            "spatial_label": spatial_label,
+                            "spatial_str": spatial_rel
+                        }
+                    )      
 
         ## Step 5: assemble prompt and goal specific
         # gen prompt

@@ -15,7 +15,7 @@ import anytree
 from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData, SampleStatus,\
     sample_distribution, ObjectData
 
-ORDERED_PATTERNS = []
+ORDERED_PATTERNS = ["spatial"]
 
 class Sampler:
     """

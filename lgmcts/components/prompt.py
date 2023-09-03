@@ -43,7 +43,7 @@ class PromptGenerator:
         self.pair_prompt = ""
 
     ## Prompt generation
-    def gen_pattern_prompt(self, obj_str: str, pattern: str, id: int=0):
+    def gen_pattern_prompt(self, obj_str: str, pattern: str):
         """Generate pattern prompt"""
         prompt_type = self.rng.integers(0, 2)
         if prompt_type == 0:
