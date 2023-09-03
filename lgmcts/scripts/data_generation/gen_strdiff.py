@@ -121,23 +121,11 @@ def _generate_data_for_one_task(
             cam_pose = cam_pose[None, :, :].repeat(step_t+1, axis=0)
             f.create_dataset("camera_view", data=cam_pose)
             # strdiff-sytle camera information
-            f_y = intrinsic[1, 1]
-            proj_fov = 2 * np.arctan(image_size[1] / (2 * f_y))
+            f_x = intrinsic[0, 0]
+            proj_fov = np.degrees(2 * np.arctan(image_size[1] / (2 * f_x)))
             f.create_dataset("proj_fov", data=proj_fov)
             f.create_dataset("proj_near", data=0.5)
             f.create_dataset("proj_far", data=5.0)
-            ## DEBUG
-            # proj_near = 0.5 
-            # aspect_ratio = image_size[0] / image_size[1]
-            # e = 1 / (np.tan(np.radians(proj_fov/2.)))
-            # t = proj_near / e
-            # b = -t
-            # r = t * aspect_ratio
-            # l = -r
-            # # pixels per meter
-            # alpha = image_size[0] / (r-l)
-            # focal_length = proj_near * alpha
-            ##
             # objs related
             poses = obs.pop("poses")
             poses = poses[view].transpose(1, 0, 2)
