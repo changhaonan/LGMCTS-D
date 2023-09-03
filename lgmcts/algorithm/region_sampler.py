@@ -98,7 +98,7 @@ class SampleData:
     obj_id: int
     obj_ids: list[int]  # all included objects
     obj_poses_pix: dict[int, np.ndarray]  # poses that are already sampled
-
+    sample_info: dict[str, any] = None  # sample information
 
 class Region2DSampler(Region2D):
     """Region2D sampler"""

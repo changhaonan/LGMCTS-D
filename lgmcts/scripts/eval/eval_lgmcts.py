@@ -68,11 +68,14 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
             goal_obj_ids = goal["obj_ids"]
             for _i, goal_obj_id in enumerate(goal_obj_ids):
                 goal_pattern = goal["type"].split(":")[-1]
+                sample_info = {}
                 if goal_pattern == "spatial":
                     # spatial only sample the second obj
                     if _i == 0:
                         continue
-                sample_data = SampleData(goal_pattern, goal_obj_id, goal["obj_ids"], {})
+                    else:
+                        sample_info = {"spatial_label": goal["spatial_label"]}
+                sample_data = SampleData(goal_pattern, goal_obj_id, goal["obj_ids"], {}, sample_info)
                 L.append(sample_data)
         
         ## Step 3. generate & exectue plan
