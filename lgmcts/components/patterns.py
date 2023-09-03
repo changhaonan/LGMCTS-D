@@ -248,7 +248,6 @@ class CirclePattern(Pattern):
             radius = int(radius)
 
         # Draw the circle on the image
-        print(prior.shape)
         cv2.circle(prior, (center_x, center_y), radius, 1.0, thickness)
         #cv2.imshow("prior", prior)
         #cv2.waitKey(500)
@@ -463,12 +462,10 @@ class RectanglePattern(Pattern):
         for obj_id in pattern_info["obj_ids"]:
             obj_poses_pattern.append(obj_poses[obj_id][:3])
         obj_poses_pattern = np.vstack(obj_poses_pattern)
-        print()
         if len(obj_poses_pattern) < 4:
             warnings.warn("not enough points")
         else:
             dists = cls.dist_corners([[sublist[0], sublist[1]] for sublist in obj_poses_pattern])
-            #print(dists)
             return not(np.max(dists) > threshold)
 
     @classmethod
@@ -645,16 +642,12 @@ class SineCurvePattern(Pattern):
 
         # Calculate distances between object poses and control points on the sine curve
         dists = []
-        print(control_points)
-        print("stop")
-        print(obj_poses_pattern)
         for obj_pose in obj_poses_pattern:
             min_dist = float("inf")
             for cp_x, cp_y in control_points:
                 dist = np.linalg.norm(obj_pose[:2] - np.array([cp_x, cp_y]))
                 min_dist = min(min_dist, dist)
             dists.append(min_dist)
-        print(dists)
         # Check if the minimum distance from each object to the sine curve is below the threshold
         threshold = pattern_info.get("threshold", 0.1)
         return not (np.max(np.linalg.norm(dists)) > threshold)

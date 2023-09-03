@@ -34,9 +34,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/eval/eval_lgmcts.py",
             "args": [
-                "--method=mcts",
+                "--method=seq",
                 "--n_epoches=10",
-                "--mask_mode=raw_mask",
+                "--mask_mode=convex_hull",
                 "--debug",
             ],
             "console": "integratedTerminal",

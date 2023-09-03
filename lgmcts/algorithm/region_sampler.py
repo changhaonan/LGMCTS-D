@@ -494,12 +494,6 @@ class Region2DSampler(Region2D):
             for j in range(0, img_resized.shape[1], scale_factor):
                 cv2.line(img_resized, (j, 0), (j, img_resized.shape[0]), grid_color, 1)
 
-        # cibverted to BGR
-        # img_resized = cv2.cvtColor(img_resized, cv2.COLOR_RGB2BGR)
-        # flip
-        # img_resized = np.flipud(img_resized)
-        # img_resized = np.transpose(img_resized, (1, 0, 2))
-        # img_resized = np.flipud(img_resized)
         cv2.imshow("Occupancy Grid with Grid Lines", img_resized)
         cv2.waitKey(0)
         cv2.destroyAllWindows()

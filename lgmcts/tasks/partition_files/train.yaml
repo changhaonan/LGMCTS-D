@@ -75,12 +75,11 @@ dragged_obj:
   - letter T
   - letter V
 
- 
-
 
 # ==== structure rearrange ====
 struct_rearrange:
   stack_prob: 0.0
+  enable_multi_prompt: True  # enable spatial prompt
   pattern_types: ["line"]  # support: "line", "circle"
   obj_list: ${dragged_obj}
   color_list: ${color_set_1}

@@ -29,10 +29,10 @@ class StructRearrange(BaseTask):
     def __init__(
         self, 
         # ==== task specific ====
-        max_num_obj: int = 8,
+        max_num_obj: int = 10,
         stack_prob: float = 0.0,
         pattern_types: list[str] = ["line", "circle"],
-        obj_express_types: Literal["name", "image"] = "name",
+        enable_multi_prompt: bool = False,
         obj_list: list[str] | None = None,
         color_list: list[str] | None = None,
         # ==== general ====
@@ -51,6 +51,7 @@ class StructRearrange(BaseTask):
         self.max_num_obj = max_num_obj
         self.stack_prob = stack_prob
         self.pattern_types = pattern_types
+        self.enable_multi_prompt = enable_multi_prompt
         self.obj_list = [ObjPedia.lookup_object_by_name(obj) for obj in obj_list]
         self.color_list = [TexturePedia.lookup_color_by_name(color) for color in color_list]
         # 
@@ -58,8 +59,6 @@ class StructRearrange(BaseTask):
         # temporary data
         self.goal_pattern_info = {}
         # for record
-        self.anchor_id = -1
-        self.rearrange_obj_ids = []
         self.distract_obj_ids = []
 
     def reset(self, env):
@@ -67,8 +66,6 @@ class StructRearrange(BaseTask):
         super().reset(env)
         # pattern_type = env.rng.choice(self.pattern_types)
         # self.add_objects_to_pattern(env, self.max_num_obj, pattern_type, False, self.stack_prob)  # Structured Goal
-        self.anchor_id = -1
-        self.rearrange_obj_ids = []
         self.distract_obj_ids = []
 
     def add_objects_to_pattern(
@@ -131,15 +128,16 @@ class StructRearrange(BaseTask):
         """goal specification; used for StructDiffusion"""
         #FIXME: what does these contents mean?
         spec = super().gen_goal_spec(env)
+        goal = self.goals[0]
         # anchor object
         spec["anchor"] = {
             "objects": []
         }
         spec["anchor"]["objects"].append(
             {
-                "obj_id": self.anchor_id,
-                "obj_name": env.obj_id_reverse_mapping[self.anchor_id]["obj_name"],
-                "obj_assets": env.obj_id_reverse_mapping[self.anchor_id]["obj_assets"],
+                "obj_id": goal["anchor_id"],
+                "obj_name": env.obj_id_reverse_mapping[goal["anchor_id"]]["obj_name"],
+                "obj_assets": env.obj_id_reverse_mapping[goal["anchor_id"]]["obj_assets"],
             }
         )
         # rearrange object
@@ -148,7 +146,7 @@ class StructRearrange(BaseTask):
             "count": "None",
             "objects": []
         }
-        for obj_id in self.rearrange_obj_ids:
+        for obj_id in goal["obj_ids"]:
             obj_info = env.obj_id_reverse_mapping[obj_id]
             spec["rearrange"]["objects"].append(
                 {
@@ -197,48 +195,92 @@ class StructRearrange(BaseTask):
 
     def gen_goal_config(self, env, promptor: PromptGenerator, obj_selector: ObjectSelector, **kwargs):
         """Generate goal config"""
-        ## Step 1: select object candidates
         num_color = kwargs.get("num_color", 2)  # Each scene only has X colors
-        num_object = kwargs.get("num_object", 6)  # Each scene only has at most X objects for pattern
-        selected_objs = self.rng.choice(self.obj_list, num_object, replace=False)
-        color_candidates = self.rng.choice(self.color_list, num_color, replace=False)
-        selected_colors = self.rng.choice(color_candidates, num_object, replace=True)
-        obj_selector.set_objs(selected_objs, selected_colors)
-        selection = obj_selector.gen_anchor_obj_prompt()
-        ## Step 2: select pattern & add objects to scene
-        if selection["anchor_obj"] is not None:
-            [self.anchor_id], _ = self.add_objects_to_pattern(env, [selection["anchor_obj"]], [selection["anchor_color"]], None, False, 0.0)  # add anchor object
-        else:
-            self.anchor_id = -1
-        # generate pattern
-        pattern_type = env.rng.choice(self.pattern_types)
-        max_try = 3
-        self.rearrange_obj_ids = []
-        pattern_info = {}
-        for i in range(max_try):
-            try:
-                pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
-                self.rearrange_obj_ids, obj_status = self.add_objects_to_pattern(env, selection["in_obj"], selection["in_color"], pattern_prior, False, 0.0)
-                assert len(self.rearrange_obj_ids) > 0, "No object is added to the pattern"
-                break
-            except:
-                continue
-        if self.anchor_id == -1:
-           self.anchor_id = self.rearrange_obj_ids[0]
-        
+        num_patterns = 3 if self.enable_multi_prompt else 1
+        num_added_objs = 0
+
+        obj_list = self.rng.choice(self.obj_list, min(self.max_num_obj, len(self.obj_list)), replace=False)   # current candidate
+        color_list = self.rng.choice(self.color_list, num_color, replace=False)
+        ## Step 1: select object candidates
+        for i in range(num_patterns):
+            if obj_list is None or len(obj_list) <= 2:
+                break  # no more enough candidate to formulate pattern
+            selected_objs = obj_list
+            selected_colors = self.rng.choice(color_list, len(obj_list), replace=True)
+            obj_selector.reset()
+            obj_selector.set_objs(selected_objs, selected_colors)
+            selection = obj_selector.gen_anchor_obj_prompt()
+            ## Step 2: select pattern & add objects to scene
+            if selection["anchor_obj"] is not None:
+                [anchor_id], _ = self.add_objects_to_pattern(env, [selection["anchor_obj"]], [selection["anchor_color"]], None, False, 0.0)  # add anchor object
+            else:
+                anchor_id = -1
+            # generate pattern
+            pattern_type = env.rng.choice(self.pattern_types)
+            max_try = 3
+            rearrange_obj_ids = []
+            pattern_info = {}
+            for i in range(max_try):
+                try:
+                    pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
+                    rearrange_obj_ids, obj_status = self.add_objects_to_pattern(env, selection["in_obj"], selection["in_color"], pattern_prior, False, 0.0)
+                    assert len(rearrange_obj_ids) > 0, "No object is added to the pattern"
+                    break
+                except:
+                    continue
+            if anchor_id == -1:
+                anchor_id = rearrange_obj_ids[0]
+            # update goals
+            pattern_info["obj_ids"] = rearrange_obj_ids
+            pattern_info["anchor_id"] = anchor_id
+            self.goals.append(pattern_info)
+            # update prompt
+            promptor.gen_pattern_prompt(selection["prompt_str"], pattern_type)
+            # update obj
+            num_added_objs += len(rearrange_obj_ids)
+            obj_list = selection["out_obj"]
+            color_list = selection["out_color"]
+
         ## Step 3: add distract objects
-        num_distract = self.max_num_obj - len(self.rearrange_obj_ids) - 1
+        num_distract = self.max_num_obj - num_added_objs - 1
         if num_distract > 0 and len(selection["out_obj"]) > 0:  # exists unselected
             self.distract_obj_ids = self.add_objects_to_random(env, num_distract, selection["out_obj"], selection["out_color"], False, 0.0)
-        
-        ## Step 4: assemble prompt and goal specific
+        else:
+            self.distract_obj_ids = []
+        ## Step 4: 
+        # if self.enable_multi_prompt:
+        #     # 4.1 add a spatial prompt
+        #     # randomly select one from pattern obj and added obj
+        #     pair_obj_ids = env.rng.choice(rearrange_obj_ids + self.distract_obj_ids, 2, replace=False)
+        #     pair_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pair_obj_ids]
+        #     # compute spatial from the pair
+        #     aabb_1 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[0])
+        #     aabb_2 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[1])
+        #     pose_1 = spatial_utils.Points9.from_aabb(aabb_1[0], aabb_1[1])
+        #     pose_2 = spatial_utils.Points9.from_aabb(aabb_2[0], aabb_2[1])
+        #     spatial_label = spatial_utils.Points9.label(pose_1, pose_2)
+        #     spatial_str_list = spatial_utils.Points9.vocabulary(spatial_label)
+        #     if spatial_str_list[0] != "A has no relationship with B":
+        #         spatial_rel = self.rng.choice(spatial_str_list)
+        #         promptor.gen_pair_prompt(pair_obj_names[0], pair_obj_names[1], spatial_rel[4:-1].strip())
+        #         # update goal
+        #         self.goals.append(
+        #             {
+        #                 "type": "pattern:spatial",
+        #                 "obj_ids": pair_obj_ids,
+        #                 "spatial_label": spatial_label,
+        #                 "spatial_str": spatial_rel
+        #             }
+        #         )
+        #     # 4.2 add another pattern prompt
+        #     # take one from existing pattern as anchor
+        #     anchor_id = env.rng.choice(rearrange_obj_ids)          
+
+        ## Step 5: assemble prompt and goal specific
         # gen prompt
-        promptor.gen_pattern_prompt(selection["prompt_str"], pattern_type)
         promptor.gen_prompt()
         self.prompt = promptor.prompt
-        # update goals
-        pattern_info["obj_ids"] = self.rearrange_obj_ids
-        self.goals.append(pattern_info)
+        print(self.prompt)
         # Env step forward
         obs, _, _, _, _ = env.step()
         return self.prompt, obs

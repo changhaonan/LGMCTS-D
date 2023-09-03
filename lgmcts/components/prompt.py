@@ -26,7 +26,7 @@ class PromptGenerator:
         self.prep_list = ["at", "in", "on"]
         self.correlative_list = ["; then ", "; and ", "; while ", "; so ", "; "]
         self.region_prompt = ""
-        self.pattern_prompt = ""
+        self.pattern_prompt_list = []
         self.pair_prompt = ""
         self._prompt_str = ""
         # vis-related
@@ -39,20 +39,21 @@ class PromptGenerator:
     def reset(self):
         """Reset the generator"""
         self.region_prompt = ""
-        self.pattern_prompt = ""
+        self.pattern_prompt_list = []
         self.pair_prompt = ""
 
     ## Prompt generation
-    def gen_pattern_prompt(self, obj_str: str, pattern: str):
+    def gen_pattern_prompt(self, obj_str: str, pattern: str, id: int=0):
         """Generate pattern prompt"""
         prompt_type = self.rng.integers(0, 2)
         if prompt_type == 0:
-            self.pattern_prompt = f"{self.rng.choice(self.place_action_list)} {obj_str} {self.rng.choice(self.prep_list)} a {pattern} pattern"
+            pattern_prompt = f"{self.rng.choice(self.place_action_list)} {obj_str} {self.rng.choice(self.prep_list)} a {pattern} pattern"
         elif prompt_type == 1:
-            self.pattern_prompt = f"{self.rng.choice(self.place_action_list)} a {pattern} pattern using {obj_str}"
+            pattern_prompt = f"{self.rng.choice(self.place_action_list)} a {pattern} pattern using {obj_str}"
         else:
-            self.pattern_prompt = f"Select {obj_str}, and {self.rng.choice(self.place_action_list)} them {self.rng.choice(self.prep_list)} a {pattern} pattern"
-    
+            pattern_prompt = f"Select {obj_str}, and {self.rng.choice(self.place_action_list)} them {self.rng.choice(self.prep_list)} a {pattern} pattern"
+        self.pattern_prompt_list.append(pattern_prompt)
+
     def gen_region_prompt(self, obj_str: str, region: str):
         """Generate region prompt"""
         self.region_prompt = f"{self.rng.choice(self.place_action_list)} {obj_str} {self.rng.choice(self.prep_list)} {region}"
@@ -72,9 +73,10 @@ class PromptGenerator:
 
     def gen_prompt(self):
         """Randomly combine three prompt"""
-        prompt_candidate = [self.region_prompt, self.pattern_prompt, self.pair_prompt]
+        prompt_candidate = [self.region_prompt, *self.pattern_prompt_list, self.pair_prompt]
         prompt_candidate = list(filter(lambda x: x != "", prompt_candidate))
-        num_prompt = min(self.rng.integers(1, 3), len(prompt_candidate))
+        # num_prompt = min(self.rng.integers(1, 3), len(prompt_candidate))
+        num_prompt = len(prompt_candidate)
         prompt_candidate = self.rng.choice(prompt_candidate, num_prompt, replace=False)
         correlative = self.rng.choice(self.correlative_list, num_prompt - 1)
         prompt_str = ""

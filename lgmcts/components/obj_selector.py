@@ -61,15 +61,15 @@ class ObjectSelector:
     def gen_anchor_obj_prompt(self):
         """Based on the obj we have, generate a valid anchor obj prompt"""
         ## random select anchor
-        max_try = 10
+        max_try = 3
         for i in range(max_try):
             anchor_obj_bag = self.rng.choice(self.obj_bag_list)
             anchor_obj = anchor_obj_bag.obj_name
             attribute = self.rng.choice(list(COMPARE_DICT.keys()))
             if attribute == "color":
-                compare_rel = self.rng.choice([EqualRel(), DifferentRel()])
+                compare_rel = self.rng.choice([EqualRel(), DifferentRel()]) if i < max_try - 1 else EqualRel()
             elif attribute == "size":
-                compare_rel = self.rng.choice([EqualRel(), DifferentRel(), SmallerRel(), BiggerRel()])
+                compare_rel = self.rng.choice([EqualRel(), DifferentRel(), SmallerRel(), BiggerRel()]) if i < max_try - 1 else EqualRel()
             else:
                 raise ValueError("Attribute not supported")
             compare_rel_str = self.rng.choice(compare_rel.words)
