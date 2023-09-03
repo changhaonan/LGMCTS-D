@@ -53,6 +53,7 @@ class BaseEnv:
         ):
         with importlib_resources.files("lgmcts.assets") as _path:
             self.assets_root = str(_path)
+        self.global_scaling = 0.75
         # Obj infos
         self.obj_ids = {"fixed": [], "rigid": []}
         self.obj_dyn_info = { "size": {}, "urdf_full_path": {} }  # obj dynamic info: size, urdf path, etc.
@@ -642,6 +643,7 @@ class BaseEnv:
             prior=prior,
             category="rigid",
             stack_prob=stack_prob,
+            scalar=self.global_scaling,
         )
 
     # object-level manipulation functions
@@ -763,7 +765,7 @@ class BaseEnv:
             obj_entry, color_entry = pybullet_utils.recover_obj_and_texture_from_mapping_info(obj_id_reverse_mapping, obj_id)
             obj_size = obj_dyn_info["size"][obj_id]
             obj_pose = (obj_poses[obj_id][:3], obj_poses[obj_id][3:7])  # tuple: (pos, rot)
-            self.add_object_to_env(obj_entry, color=color_entry, size=obj_size, pose=obj_pose, category="rigid", retain_temp=False)
+            self.add_object_to_env(obj_entry, color=color_entry, size=obj_size, pose=obj_pose, category="rigid", retain_temp=False, scalar=self.global_scaling)
             # pybullet_utils.p_change_texture(obj_id, color_entry, self.client_id)
         # support tree
         self.obj_support_tree = JsonImporter().import_(env_state["obj_support_tree"])

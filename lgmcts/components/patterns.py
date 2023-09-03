@@ -737,7 +737,7 @@ class SpatialPattern:
     @classmethod
     def check(cls, obj_poses: dict[int, np.ndarray], pattern_info, **kwargs):
         """Check if obj poses meet the spatial pattern"""
-        obj_id = pattern_info["obj_id"]
+        obj_id = pattern_info["obj_ids"][-1]  # the second one is to be checked
         obj_ids = pattern_info["obj_ids"]
         # extract relative obj & poses
         rel_obj_ids = []

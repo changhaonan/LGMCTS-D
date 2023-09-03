@@ -240,6 +240,9 @@ class StructRearrange(BaseTask):
             num_added_objs += len(rearrange_obj_ids)
             obj_list = selection["out_obj"]
             color_list = selection["out_color"]
+            ##DEBUG
+            if i == 0:
+                break
 
         ## Step 3: add distract objects
         num_distract = self.max_num_obj - num_added_objs - 1
@@ -247,6 +250,7 @@ class StructRearrange(BaseTask):
             self.distract_obj_ids = self.add_objects_to_random(env, num_distract, selection["out_obj"], selection["out_color"], False, 0.0)
         else:
             self.distract_obj_ids = []
+        num_distract = len(self.distract_obj_ids)
         ## Step 4: 
         if self.enable_multi_prompt:
             if len(self.goals) < num_patterns and num_distract > 0:  # not enough pattern

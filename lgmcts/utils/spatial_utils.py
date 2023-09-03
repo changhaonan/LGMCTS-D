@@ -852,14 +852,3 @@ class Points9:
             # label_tuple = tuple(label)
             rel_map[tuple(label)] = Points9.vocabulary(label)
         return rel_map
-
-if __name__ == "__main__":
-    import random
-
-    # build vocabulary
-    spatial_rel_sampler = SpatialRelSampler("cuda")
-    # sample a relation
-    label = (1, 0, 0, 0, 1, 0, 0, 0)
-    for i in range(10):
-        positive_rel, negative_rel = spatial_rel_sampler.sample_rel(label)
-        pass
