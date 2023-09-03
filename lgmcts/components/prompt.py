@@ -1,6 +1,6 @@
 """Template to generate prompt
 We majorly care three different prompts and their combination:
-1. Region: Put/Place/Leave {obj_str} at/in/on {region}
+1. Region: Put/Place/Leave {obj_str} at/in/on {region}  (Not implemented yet)
 2. Pattern: Put/Place/Leave {obj_str} at/in/on {pattern}
 3. Pair: Put/Place/Leave {obj1} {relation} {obj2}
 

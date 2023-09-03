@@ -551,17 +551,23 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         obj_names = [env.obj_id_reverse_mapping[obj_id]["obj_name"] for obj_id in obj_lists]
         max_pcd_size = env.obs_img_size[0] * env.obs_img_size[1]
         obj_lists, obj_pcd_list, obj_pose_list = utils.separate_pcd_pose(obj_lists, obj_pcds, obj_poses, max_pcd_size)
+        # get color
+        color = obs["rgb"]["top"].transpose((1, 2, 0))
+        segm = obs["segm"]["top"]
+
         for i, (obj_id, obj_name, obj_pcd, obj_pose) in enumerate(zip(obj_lists, obj_names, obj_pcd_list, obj_pose_list)):
             # compute the pos_ref
             obj_pcd_center = obj_pcd.mean(axis=0)
             obj_pcd -= obj_pcd_center
             # pos_ref = obj_pose[:3] - obj_pcd_center
             pos_ref = None
-            color = np.random.rand(3) * 255
+            # color = np.random.rand(3) * 255
+            obj_color = color[segm == obj_id].mean(axis=0)
+            obj_color = (obj_color[2], obj_color[1], obj_color[0])  # convert to BGR
             # DEBUG
             # misc_utils.plot_3d("test", obj_pcd, "red")
             # add object to region sampler
-            self.add_object(obj_id=obj_id, points=obj_pcd, pos_ref=pos_ref, name=obj_name, color=color, mask_mode=mask_mode)
+            self.add_object(obj_id=obj_id, points=obj_pcd, pos_ref=pos_ref, name=obj_name, color=obj_color, mask_mode=mask_mode)
             # set object pose
             self.set_object_pose(obj_id, obj_pose)
         self.obj_support_tree = env.obj_support_tree
