@@ -66,18 +66,12 @@ class LinePattern(Pattern):
         height, width = img_size
         prior = np.zeros(img_size, dtype=np.float32)
         if len(rel_obj_ids) == 0:
-            i0 = rng.integers(0, 4)  # select one of 4 borders
-            i1 = (rng.integers(1, 4) + i0) % 4  # select one of 3 other borders
-            i = [i0, i1]
-            # select one point on each border
-            x0 = rng.integers(0, width)
-            y0 = rng.integers(0, height)
-            x1 = rng.integers(0, width)
-            y1 = rng.integers(0, height)
+            # first point can be anywhere
+            return np.ones_like(prior), {"type": "pattern:line", "position_pixel": [0, 0, width-1, height-1], "rotation": [0, 0, 0]}
         elif len(rel_obj_ids) == 1:
             # random pixel
-            x0 = rng.integers(0, width)
-            y0 = rng.integers(0, height)
+            x0 = 0 if rel_obj_poses_pix[0][1] == 0 else width-1
+            y0 = rel_obj_poses_pix[0][0]  #HACK: line will be parallel to x-axis
             x1 = rel_obj_poses_pix[0][1]
             y1 = rel_obj_poses_pix[0][0]
         else:
@@ -86,7 +80,7 @@ class LinePattern(Pattern):
             y0 = rel_obj_poses_pix[0][0]
             x1 = rel_obj_poses_pix[1][1]
             y1 = rel_obj_poses_pix[1][0]
-            # compute the line that passing (xc1, yc1) & (xc2, yc2), both sides ending at borders
+        # compute the line that passing (xc1, yc1) & (xc2, yc2), both sides ending at borders
         ## Draw lines & extend to the borders
         # calculate the line's equation: y = mx + c
         if x1 - x0 == 0:  # vertical line
@@ -120,7 +114,7 @@ class LinePattern(Pattern):
 
         # Debug
         # cv2.imshow("prior", prior)
-        # cv2.waitKey(0)
+        # cv2.waitKey(0.01)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"

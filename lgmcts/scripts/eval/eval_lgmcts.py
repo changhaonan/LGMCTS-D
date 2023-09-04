@@ -24,7 +24,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
     resolution = 0.01
-    pix_padding = 2  # padding for clearance
+    pix_padding = 1  # padding for clearance
     n_samples = 5
     num_save_digits = 6
     env = lgmcts.make(
@@ -81,7 +81,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 L.append(sample_data)
         
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, seed=env.seed)
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
         env.prepare()
         for step in action_list:
             # assemble action

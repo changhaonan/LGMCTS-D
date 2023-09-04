@@ -398,7 +398,7 @@ class Region2DSampler(Region2D):
         #
         samples_reg = np.concatenate([samples_reg, np.zeros((samples_reg.shape[0], 1))], axis=1)  # (N, 3)
         samples_wd = self._region2world(samples_reg)  # (N, 3)
-        samples_wd = samples_wd + self.objects[obj_id].pos_offset.reshape(1, 3)
+        samples_wd = samples_wd - self.objects[obj_id].pos_offset.reshape(1, 3)
         samples_wd = np.clip(samples_wd, a_max=self.pose_boundary[:, 1], a_min=self.pose_boundary[:, 0])
 
         #FIXME: currently we don't support sample in rotation, so we set it to identity

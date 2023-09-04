@@ -242,9 +242,6 @@ class StructRearrange(BaseTask):
             num_added_objs += len(rearrange_obj_ids)
             obj_list = selection["out_obj"]
             color_list = selection["out_color"]
-            ##DEBUG
-            if i == 0:
-                break
 
         ## Step 3: add distract objects
         num_distract = self.max_num_obj - num_added_objs - 1
