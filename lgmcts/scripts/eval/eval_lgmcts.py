@@ -76,7 +76,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                     if _i == 0:
                         continue
                     else:
-                        sample_info = {"spatial_label": goal["spatial_label"]}
+                        sample_info = {"spatial_label": goal["spatial_label"], "ordered": True}
                 sample_data = SampleData(goal_pattern, goal_obj_id, goal["obj_ids"], {}, sample_info)
                 L.append(sample_data)
         
