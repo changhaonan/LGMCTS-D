@@ -745,6 +745,7 @@ class BaseEnv:
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         env_state = {}
+        env_state["seed"] = self._env_seed
         env_state["obj_ids"] = self.obj_ids
         env_state["obj_dyn_info"] = self.obj_dyn_info
         env_state["obj_id_reverse_mapping"] = self.obj_id_reverse_mapping
@@ -764,6 +765,8 @@ class BaseEnv:
         self.reset()  # reset env before loading
         with open(check_point_path, "rb") as f:
             env_state = pickle.load(f)
+        seed = env_state["seed"]
+        self.set_seed(seed)
         # load objects
         obj_ids = env_state["obj_ids"]
         obj_dyn_info = env_state["obj_dyn_info"]

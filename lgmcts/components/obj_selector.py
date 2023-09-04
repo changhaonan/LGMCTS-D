@@ -1,5 +1,6 @@
 """Object selector"""
 from __future__ import annotations
+import warnings
 from lgmcts.components.encyclopedia import ObjEntry, TextureEntry, SizeRange
 from lgmcts.components.attribute import COMPARE_DICT, CompareRel, EqualRel, DifferentRel, SmallerRel, BiggerRel
 from lgmcts.components.attribute import ObjectBag, get_object_bag
@@ -98,4 +99,5 @@ class ObjectSelector:
                     "out_color": out_color,
                     "out_size": out_size,
                 }
-        raise ValueError("Cannot generate a valid prompt")
+        warnings.warn("Cannot generate a valid prompt")
+        return {}

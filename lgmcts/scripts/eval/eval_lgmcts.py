@@ -56,7 +56,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         checkpoint_path = os.path.join(dataset_path, checkpoint_list[i])
         env.load_checkpoint(checkpoint_path)
         prompt_generator.prompt = task.prompt
-        region_sampler.load_objs_from_env(env, mask_mode=mask_mode)
+        region_sampler.load_env(env, mask_mode=mask_mode)
         # DEBUG
         if debug:
             region_sampler.visualize()
@@ -81,7 +81,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 L.append(sample_data)
         
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, seed=env.seed)
         env.prepare()
         for step in action_list:
             # assemble action
@@ -91,8 +91,8 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 "pose1_position": step["new_pose"][:3],
                 "pose1_rotation": step["new_pose"][3:],
             }
-            if debug:
-                print(f"{step['obj_id']}: {step['new_pose'][:3]}")
+            # if debug:
+            #     print(f"{step['obj_id']}: {step['new_pose'][:3]}")
             # execute action
             env.step(action)
 

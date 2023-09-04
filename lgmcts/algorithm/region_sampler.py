@@ -542,8 +542,9 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         pose_boundary = env.bounds
         super().__init__(resolution, grid_size, world2region=world2region, pix_padding=pix_padding, pose_boundary=pose_boundary)
 
-    def load_objs_from_env(self, env, mask_mode: str, **kwargs):
+    def load_env(self, env, mask_mode: str, **kwargs):
         """Load objects from observation"""
+        # load objects
         obs = env.get_obs()
         obj_pcds = obs["point_cloud"]["top"]
         obj_poses = obs["poses"]["top"]

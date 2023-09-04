@@ -35,6 +35,8 @@ class SamplingPlanner:
         Args:
             goals: list of SampleData
         """
+        seed = kwargs.get("seed", 0)  # update seed
+        self.sampler.rng.seed(seed)
         prior_dict = kwargs.get("prior_dict", {})
         debug = kwargs.get("debug", False)
         sampled_obj_poses_pix = {}  # keep track of sampled object poses
@@ -78,6 +80,7 @@ class SamplingPlanner:
         Return:
             action_list: list of actions
         """
+        seed = kwargs.get("seed", 0)  # update seed
         prior_dict = kwargs.get("prior_dict", {})
         sampled_obj_poses_pix = {}  # keep track of sampled object poses
         action_list = []
@@ -90,6 +93,7 @@ class SamplingPlanner:
             prior_dict=prior_dict,
             n_samples=self.n_samples,
             verbose=True,
+            seed=seed,
         )
 
         sampler_planner.search()

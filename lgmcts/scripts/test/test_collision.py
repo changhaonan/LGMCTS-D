@@ -53,7 +53,7 @@ def test_collision(dataset_path: str, method: str, n_samples: int = 10, n_epoche
     checkpoint_path = os.path.join(dataset_path, checkpoint_list[i])
     env.load_checkpoint(checkpoint_path)
     prompt_generator.prompt = task.prompt
-    region_sampler.load_objs_from_env(env, mask_mode="convex_hull")
+    region_sampler.load_env(env, mask_mode="convex_hull")
     # DEBUG
     # region_sampler.visualize()
     if debug:

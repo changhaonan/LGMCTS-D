@@ -210,6 +210,8 @@ class StructRearrange(BaseTask):
             obj_selector.reset()
             obj_selector.set_objs(selected_objs, selected_colors)
             selection = obj_selector.gen_anchor_obj_prompt()
+            if not selection:  # no valid selection
+                continue
             ## Step 2: select pattern & add objects to scene
             if selection["anchor_obj"] is not None:
                 [anchor_id], _ = self.add_objects_to_pattern(env, [selection["anchor_obj"]], [selection["anchor_color"]], None, False, 0.0)  # add anchor object
@@ -286,7 +288,6 @@ class StructRearrange(BaseTask):
         # gen prompt
         promptor.gen_prompt()
         self.prompt = promptor.prompt
-        print(self.prompt)
         # Env step forward
         obs, _, _, _, _ = env.step()
         return self.prompt, obs

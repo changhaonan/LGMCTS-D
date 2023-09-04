@@ -48,6 +48,8 @@ def _generate_data_for_one_task(
     print("Generate dataset...")
     for i in range(num_episodes):
         # reset
+        seed = env.rng.integers(0, 100)
+        env.set_seed(seed)
         env.reset()
         prompt_generator.reset()
         obj_selector.reset()
