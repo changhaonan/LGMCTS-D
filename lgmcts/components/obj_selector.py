@@ -62,7 +62,8 @@ class ObjectSelector:
     def gen_anchor_obj_prompt(self):
         """Based on the obj we have, generate a valid anchor obj prompt"""
         ## random select anchor
-        max_try = 3
+        ##FIXME: Rewrite the logic for anchor selection
+        max_try = 10
         for i in range(max_try):
             anchor_obj_bag = self.rng.choice(self.obj_bag_list)
             anchor_obj = anchor_obj_bag.obj_name
@@ -99,5 +100,6 @@ class ObjectSelector:
                     "out_color": out_color,
                     "out_size": out_size,
                 }
-        warnings.warn("Cannot generate a valid prompt")
-        return {}
+        # warnings.warn("Cannot generate a valid prompt")
+        assert False, "Cannot generate a valid prompt"
+        return {"anchor_obj": None, "in_obj": [], "in_color": [], "in_size": [], "out_obj": [], "out_color": [], "out_size": []}

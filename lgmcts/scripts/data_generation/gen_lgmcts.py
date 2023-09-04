@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 from einops import rearrange
 from tqdm import tqdm
+import argparse
 
 import lgmcts
 import lgmcts.utils.file_utils as U
@@ -27,6 +28,7 @@ def _generate_data_for_one_task(
     num_episodes: int,
     save_path: str,
     num_save_digits: int,
+    debug: bool,
     seed: int | None = None,
 ):
     # init
@@ -35,9 +37,9 @@ def _generate_data_for_one_task(
         task_kwargs=task_kwargs, 
         modalities=modalities, 
         seed=seed, 
-        debug=True, 
-        display_debug_window=True,
-        hide_arm_rgb=True,
+        debug=debug, 
+        display_debug_window=debug,
+        hide_arm_rgb=debug,
     )
     task = env.task
     prompt_generator = PromptGenerator(env.rng)
@@ -70,14 +72,21 @@ def _generate_data_for_one_task(
 
 
 if __name__ == '__main__':
-    task_name = "struct_rearrange"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--task_name", type=str, default="struct_rearrange")
+    parser.add_argument("--num_episodes", type=int, default=10)
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+
+    task_name = args.task_name
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
     _generate_data_for_one_task(
         task_name,
         PARTITION_TO_SPECS["train"][task_name],
         modalities=["rgb", "segm"],
-        num_episodes=10,
+        num_episodes=args.num_episodes,
         save_path=f"{root_path}/output",
         num_save_digits=6,
+        debug=args.debug,
         seed=0,
     )

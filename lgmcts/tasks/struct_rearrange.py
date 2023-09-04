@@ -30,9 +30,9 @@ class StructRearrange(BaseTask):
         self, 
         # ==== task specific ====
         max_num_obj: int = 10,
+        max_num_pattern: int = 2,
         stack_prob: float = 0.0,
         pattern_types: list[str] = ["line", "circle"],
-        enable_multi_prompt: bool = False,
         obj_list: list[str] | None = None,
         color_list: list[str] | None = None,
         # ==== general ====
@@ -49,9 +49,9 @@ class StructRearrange(BaseTask):
             debug=debug,
         )
         self.max_num_obj = max_num_obj
+        self.max_num_pattern = max_num_pattern
         self.stack_prob = stack_prob
         self.pattern_types = pattern_types
-        self.enable_multi_prompt = enable_multi_prompt
         self.obj_list = [ObjPedia.lookup_object_by_name(obj) for obj in obj_list]
         self.color_list = [TexturePedia.lookup_color_by_name(color) for color in color_list]
         # 
@@ -196,13 +196,11 @@ class StructRearrange(BaseTask):
     def gen_goal_config(self, env, promptor: PromptGenerator, obj_selector: ObjectSelector, **kwargs):
         """Generate goal config"""
         num_color = kwargs.get("num_color", 2)  # Each scene only has X colors
-        num_patterns = 2 if self.enable_multi_prompt else 1
         num_added_objs = 0
-
         obj_list = self.rng.choice(self.obj_list, min(self.max_num_obj, len(self.obj_list)), replace=False)   # current candidate
         color_list = self.rng.choice(self.color_list, num_color, replace=False)
         ## Step 1: select object candidates
-        for i in range(num_patterns):
+        for i in range(max(self.max_num_pattern - 1, 1)):
             if obj_list is None or len(obj_list) <= 2:
                 break  # no more enough candidate to formulate pattern
             selected_objs = obj_list
@@ -251,8 +249,8 @@ class StructRearrange(BaseTask):
             self.distract_obj_ids = []
         num_distract = len(self.distract_obj_ids)
         ## Step 4: 
-        if self.enable_multi_prompt:
-            if len(self.goals) < num_patterns and num_distract > 0:  # not enough pattern
+        if self.max_num_pattern > 1:
+            if len(self.goals) < self.max_num_pattern and num_distract > 0:  # not enough pattern
                 # 4.1 add a spatial prompt
                 # randomly select one from pattern obj and added obj
                 anchor_id = env.rng.choice(rearrange_obj_ids)

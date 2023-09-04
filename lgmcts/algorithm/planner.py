@@ -36,7 +36,7 @@ class SamplingPlanner:
             goals: list of SampleData
         """
         seed = kwargs.get("seed", 0)  # update seed
-        self.sampler.rng.seed(seed)
+        self.sampler.rng = np.random.default_rng(seed=seed)
         prior_dict = kwargs.get("prior_dict", {})
         debug = kwargs.get("debug", False)
         sampled_obj_poses_pix = {}  # keep track of sampled object poses
@@ -49,7 +49,8 @@ class SamplingPlanner:
                     self.sampler.grid_size, self.sampler.rng, 
                     obj_id=sample_data.obj_id, 
                     obj_ids=sample_data.obj_ids,
-                    obj_poses_pix=sampled_obj_poses_pix)
+                    obj_poses_pix=sampled_obj_poses_pix,
+                    sample_info=sample_data.sample_info,)
                 pose_wd, pose_rg, sample_status, _ = self.sampler.sample(sample_data.obj_id, self.n_samples, prior, allow_outside=False)
                 if sample_status is not SampleStatus.SUCCESS:
                     warnings.warn(f"Sample {sample_data.obj_id} failed")

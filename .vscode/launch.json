@@ -9,6 +9,10 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_lgmcts.py",
+            "args": [
+                "--num_episodes=100",
+                "--debug",
+            ],
             "console": "integratedTerminal",
             "justMyCode": false
         },
@@ -35,9 +39,9 @@
             "program": "${workspaceFolder}/lgmcts/scripts/eval/eval_lgmcts.py",
             "args": [
                 "--method=mcts",
-                "--n_epoches=10",
+                "--n_epoches=-1",
                 "--mask_mode=raw_mask",
-                "--debug",
+                // "--debug",
             ],
             "console": "integratedTerminal",
             "justMyCode": false
