@@ -144,6 +144,11 @@ def _generate_data_for_one_task(
 
             ## DEBUG
             # print(rgb.shape)
+            # check sem is not empty
+            for i, obj_id in enumerate(env.obj_ids["rigid"]):
+                obj_mask = seg[0, :, :, 0] == obj_id
+                if np.sum(obj_mask) == 0:
+                    assert False, f"Object {obj_id} is not in the image"
 
         n_generated += 1
         num_tried_this_seed = 0
