@@ -1,6 +1,7 @@
 """Generate data for struct diffusion"""
 from __future__ import annotations
 
+import cv2
 import multiprocessing
 import os
 import json
@@ -70,7 +71,6 @@ def _generate_data_for_one_task(
             env.reset()
             prompt_generator.reset()
             obj_selector.reset()
-            env.prepare()
 
             # generate goal
             prompt_str, obs = task.gen_goal_config(env, prompt_generator, obj_selector)
@@ -97,21 +97,21 @@ def _generate_data_for_one_task(
         with h5py.File(U.f_join(save_path, export_file_name), 'w') as f:
             # rgb
             rgb = obs.pop("rgb")
-            rgb = rearrange(rgb[view], "t c h w -> t h w c")
-            f.create_dataset("rgb", data=rgb)
+            rgb_tensor = rearrange(rgb[view], "t c h w -> t h w c")
+            f.create_dataset("rgb", data=rgb_tensor)
             # seg
             seg = obs.pop("segm")
-            seg = seg[view][:, :, :, None]  # Append a new dimension
-            f.create_dataset("seg", data=seg)
+            seg_tensor = seg[view][:, :, :, None]  # Append a new dimension
+            f.create_dataset("seg", data=seg_tensor)
             # depth
             depth = obs.pop("depth")
-            depth = rearrange(depth[view], "t c h w -> t h w c")
+            depth_tensor = rearrange(depth[view], "t c h w -> t h w c")
             # normalize depth to fit in structFormer
-            depth = depth * 20.0
-            f.create_dataset("depth", data=depth)
+            depth_tensor = depth_tensor * 20.0
+            f.create_dataset("depth", data=depth_tensor)
             # depth_min & depth_max
-            depth_min = np.min(depth) * np.ones([2,], dtype=np.float32)
-            depth_max = np.max(depth) * np.ones([2,], dtype=np.float32)
+            depth_min = np.min(depth_tensor) * np.ones([2,], dtype=np.float32)
+            depth_max = np.max(depth_tensor) * np.ones([2,], dtype=np.float32)
             print(depth_min, depth_max)
             f.create_dataset("depth_min", data=depth_min)
             f.create_dataset("depth_max", data=depth_max)
@@ -149,8 +149,11 @@ def _generate_data_for_one_task(
             # print(rgb.shape)
             # check sem is not empty
             for i, obj_id in enumerate(env.obj_ids["rigid"]):
-                obj_mask = seg[0, :, :, 0] == obj_id
+                obj_mask = seg_tensor[0, :, :, 0] == obj_id
                 if np.sum(obj_mask) == 0:
+                    cv2.imshow("rgb", rgb_tensor[0, :, :, :])
+                    cv2.imshow("seg", seg_tensor[0, :, :, 0] / (np.max(seg_tensor[0, :, :, 0]) + 1e-6) * 255)
+                    cv2.waitKey(0)
                     assert False, f"Object {obj_id} is not in the image"
 
         n_generated += 1
@@ -189,6 +192,6 @@ if __name__ == '__main__':
         num_episodes=args.num_episodes,
         save_path=f"{root_path}/output/struct_diffusion",
         num_save_digits=8,
-        debug=False,
+        debug=True,
         seed=0,
     )
