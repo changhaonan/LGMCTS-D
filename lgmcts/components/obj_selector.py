@@ -69,7 +69,8 @@ class ObjectSelector:
             anchor_obj = anchor_obj_bag.obj_name
             attribute = self.rng.choice(list(COMPARE_DICT.keys()))
             if attribute == "color":
-                compare_rel = self.rng.choice([EqualRel(), DifferentRel()]) if i < max_try - 1 else EqualRel()
+                # compare_rel = self.rng.choice([EqualRel(), DifferentRel()]) if i < max_try - 1 else EqualRel()
+                compare_rel = EqualRel() #To accomodate queries for StructFormer
             elif attribute == "size":
                 compare_rel = self.rng.choice([EqualRel(), DifferentRel(), SmallerRel(), BiggerRel()]) if i < max_try - 1 else EqualRel()
             else:

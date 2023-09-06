@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import warnings
 from copy import deepcopy
+import random
 import lgmcts.utils.misc_utils as utils
 import lgmcts.utils.spatial_utils as spatial_utils
 import lgmcts.utils.pybullet_utils as pybullet_utils
@@ -131,7 +132,14 @@ class StructRearrange(BaseTask):
         goal = self.goals[0]
         # anchor object
         spec["anchor"] = {
-            "objects": []
+            "objects": [],
+            "features" : [
+                {
+                   "comparator" : None,
+                   "type" : "color_d",
+                   "value" : env.obj_id_reverse_mapping[goal["anchor_id"]]['texture_name']
+                }
+            ]
         }
         spec["anchor"]["objects"].append(
             {
@@ -144,7 +152,14 @@ class StructRearrange(BaseTask):
         spec["rearrange"] = {
             "combine_features_logic": "None",
             "count": "None",
-            "objects": []
+            "objects": [],
+            "features" : [
+                {
+                    "comparator" : None,
+                    "type" : "color_d",
+                    "value" : env.obj_id_reverse_mapping[random.choice(goal["obj_ids"])]['texture_name']
+                }
+            ]
         }
         for obj_id in goal["obj_ids"]:
             obj_info = env.obj_id_reverse_mapping[obj_id]
@@ -189,6 +204,7 @@ class StructRearrange(BaseTask):
             type_vocabs["class"][obj.name] = i
         type_vocabs["color"] = {}
         for i, color in enumerate(self.color_list):
+            
             type_vocabs["color"][color.name] = i
         print("type_vocabs:", type_vocabs)
         return type_vocabs
