@@ -106,10 +106,13 @@ def _generate_data_for_one_task(
             # depth
             depth = obs.pop("depth")
             depth = rearrange(depth[view], "t c h w -> t h w c")
+            # normalize depth to fit in structFormer
+            depth = depth * 20.0
             f.create_dataset("depth", data=depth)
             # depth_min & depth_max
             depth_min = np.min(depth) * np.ones([2,], dtype=np.float32)
             depth_max = np.max(depth) * np.ones([2,], dtype=np.float32)
+            print(depth_min, depth_max)
             f.create_dataset("depth_min", data=depth_min)
             f.create_dataset("depth_max", data=depth_max)
             # camera related

@@ -477,7 +477,7 @@ class BaseEnv:
             
             # Pointcloud (from top view)
             intrinsic_mat = np.array(config["intrinsics"]).reshape(3, 3)
-            # Notice: depth is within [0, 1], so we need to scale it back to [0, 20]
+            # Notice: convert depth back to mm
             real_depth = depth[0] * 20.0
             scene_pcd = misc_utils.get_pointcloud(real_depth, intrinsic_mat)
             obs["point_cloud"][view] = {}
