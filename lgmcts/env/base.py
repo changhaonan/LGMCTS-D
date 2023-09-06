@@ -560,7 +560,6 @@ class BaseEnv:
                 assert prior.shape == free.shape, "prior shape must be the same as free shape"
                 free = np.multiply(free, prior)
             if np.sum(free) == 0:
-                print("There is no free space..")
                 return [None, None], None
             pix = misc_utils.sample_distribution(prob=free, rng=self._random)
             pos = misc_utils.pix_to_xyz(pix, hmap, self.bounds, self.pix_size)

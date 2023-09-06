@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_lgmcts.py",
             "args": [
-                "--num_episodes=100",
+                "--num_episodes=10",
                 "--debug",
             ],
             "console": "integratedTerminal",
@@ -21,6 +21,9 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_strdiff.py",
+            "args": [
+                "--num_episodes=100",
+            ],
             "console": "integratedTerminal",
             "justMyCode": false
         },
