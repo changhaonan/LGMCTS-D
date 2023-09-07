@@ -30,8 +30,8 @@ def eval_real(real_data_path):
     color = cv2.imread(os.path.join(real_data_path, "color_image.png"))
     color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
     # load pointcloud
-    mask_ids = [mask_info["value"] for mask_info in label["mask"] if mask_info["label"] != "background"]
-    pcd_list = utils.get_pointcloud_list(color, depth, mask, mask_ids, intrinsics_matrix, np.eye(4, dtype=np.float32))
+    mask_name_ids = [(mask_info["label"], mask_info["value"]) for mask_info in label["mask"] if mask_info["label"] != "background"]
+    pcd_list = utils.get_pointcloud_list(color, depth, mask, mask_name_ids, intrinsics_matrix, np.eye(4, dtype=np.float32))
     origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0)
     origin.transform(camera_pose)
     # for pcd in pcd_list:
@@ -50,7 +50,7 @@ def eval_real(real_data_path):
     # depth = cv2.imread(os.path.join(real_data_path, "top_down_depth.jpg"), cv2.IMREAD_UNCHANGED)
     # depth = np.array(depth, dtype=np.uint16) / 10000.0
     # mask = cv2.imread(os.path.join(real_data_path, "top_down_mask.jpg"))
-    region_sampler.load_from_pcds(pcd_list, mask_mode="raw_mask", cam2world=np.linalg.inv(camera_pose))
+    region_sampler.load_from_pcds(pcd_list, mask_name_ids, mask_mode="raw_mask", cam2world=np.linalg.inv(camera_pose))
     region_sampler.visualize()
     region_sampler.visualize_3d()
 

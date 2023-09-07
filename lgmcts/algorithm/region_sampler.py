@@ -175,7 +175,7 @@ class Region2DSampler(Region2D):
         """
         assert points is not None, "points should not be None"
         if pos_ref is None:
-            pos_ref = np.mean(points, axis=0)  # the ref position will be at center
+            pos_ref = (points.max(axis=0) + points.min(axis=0)) / 2.0
         # project points to region plane
         points_region = self._world2region(points)
         lb_region = np.array(
@@ -519,6 +519,7 @@ class Region2DSampler(Region2D):
             pcd.paint_uniform_color(o3d_color)
             # transform obj to global pos
             obj_pose = self.get_object_pose(obj_id)
+            obj_pose = np.linalg.inv(self.cam2world) @ np.hstack([obj_pose[:3], 1])  # transform to camera frame
             pcd.translate(obj_pose[:3])
             bbox.translate(obj_pose[:3])
             vis_list.append(bbox)
@@ -540,9 +541,11 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         world2region = np.eye(4, dtype=np.float32)
         world2region[:3, :3] = R.from_euler("xyz", [0.0, 0.0, 0.0]).as_matrix()  # top-down
         world2region[:3, 3] = -bounds[:, 0]
-        world2region[2, 3] -= 1e-3  # add a small offset to avoid numerical error
+        world2region[2, 3] -= 1e-6  # add a small offset to avoid numerical error
         # pose boundary
         pose_boundary = bounds
+        # camera
+        self.cam2world = np.eye(4, dtype=np.float32)
         super().__init__(resolution, grid_size, world2region=world2region, pix_padding=pix_padding, pose_boundary=pose_boundary)
 
     def load_env(self, env, mask_mode: str, **kwargs):
@@ -576,23 +579,23 @@ class Region2DSamplerLGMCTS(Region2DSampler):
             self.set_object_pose(obj_id, obj_pose)
         self.obj_support_tree = env.obj_support_tree
     
-    def load_from_pcds(self, pcd_list: list, mask_mode: str, **kwargs):
+    def load_from_pcds(self, pcd_list: list, mask_name_ids: list, mask_mode: str, **kwargs):
         """Load from pcd (in open3d representation) list"""
-        cam2world = kwargs.get("cam2world", np.eye(4))
-        for i, obj_pcd_o3d in enumerate(pcd_list):
+        self.cam2world = kwargs.get("cam2world", np.eye(4))
+        for i, (obj_pcd_o3d, name_id) in enumerate(zip(pcd_list, mask_name_ids)):
+            name, id = name_id
             obj_pcd = np.asarray(obj_pcd_o3d.points)
             obj_pose_max = obj_pcd.max(axis=0)
             obj_pose_min = obj_pcd.min(axis=0)
             obj_pcd_center = (obj_pose_max + obj_pose_min) / 2.0
-            # obj_pcd_center = obj_pcd.mean(axis=0)
             obj_pcd -= obj_pcd_center
             pos_ref = None
             obj_color = np.array(obj_pcd_o3d.colors).mean(axis=0) * 255.0
             # add object to region sampler
-            self.add_object(obj_id=i, points=obj_pcd, pos_ref=pos_ref, name=f"obj_{i}", color=obj_color, mask_mode=mask_mode)
-            # set object pose
-            obj_pose = cam2world @ np.hstack([obj_pcd_center, 1.0])
-            self.set_object_pose(obj_id=i, obj_pos=obj_pose)
+            self.add_object(obj_id=id, points=obj_pcd, pos_ref=pos_ref, name=name, color=obj_color, mask_mode=mask_mode)
+            # set object pose  (obj_pose is in world frame)
+            obj_pose = self.cam2world @ np.hstack([obj_pcd_center, 1.0])
+            self.set_object_pose(obj_id=id, obj_pos=obj_pose)
         self.obj_support_tree = None
 
 

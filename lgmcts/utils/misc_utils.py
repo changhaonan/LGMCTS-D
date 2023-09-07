@@ -77,14 +77,14 @@ def get_pointcloud(depth, intrinsic):
     return points
 
 
-def get_pointcloud_list(color, depth, mask, mask_ids, intrinisc, extrinsic, **kwargs):
+def get_pointcloud_list(color, depth, mask, mask_name_ids, intrinisc, extrinsic, **kwargs):
     """Get point cloud and seperate them by mask ids"""
     clip_far = kwargs.get("clip_far", 10.0)
     clip_near = kwargs.get("clip_near", 0.0)
     valid_mask = (depth > clip_near) & (depth < clip_far)
     scene_points = get_pointcloud(depth, intrinisc)
     obj_pcd_list = []
-    for mask_id in mask_ids:
+    for (mask_name, mask_id) in mask_name_ids:
         obj_mask = (mask == mask_id)[:, :, 0] & valid_mask
         obj_points = scene_points[obj_mask].reshape(-1, 3)
         # transform
