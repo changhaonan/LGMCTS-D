@@ -479,7 +479,11 @@ class Region2DSampler(Region2D):
             )
 
         # resize the image
-        scale_factor = int(500 / self.grid_size[1])
+        vis_img_size = 500
+        if self.grid_size[1] > vis_img_size:
+            scale_factor = int(self.grid_size[1] / vis_img_size)
+        else:
+            scale_factor = int(vis_img_size / self.grid_size[1])
         img_resized = cv2.resize(
             img,
             (img.shape[1] * scale_factor, img.shape[0] * scale_factor),
@@ -515,8 +519,8 @@ class Region2DSampler(Region2D):
             pcd.paint_uniform_color(o3d_color)
             # transform obj to global pos
             obj_pose = self.get_object_pose(obj_id)
-            pcd.translate(obj_pose[3:])
-            bbox.translate(obj_pose[3:])
+            pcd.translate(obj_pose[:3])
+            bbox.translate(obj_pose[:3])
             vis_list.append(bbox)
             vis_list.append(pcd)
         if show_origin:
@@ -530,16 +534,15 @@ import lgmcts.utils.misc_utils as utils
 
 class Region2DSamplerLGMCTS(Region2DSampler):
     """Region sampler wrapper for LGMCTS"""
-    def __init__(self, resolution: float, pix_padding: int, env):
-        bounds = env.bounds  # (3, 2)
-        grid_size = (int((env.bounds[0, 1] - env.bounds[0, 0]) / resolution), 
-            int((env.bounds[1, 1] - env.bounds[1, 0]) / resolution))
+    def __init__(self, resolution: float, pix_padding: int, bounds: np.ndarray):
+        grid_size = (int((bounds[0, 1] - bounds[0, 0]) / resolution), 
+            int((bounds[1, 1] - bounds[1, 0]) / resolution))
         world2region = np.eye(4, dtype=np.float32)
         world2region[:3, :3] = R.from_euler("xyz", [0.0, 0.0, 0.0]).as_matrix()  # top-down
         world2region[:3, 3] = -bounds[:, 0]
         world2region[2, 3] -= 1e-3  # add a small offset to avoid numerical error
         # pose boundary
-        pose_boundary = env.bounds
+        pose_boundary = bounds
         super().__init__(resolution, grid_size, world2region=world2region, pix_padding=pix_padding, pose_boundary=pose_boundary)
 
     def load_env(self, env, mask_mode: str, **kwargs):
@@ -572,6 +575,25 @@ class Region2DSamplerLGMCTS(Region2DSampler):
             # set object pose
             self.set_object_pose(obj_id, obj_pose)
         self.obj_support_tree = env.obj_support_tree
+    
+    def load_from_pcds(self, pcd_list: list, mask_mode: str, **kwargs):
+        """Load from pcd (in open3d representation) list"""
+        cam2world = kwargs.get("cam2world", np.eye(4))
+        for i, obj_pcd_o3d in enumerate(pcd_list):
+            obj_pcd = np.asarray(obj_pcd_o3d.points)
+            obj_pose_max = obj_pcd.max(axis=0)
+            obj_pose_min = obj_pcd.min(axis=0)
+            obj_pcd_center = (obj_pose_max + obj_pose_min) / 2.0
+            # obj_pcd_center = obj_pcd.mean(axis=0)
+            obj_pcd -= obj_pcd_center
+            pos_ref = None
+            obj_color = np.array(obj_pcd_o3d.colors).mean(axis=0) * 255.0
+            # add object to region sampler
+            self.add_object(obj_id=i, points=obj_pcd, pos_ref=pos_ref, name=f"obj_{i}", color=obj_color, mask_mode=mask_mode)
+            # set object pose
+            obj_pose = cam2world @ np.hstack([obj_pcd_center, 1.0])
+            self.set_object_pose(obj_id=i, obj_pos=obj_pose)
+        self.obj_support_tree = None
 
 
 if __name__ == "__main__":

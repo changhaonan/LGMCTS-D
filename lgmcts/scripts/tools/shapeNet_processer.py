@@ -7,6 +7,7 @@ import open3d as o3d
 from scipy.spatial.transform import Rotation as R
 
 asset_dir = importlib_resources.files('lgmcts.assets').joinpath('shapenet')
+max_size = 0.15
 for f in os.listdir(os.path.join(asset_dir, 'meshes')):
     if f.endswith('.obj'):
         # load info json
@@ -22,16 +23,21 @@ for f in os.listdir(os.path.join(asset_dir, 'meshes')):
         # mesh.rotate(rot.as_matrix(), center=(0, 0, 0))
 
         ## Step. 2: shift the origin to center in z-axis
+        mesh_points = np.asarray(mesh.vertices)
         # get the center of the mesh
-        center = mesh.get_center()
+        center = (mesh.get_max_bound() + mesh.get_min_bound()) / 2.0
         # shift the origin to center
         mesh.translate(-center)
         # get size along each axis
         size = mesh.get_max_bound() - mesh.get_min_bound()
-
+        scale = max_size / np.linalg.norm(size)
+        # scale the mesh
+        mesh.scale(scale, center=(0, 0, 0))
+        size = size * scale
+        # resize
         ## Step. 3: save the size to info
         info['max_size'] = size.tolist()
-        info['min_size'] = (size / 2.0).tolist()
+        info['min_size'] = size.tolist()
         # save info
         json.dump(info, open(json_file, 'w'))
         # add origin

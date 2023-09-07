@@ -53,7 +53,7 @@ class BaseEnv:
         ):
         with importlib_resources.files("lgmcts.assets") as _path:
             self.assets_root = str(_path)
-        self.global_scaling = 0.75
+        self.global_scaling = 1.0
         # Obj infos
         self.obj_ids = {"fixed": [], "rigid": []}
         self.obj_dyn_info = { "size": {}, "urdf_full_path": {} }  # obj dynamic info: size, urdf path, etc.
@@ -492,9 +492,6 @@ class BaseEnv:
                 obj_mask = segm == obj_id
                 obj_pcd = scene_pcd[obj_mask].reshape(-1, 3)
                 # misc_utils.plot_3d(f"{view}-{obj_id}", obj_pcd, color='blue')
-                # if obj_pcd.shape[0] == 0:
-                #     cv2.imshow("color", color.transpose(1, 2, 0))
-                #     cv2.waitKey(0)
                 # assert obj_pcd.shape[0] > 0, f"obj_id {obj_id} has no point cloud"
                 offset = counter * max_pcd_size
                 obj_pcds[offset:offset+obj_pcd.shape[0], :] = obj_pcd
@@ -504,6 +501,13 @@ class BaseEnv:
                 offset = counter * 7
                 obj_poses[counter, :] = np.array(position + orientation)
                 
+                print(f"obj_id: {obj_id}, obj_pcd.shape: {obj_pcd.shape}, obj_pose: {position}, {orientation}")
+                if obj_pcd.shape[0] == 0:
+                    print(f"obj_id: {obj_id}, obj_pcd.shape: {obj_pcd.shape}, obj_pose: {position}, {orientation}")
+                    cv2.imshow("color", color.transpose(1, 2, 0))
+                    cv2.waitKey(0)
+                    pass
+
                 counter += 1
             obs["point_cloud"][view] = obj_pcds
             obs["poses"][view] = obj_poses
@@ -554,7 +558,8 @@ class BaseEnv:
                     free[obj_mask == obj_id] = 0
             free[0, :], free[:, 0], free[-1, :], free[:, -1] = 0, 0, 0, 0
             free = cv2.erode(free, np.ones((erode_size, erode_size), np.uint8))
-            free = free.astype(np.float32) 
+            free = free.astype(np.float32)
+            print(f"No free; erode_size: {erode_size}, free_size: {free.shape}, obj_size: {obj_size}") 
             # Get the probability union
             if prior is not None:
                 assert prior.shape == free.shape, "prior shape must be the same as free shape"
@@ -565,6 +570,7 @@ class BaseEnv:
             pos = misc_utils.pix_to_xyz(pix, hmap, self.bounds, self.pix_size)
             # print(f"pos: {pos}")
             pos = (pos[0], pos[1], obj_size[2] / 2)
+        print(f"random pose: {pos}")
         theta = self._random.random() * 2 * np.pi
         rot = misc_utils.eulerXYZ_to_quatXYZW((0, 0, theta))
         return [pos, rot], obj_stack_id
@@ -591,7 +597,10 @@ class BaseEnv:
             return None, None, None
         else:
             obj_stack_id = None
-
+        
+        ## DEBUG
+        print(f"add object {obj_entry.name} with size {size}, {scalar} to env.")
+        
         obj_id, urdf_full_path = pybullet_utils.add_any_object(
             env=self,
             obj_entry=obj_entry,
@@ -636,7 +645,6 @@ class BaseEnv:
             low=sampled_obj.size_range.low,
             high=sampled_obj.size_range.high,
         )
-        sampled_obj_size = sampled_obj_size/2
         if len(color_lists) > 1:
             sampled_obj_color = self._random.choice(color_lists).value
         elif len(color_lists) == 1:
@@ -669,6 +677,7 @@ class BaseEnv:
         obj_size = self.obj_dyn_info["size"][obj_id]
         pose, obj_stack_id = self.get_random_pose(obj_size, prior, stack_prob=stack_prob)
         if pose[0] is None or pose[1] is None:
+            print(f"move object {obj_id} to random pose failed.")
             return None
         pybullet_utils.move_obj(self, obj_id, pose[0], pose[1])
         self._update_support_tree(obj_id, obj_stack_id)

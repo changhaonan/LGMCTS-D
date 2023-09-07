@@ -57,7 +57,7 @@ def get_heightmap(points, colors, bounds, pixel_size):
     return heightmap, colormap
 
 
-def get_pointcloud(depth, intrinsics):
+def get_pointcloud(depth, intrinsic):
     """Get 3D pointcloud from perspective depth image.
 
     Args:
@@ -71,10 +71,30 @@ def get_pointcloud(depth, intrinsics):
     xlin = np.linspace(0, width - 1, width)
     ylin = np.linspace(0, height - 1, height)
     px, py = np.meshgrid(xlin, ylin)
-    px = (px - intrinsics[0, 2]) * (depth / intrinsics[0, 0])
-    py = (py - intrinsics[1, 2]) * (depth / intrinsics[1, 1])
+    px = (px - intrinsic[0, 2]) * (depth / intrinsic[0, 0])
+    py = (py - intrinsic[1, 2]) * (depth / intrinsic[1, 1])
     points = np.float32([px, py, depth]).transpose(1, 2, 0)
     return points
+
+
+def get_pointcloud_list(color, depth, mask, mask_ids, intrinisc, extrinsic, **kwargs):
+    """Get point cloud and seperate them by mask ids"""
+    clip_far = kwargs.get("clip_far", 10.0)
+    clip_near = kwargs.get("clip_near", 0.0)
+    valid_mask = (depth > clip_near) & (depth < clip_far)
+    scene_points = get_pointcloud(depth, intrinisc)
+    obj_pcd_list = []
+    for mask_id in mask_ids:
+        obj_mask = (mask == mask_id)[:, :, 0] & valid_mask
+        obj_points = scene_points[obj_mask].reshape(-1, 3)
+        # transform
+        obj_points = (extrinsic[:3, :3] @ obj_points.T).T + (extrinsic[:3, 3])[None, :]
+        obj_colors = color[obj_mask].reshape(-1, 3) / 255.0
+        obj_pcd = o3d.geometry.PointCloud()
+        obj_pcd.points = o3d.utility.Vector3dVector(obj_points)
+        obj_pcd.colors = o3d.utility.Vector3dVector(obj_colors)
+        obj_pcd_list.append(obj_pcd)
+    return obj_pcd_list
 
 
 def transform_pointcloud(points, transform):

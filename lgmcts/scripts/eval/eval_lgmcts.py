@@ -38,7 +38,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     )
     task = env.task
 
-    region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, env)
+    region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, env.bounds)
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
     sucess_count = 0

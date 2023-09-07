@@ -39,7 +39,7 @@ def _generate_data_for_one_task(
         seed=seed, 
         debug=debug, 
         display_debug_window=debug,
-        hide_arm_rgb=debug,
+        hide_arm_rgb=not debug,
     )
     task = env.task
     prompt_generator = PromptGenerator(env.rng)
@@ -49,6 +49,7 @@ def _generate_data_for_one_task(
 
     print("Generate dataset...")
     for i in range(num_episodes):
+        print(f"==== Episode {i} ====")
         # reset
         seed = env.rng.integers(0, 100)
         env.set_seed(seed)
