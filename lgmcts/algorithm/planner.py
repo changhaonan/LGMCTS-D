@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import cv2
 import warnings
-from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData, SampleStatus
+from lgmcts.algorithm.region_sampler_v2 import Region2DSampler, SampleData, SampleStatus
 from lgmcts.algorithm.mcts import MCTS
 
 
@@ -67,9 +67,7 @@ class SamplingPlanner:
                     "new_pose": pose_wd[0].astype(np.float32),
                 })
                 if debug:
-                    # cv2.imshow("prior", prior)  # show prior
-                    # cv2.waitKey(0)
-                    print(f"pose_rg: {pose_rg[0]}; pose_wd: {pose_wd[0]}")
+                    print(f"old: {action_list[-1]['old_pose'][:3]}, new: {action_list[-1]['new_pose'][:3]}")
                     self.sampler.visualize()  # show the new pose
         return action_list
 

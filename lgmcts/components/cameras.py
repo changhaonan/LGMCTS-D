@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import pybullet as p
+from scipy.spatial.transform import Rotation as R
 
 __all__ = [
     "get_agent_cam_config",
@@ -86,17 +87,24 @@ class NearPerfectCamera256x256(object):
 
     # Near-orthographic projection.
     image_size = (256, 256)
-    front_intrinsics = (64e4 // 1.80, 0, 320.0, 0, 63e4 // 1.80, 240.0, 0, 0, 1)
-    top_intrinsics = (64e4 // 2.55, 0, 320.0, 0, 63e4 // 2.55, 240.0, 0, 0, 1)
+    front_intrinsics = (64e4 // 1.80, 0, 128.0, 0, 64e4 // 1.80, 128.0, 0, 0, 1)
+    top_intrinsics = (64e4 // 2.55, 0, 128.0, 0, 64e4 // 2.55, 128.0, 0, 0, 1)
 
     # Set default camera poses.
     front_offset = 0.09  # offset from the center of workspace to make the workspace close to the bottom in the view
     front_position = (1000 + 0.5 - front_offset, 0, 1000)
     front_rotation = (np.pi / 4, np.pi, -np.pi / 2)
     front_rotation = p.getQuaternionFromEuler(front_rotation)
-    top_position = (0.6, 0, 1000.0)
+    front_transform = np.eye(4, dtype=np.float32)
+    front_transform[:3, :3] = R.from_quat(front_rotation).as_matrix()
+    front_transform[:3, 3] = front_position
+
+    top_transform = np.eye(4, dtype=np.float32)
+    top_position = (0.5, 0, 1000.0)
     top_rotation = (0, np.pi, -np.pi / 2)
     top_rotation = p.getQuaternionFromEuler(top_rotation)
+    top_transform[:3, :3] = R.from_quat(top_rotation).as_matrix()
+    top_transform[:3, 3] = top_position
 
     # Camera config.
     CONFIG = [
@@ -105,6 +113,7 @@ class NearPerfectCamera256x256(object):
             "intrinsics": front_intrinsics,
             "position": front_position,
             "rotation": front_rotation,
+            "transform": front_transform,
             # "zrange": (999.7, 1001.0),
             "zrange": (900, 10001.0),
             "noise": False,
@@ -114,6 +123,7 @@ class NearPerfectCamera256x256(object):
             "intrinsics": top_intrinsics,
             "position": top_position,
             "rotation": top_rotation,
+            "transform": top_transform,
             # "zrange": (999.7, 1001.0),
             "zrange": (900, 1001.0),
             "noise": False,

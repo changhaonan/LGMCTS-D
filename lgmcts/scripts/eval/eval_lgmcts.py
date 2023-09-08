@@ -40,8 +40,9 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         hide_arm_rgb=(not debug),
     )
     task = env.task
-
-    region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, env.bounds)
+    cam2world = env.agent_cams["top"]["transform"]
+    bounds = np.array([[-0.2, 0.2], [-0.4, 0.4], [0.0, 0.5]])  # bounds in camera coordinate
+    region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
     sucess_count = 0
@@ -111,13 +112,23 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         
         ## Step 3. generate & exectue plan
         action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
+        region_sampler.reset()
+        region_sampler.load_env(env, mask_mode=mask_mode)
+        for step in action_list:
+            region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
+            region_sampler.visualize()
+
         env.prepare()
         for step in action_list:
             # assemble action
+            pose0_position = cam2world[:3, :3] @ step["old_pose"][:3] + cam2world[:3, 3]
+            pose0_position[2] = 0.0
+            pose1_position = cam2world[:3, :3] @ step["new_pose"][:3] + cam2world[:3, 3]
+            pose1_position[2] = 0.05
             action = {
-                "pose0_position": step["old_pose"][:3],
+                "pose0_position": pose0_position,
                 "pose0_rotation": step["old_pose"][3:],
-                "pose1_position": step["new_pose"][:3],
+                "pose1_position": pose1_position,
                 "pose1_rotation": step["new_pose"][3:],
             }
             # if debug:
@@ -133,9 +144,9 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         
         if debug:
             prompt_generator.render(append=" [succes]" if exe_result.success else " [fail]")
-            for step in action_list:
-                region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
-            region_sampler.visualize()
+            # for step in action_list:
+            #     region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
+            # region_sampler.visualize()
 
     # average result
     print(f"Success rate: {float(sucess_count) / float(n_epoches)}")
