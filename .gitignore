@@ -8,3 +8,6 @@ build/
 
 # itermidate data
 *.mtl
+
+# GPT API keys
+lgmcts/conf/

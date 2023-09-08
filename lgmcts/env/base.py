@@ -501,11 +501,11 @@ class BaseEnv:
                 offset = counter * 7
                 obj_poses[counter, :] = np.array(position + orientation)
                 
-                print(f"obj_id: {obj_id}, obj_pcd.shape: {obj_pcd.shape}, obj_pose: {position}, {orientation}")
+                # print(f"obj_id: {obj_id}, obj_pcd.shape: {obj_pcd.shape}, obj_pose: {position}, {orientation}")
                 if obj_pcd.shape[0] == 0:
-                    print(f"obj_id: {obj_id}, obj_pcd.shape: {obj_pcd.shape}, obj_pose: {position}, {orientation}")
-                    cv2.imshow("color", color.transpose(1, 2, 0))
-                    cv2.waitKey(0)
+                    # print(f"obj_id: {obj_id}, obj_pcd.shape: {obj_pcd.shape}, obj_pose: {position}, {orientation}")
+                    # cv2.imshow("color", color.transpose(1, 2, 0))
+                    # cv2.waitKey(0)
                     pass
 
                 counter += 1
@@ -559,7 +559,7 @@ class BaseEnv:
             free[0, :], free[:, 0], free[-1, :], free[:, -1] = 0, 0, 0, 0
             free = cv2.erode(free, np.ones((erode_size, erode_size), np.uint8))
             free = free.astype(np.float32)
-            print(f"No free; erode_size: {erode_size}, free_size: {free.shape}, obj_size: {obj_size}") 
+            # print(f"No free; erode_size: {erode_size}, free_size: {free.shape}, obj_size: {obj_size}") 
             # Get the probability union
             if prior is not None:
                 assert prior.shape == free.shape, "prior shape must be the same as free shape"
@@ -570,7 +570,7 @@ class BaseEnv:
             pos = misc_utils.pix_to_xyz(pix, hmap, self.bounds, self.pix_size)
             # print(f"pos: {pos}")
             pos = (pos[0], pos[1], obj_size[2] / 2)
-        print(f"random pose: {pos}")
+        # print(f"random pose: {pos}")
         theta = self._random.random() * 2 * np.pi
         rot = misc_utils.eulerXYZ_to_quatXYZW((0, 0, theta))
         return [pos, rot], obj_stack_id
@@ -599,7 +599,7 @@ class BaseEnv:
             obj_stack_id = None
         
         ## DEBUG
-        print(f"add object {obj_entry.name} with size {size}, {scalar} to env.")
+        # print(f"add object {obj_entry.name} with size {size}, {scalar} to env.")
         
         obj_id, urdf_full_path = pybullet_utils.add_any_object(
             env=self,
@@ -791,6 +791,7 @@ class BaseEnv:
         # load task
         task_state = env_state["task_state"]
         self.task.set_state(task_state)
+        
 
     # ---------------------------------------------------------------------------
     # Robot Movement Functions

@@ -258,10 +258,10 @@ class Region2D(Region):
         # check
         # image_vis = draw_occupancy_map(self.region_map, vis_scale=5)
         image_vis = draw_color_map(self.color_map, vis_scale=5)
-        cv2.imshow(title, image_vis)
-        cv2.waitKey(0)
+        # cv2.imshow(title, image_vis)
+        # cv2.waitKey(0)
         # close the window
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
 
     def grid_points_3d(self, **kwargs):
         """Get the 3d grid points in the region"""

@@ -498,9 +498,9 @@ class Region2DSampler(Region2D):
             for j in range(0, img_resized.shape[1], scale_factor):
                 cv2.line(img_resized, (j, 0), (j, img_resized.shape[0]), grid_color, 1)
 
-        cv2.imshow("Occupancy Grid with Grid Lines", img_resized)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.imshow("Occupancy Grid with Grid Lines", img_resized)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
     def visualize_3d(self, show_origin: bool = False):
         """Visualize the region and obj bbox in 3D"""
