@@ -4,7 +4,9 @@ import warnings
 from lgmcts.components.encyclopedia import ObjEntry, TextureEntry, SizeRange
 from lgmcts.components.attribute import COMPARE_DICT, CompareRel, EqualRel, DifferentRel, SmallerRel, BiggerRel
 from lgmcts.components.attribute import ObjectBag, get_object_bag
-
+import os 
+import numpy as np
+import pickle 
 
 class ObjectSelector:
     """Obj selector"""
@@ -104,3 +106,78 @@ class ObjectSelector:
         # warnings.warn("Cannot generate a valid prompt")
         assert False, "Cannot generate a valid prompt"
         return {"anchor_obj": None, "in_obj": [], "in_color": [], "in_size": [], "out_obj": [], "out_color": [], "out_size": []}
+    
+    def parse_llm_result(self, dataset_path: str, llm_result: str, check_point_list: list[str], num_objs: int):
+        """Parse the result from LLM"""
+            # generate prompt
+        prompt_folder = os.path.join(os.path.dirname(dataset_path), "prompt")
+        if not os.path.exists(prompt_folder):
+            os.makedirs(prompt_folder)
+
+        goals = []
+        for ind, res in enumerate(llm_result):
+            env_state = None
+            with open(os.path.join(dataset_path, check_point_list[ind]), "rb") as f:
+                env_state = pickle.load(f)
+            obj_list = [None]* num_objs
+            texture_list = [None]* num_objs
+            for entry in env_state["obj_id_reverse_mapping"]:
+                obj_list[entry] = env_state["obj_id_reverse_mapping"][entry]["obj_name"]
+                texture_list[entry] = env_state["obj_id_reverse_mapping"][entry]["texture_name"]
+            goal = []
+            for entry in res:
+                goal_entry = dict()
+                if entry["pattern"] != "spatial":
+                    goal_entry["type"] = f"pattern:{entry['pattern']}"
+                    goal_entry["obj_ids"] = []
+                    anchor_ind = obj_list.index(entry["anchor"])
+                    goal_entry["anchor_id"] = anchor_ind
+                    if entry["anchor_relation"] == "same":
+                        for obj, color in zip(obj_list, texture_list):
+                            if color == texture_list[anchor_ind]:
+                                goal_entry["obj_ids"].append(obj_list.index(obj))
+                                
+                    else:
+                        for obj, color in zip(obj_list, texture_list):
+                            if color != texture_list[anchor_ind]:
+                                goal_entry["obj_ids"].append(obj_list.index(obj))
+                    goal.append(goal_entry)
+                else:
+                    goal_entry["type"] = f"pattern:{entry['pattern']}"
+                    goal_entry["obj_ids"] = []
+                    # for obj_name, obj_color in zip(entry["objects"], entry["colors"]):
+                    #     for obj, color, k in zip(obj_list, texture_list, range(len(obj_list))):
+                    #         if obj == obj_name and color == obj_color:
+                    #             goal_entry["obj_ids"].append(k)
+                    for obj_name in entry["objects"]:
+                        if obj_name in obj_list:
+                            goal_entry["obj_ids"].append(obj_list.index(obj_name))
+                    goal_entry["obj_ids"] = goal_entry["obj_ids"][::-1]
+                    goal_entry["spatial_label"] = np.array([0, 0, 0, 0], dtype=np.int32)
+                    if "left" in entry["spatial_label"]:
+                        goal_entry["spatial_label"][0] = 1
+                    if "right" in entry["spatial_label"]:
+                        goal_entry["spatial_label"][1] = 1
+                    if "front" in entry["spatial_label"]:
+                        goal_entry["spatial_label"][2] = 1
+                    if "behind" in entry["spatial_label"]:
+                        goal_entry["spatial_label"][3] = 1
+                    goal_entry["spatial_str"] = entry["spatial_str"]
+                    goal.append(goal_entry)
+            goals.append(goal)           
+        with open(f"{dataset_path}/goal.pkl", "wb") as fp:
+            pickle.dump(goals, fp)
+
+
+        # prompt_bg = "Assume you are a language-based motion planner. You will parse user's requirement into goal configuration and constraints. Follow the examples we provide. You should strictly adhere to our format. \n"
+        # obj_id_list = list(range(len(self.obj_list)))
+        # obj_name_list = []
+        # obj_color_list = []
+        # for obj_id in obj_id_list:
+        #     # obj_name_list.append(entry["obj_name"] for entry in env.obj_id_reverse_mapping[obj_id])
+        #     obj_name_list.append(self.obj_list[obj_id].name.lower().replace("shapenet_", ""))
+        #     obj_color_list.append(self.color_list[obj_id].name.lower().replace("_", " "))
+        # prompt_bg += f"Object_id of the objects in the scene are: {obj_id_list} for {obj_name_list}\n"
+        # prompt_bg += f"And correspondingly colors of the objects in the scene are:  {obj_color_list}\n"
+        # with open(f"{prompt_folder}/prompt_bg.txt", "w") as f:
+        #     f.write(prompt_bg)

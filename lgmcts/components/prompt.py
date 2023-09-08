@@ -117,10 +117,11 @@ class PromptGenerator:
 
     def render(self, append: str = ""):
         prompt_img = self.get_prompt_img_from_text(self._prompt_str + append)
-        self._display(prompt_img)
+        # self._display(prompt_img)
 
     def close(self):
-        self._display.close()
+        # self._display.close()
+        pass
 
 
 class Cv2Display:
@@ -201,7 +202,7 @@ class Cv2Display:
     def close(self):
         if not self._enabled:
             return
-        cv2.destroyWindow(self._window_name)
+        # cv2.destroyWindow(self._window_name)
 
 
 if __name__ == "__main__":
