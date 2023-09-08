@@ -292,10 +292,10 @@ class Region2DSampler():
             pos[1] - mask_half_y + mask_min_y: pos[1] - mask_half_y + mask_max_y,
             :,
         ][mask_in_region == 1] = value
-        # DEBUG
-        cv2.circle(occupancy_map, (pos[1], pos[0]), 1, (255, 0, 0), thickness=-1)
-        cv2.rectangle(occupancy_map, (pos[1] - mask_half_y, pos[0] - mask_half_x),
-                      (pos[1] + mask_half_y, pos[0] + mask_half_x), (0, 255, 0), thickness=1)
+        # # DEBUG
+        # cv2.circle(occupancy_map, (pos[1], pos[0]), 1, (255, 0, 0), thickness=-1)
+        # cv2.rectangle(occupancy_map, (pos[1] - mask_half_y, pos[0] - mask_half_x),
+        #               (pos[1] + mask_half_y, pos[0] + mask_half_x), (0, 255, 0), thickness=1)
         return True
 
     def get_occupancy(self, obj_list: list[int] | None = None) -> bool:
