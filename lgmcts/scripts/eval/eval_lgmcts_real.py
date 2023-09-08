@@ -9,6 +9,7 @@ from scipy.spatial.transform import Rotation as R
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 import lgmcts.utils.misc_utils as utils
 
+
 def eval_real(real_data_path):
     # load camera
     camera_pose = np.array([[-9.98961852e-01,  4.55540366e-02, -2.20703533e-04,  2.41992141e-02],
@@ -26,23 +27,29 @@ def eval_real(real_data_path):
     # load images
     depth_scale = 100000.0
     mask = cv2.imread(os.path.join(real_data_path, "mask_image.png"))
-    depth = cv2.imread(os.path.join(real_data_path, "depth_image.png"), cv2.IMREAD_UNCHANGED).astype(np.uint16) / depth_scale
+    depth = cv2.imread(os.path.join(real_data_path, "depth_image.png"),
+                       cv2.IMREAD_UNCHANGED).astype(np.uint16) / depth_scale
     color = cv2.imread(os.path.join(real_data_path, "color_image.png"))
     color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
     # load pointcloud
-    mask_name_ids = [(mask_info["label"], mask_info["value"]) for mask_info in label["mask"] if mask_info["label"] != "background"]
-    pcd_list = utils.get_pointcloud_list(color, depth, mask, mask_name_ids, intrinsics_matrix, np.eye(4, dtype=np.float32))
+    mask_name_ids = [(mask_info["label"], mask_info["value"])
+                     for mask_info in label["mask"] if mask_info["label"] != "background"]
+    pcd_list = utils.get_pointcloud_list(color, depth, mask, mask_name_ids,
+                                         intrinsics_matrix, np.eye(4, dtype=np.float32))
     origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0)
     origin.transform(camera_pose)
     # for pcd in pcd_list:
     #     o3d.visualization.draw_geometries([pcd, origin])
-    o3d.visualization.draw_geometries(pcd_list + [origin])
+    pcd_all = o3d.geometry.PointCloud()
+    for pcd in pcd_list:
+        pcd_all += pcd
+    # o3d.visualization.draw_geometries(pcd_list + [origin])
     # create instance list
 
     # init region_sampler
-    resolution = 0.002
+    resolution = 0.01
     pix_padding = 1  # padding for clearance
-    bounds = np.array([[0.0, 1.0], [-0.5, 0.5], [0.0, 0.5]])
+    bounds = np.array([[-0.35, 0.35], [-0.5, 0.5], [0.0, 0.5]])  # (height, width, depth)
     region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
     # region_sampler.visualize()
     # color = cv2.imread(os.path.join(real_data_path, "top_down_color.jpg"))
@@ -50,9 +57,13 @@ def eval_real(real_data_path):
     # depth = cv2.imread(os.path.join(real_data_path, "top_down_depth.jpg"), cv2.IMREAD_UNCHANGED)
     # depth = np.array(depth, dtype=np.uint16) / 10000.0
     # mask = cv2.imread(os.path.join(real_data_path, "top_down_mask.jpg"))
-    region_sampler.load_from_pcds(pcd_list, mask_name_ids, mask_mode="raw_mask", cam2world=np.linalg.inv(camera_pose))
+    region_sampler.load_from_pcds(pcd_list, mask_name_ids, mask_mode="raw_mask")
     region_sampler.visualize()
-    region_sampler.visualize_3d()
+    region_sampler.visualize_3d(show_origin=True)
+    pcd_image = region_sampler.project_pcd(pcd_all)
+    cv2.imshow("pcd_image", pcd_image)
+    cv2.waitKey(0)
+
 
 if __name__ == "__main__":
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")

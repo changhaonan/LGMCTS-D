@@ -12,7 +12,7 @@ from typing import Union
 import cv2
 import anytree
 
-from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData, SampleStatus,\
+from lgmcts.algorithm.region_sampler_v2 import Region2DSampler, SampleData, SampleStatus,\
     sample_distribution, ObjectData
 
 ORDERED_PATTERNS = ["spatial"]
@@ -200,7 +200,7 @@ class Node(object):
         
         # update region
         region.set_object_poses(obj_states=object_states)
-        
+        # region.visualize()
         # keep track of sampled object poses
         sampled_obj_poses_pix = {} 
         pattern_objs = sample_data.obj_ids  # objects involved in the sampling pattern
@@ -211,7 +211,7 @@ class Node(object):
             ] # pattern objects at goal
         #FIXME: this could be a problem here, because there is an offset
         sampled_obj_poses_pix = {
-            obj:tuple(region._world2region(object_states[obj][:3]+region.objects[obj].pos_offset)[:2]) 
+            obj:tuple(region._world2pix(object_states[obj][:3] + region.objects[obj].pos_offset)) 
             for obj in objs_at_goal}
 
         # update prior
@@ -254,8 +254,8 @@ class Node(object):
             counter = 100
             while (counter > 0):
                 counter -= 1
-                samples_reg, sample_probs = sample_distribution(prob=prior, rng=region.rng, n_samples=1)  # (N, 2)
-                obs_id  = self.segmentation[samples_reg[0][0], samples_reg[0][1], 0]
+                sample_pix, sample_probs = sample_distribution(prob=prior, rng=region.rng, n_samples=1)  # (N, 2)
+                obs_id  = self.segmentation[sample_pix[0][0], sample_pix[0][1], 0]
                 if (obs_id not in [-1, obj_id]) and (obs_id in leaf_objs):
                     break
             if counter <= 0:

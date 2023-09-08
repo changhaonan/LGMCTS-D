@@ -500,13 +500,6 @@ class BaseEnv:
                 position, orientation = pybullet_utils.get_obj_pose(self, obj_id)
                 offset = counter * 7
                 obj_poses[counter, :] = np.array(position + orientation)
-                
-                print(f"obj_id: {obj_id}, obj_pcd.shape: {obj_pcd.shape}, obj_pose: {position}, {orientation}")
-                if obj_pcd.shape[0] == 0:
-                    print(f"obj_id: {obj_id}, obj_pcd.shape: {obj_pcd.shape}, obj_pose: {position}, {orientation}")
-                    cv2.imshow("color", color.transpose(1, 2, 0))
-                    cv2.waitKey(0)
-                    pass
 
                 counter += 1
             obs["point_cloud"][view] = obj_pcds
@@ -597,9 +590,6 @@ class BaseEnv:
             return None, None, None
         else:
             obj_stack_id = None
-        
-        ## DEBUG
-        print(f"add object {obj_entry.name} with size {size}, {scalar} to env.")
         
         obj_id, urdf_full_path = pybullet_utils.add_any_object(
             env=self,

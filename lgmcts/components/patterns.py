@@ -63,8 +63,8 @@ class LinePattern(Pattern):
                 rel_obj_ids.append(id)
                 rel_obj_poses_pix.append(obj_poses_pix[id])
         # if no other objects are sampled, we generate a random line
-        height, width = img_size
-        prior = np.zeros(img_size, dtype=np.float32)
+        height, width = img_size[0], img_size[1]
+        prior = np.zeros([height, width], dtype=np.float32)
         if len(rel_obj_ids) == 0:
             # first point can be anywhere
             return np.ones_like(prior), {"type": "pattern:line", "position_pixel": [0, 0, width-1, height-1], "rotation": [0, 0, 0]}
@@ -672,7 +672,8 @@ class SpatialPattern:
                 else:
                     anchor_sampled = False
 
-        prior = np.zeros(img_size, dtype=np.float32)
+        height, width = img_size[0], img_size[1]
+        prior = np.zeros([height, width], dtype=np.float32)
         # compute anchor
         if len(rel_obj_poses_pix) > 0:
             assert len(rel_obj_poses_pix) == 1, "Only one anchor object is allowed!"
@@ -680,7 +681,7 @@ class SpatialPattern:
         else:
             if anchor_sampled:
                 # if no object is anchor, we use the center of the image
-                anchor = [img_size[0]/2, img_size[1]/2]
+                anchor = [height/2, width/2]
             else:
                 warnings.warn("Anchor object exists, but not sampled!")
                 return prior, {}
@@ -694,12 +695,12 @@ class SpatialPattern:
             spatial_str = "left"
         elif spatial_label == [0, 1, 0, 0]:
             # right
-            anchor[0] = np.min([anchor[0] + 1, img_size[1] - 1])
+            anchor[0] = np.min([anchor[0] + 1, width - 1])
             prior[:, int(anchor[0]):] = 1.0
             spatial_str = "right"
         elif spatial_label == [0, 0, 1, 0]:
             # front
-            anchor[1] = np.min([anchor[1] + 1, img_size[0] - 1])
+            anchor[1] = np.min([anchor[1] + 1, height - 1])
             prior[int(anchor[1]):, :] = 1.0
             spatial_str = "front"
         elif spatial_label == [0, 0, 0, 1]:
@@ -710,7 +711,7 @@ class SpatialPattern:
         elif spatial_label == [1, 0, 1, 0]:
             # left & front
             anchor[0] = np.max([anchor[0] - 1, 0])
-            anchor[1] = np.min([anchor[1] + 1, img_size[0] - 1])
+            anchor[1] = np.min([anchor[1] + 1, height - 1])
             prior[int(anchor[1]):, :int(anchor[0])] = 1.0
             spatial_str = "left & front"
         elif spatial_label == [1, 0, 0, 1]:
@@ -721,13 +722,13 @@ class SpatialPattern:
             spatial_str = "left & back"
         elif spatial_label == [0, 1, 1, 0]:
             # right & front
-            anchor[0] = np.min([anchor[0] + 1, img_size[1] - 1])
-            anchor[1] = np.min([anchor[1] + 1, img_size[0] - 1])
+            anchor[0] = np.min([anchor[0] + 1, width - 1])
+            anchor[1] = np.min([anchor[1] + 1, height - 1])
             prior[int(anchor[1]):, int(anchor[0]):] = 1.0
             spatial_str = "right & front"
         elif spatial_label == [0, 1, 0, 1]:
             # right & back
-            anchor[0] = np.min([anchor[0] + 1, img_size[1] - 1])
+            anchor[0] = np.min([anchor[0] + 1, width - 1])
             anchor[1] = np.max([anchor[1] - 1, 0])
             prior[:int(anchor[1]), int(anchor[0]):] = 1.0
             spatial_str = "right & back"

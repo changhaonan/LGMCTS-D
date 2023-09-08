@@ -208,6 +208,16 @@ def unproject_depth_vectorized(im_depth, depth_dist, camera_mtx, camera_dist):
     )
 
 
+def visualize_depth_map(depth_map):
+    """Visualize depth map."""
+    # normalize
+    depth_map = depth_map - np.min(depth_map)
+    depth_map = depth_map / np.max(depth_map)
+    plt.figure(figsize=(10, 10))
+    plt.imshow(depth_map)
+    plt.show()
+
+
 # -----------------------------------------------------------------------------
 # MATH UTILS
 # -----------------------------------------------------------------------------
