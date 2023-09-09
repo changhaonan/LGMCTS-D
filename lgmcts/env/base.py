@@ -582,6 +582,8 @@ class BaseEnv:
         **kwargs,
     ):
         """helper function for adding object to env."""
+        if len(self.obj_ids["rigid"]) >= self.max_num_obj:
+            return None, None, None
         scaled_size = self._scale_size(size, scalar)
         if pose is None:
             pose, obj_stack_id = self.get_random_pose(scaled_size, prior=prior, stack_prob=stack_prob)

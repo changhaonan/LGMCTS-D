@@ -82,13 +82,10 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         if debug:
             # region_sampler.visualize()
             prompt_generator.render()
+            ##
+            print(env.obj_ids)
 
         ## Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
-        # goals = task.goals
-        # for ind, en in enumerate(task.goals):
-        #     for ky in en:
-        #         if ky in prompt_goals[i][ind]:
-        #             assert en[ky] == prompt_goals[i][ind][ky]
         if use_llm:
             goals = prompt_goals[i]
         else:

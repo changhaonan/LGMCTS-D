@@ -70,7 +70,7 @@ class StructRearrange(BaseTask):
         self.distract_obj_ids = []
 
     def add_objects_to_pattern(
-        self, env, objs, colors, pattern_prior: np.ndarray | None, use_existing: bool=False, stack_prob: float=0.0):
+        self, env, objs, colors, pattern_prior: np.ndarray | None, num_limit: list[int]=[0, 100], use_existing: bool=False, stack_prob: float=0.0):
         """Set objects to a line, use_existing decides whether to add new object or not"""
         # Add object
         added_obj_ids = []
@@ -86,6 +86,8 @@ class StructRearrange(BaseTask):
                 if obj_id is not None:
                     added_obj_ids.append(obj_id)
                     obj_status[obj_id] = True
+                    if len(added_obj_ids) >= num_limit[-1]:
+                        break
         else:
             raise NotImplementedError("Not implemented yet")
         if len(added_obj_ids) == 0:
@@ -228,7 +230,13 @@ class StructRearrange(BaseTask):
                 continue
             ## Step 2: select pattern & add objects to scene
             if selection["anchor_obj"] is not None:
-                [anchor_id], _ = self.add_objects_to_pattern(env, [selection["anchor_obj"]], [selection["anchor_color"]], None, False, 0.0)  # add anchor object
+                [anchor_id], _ = self.add_objects_to_pattern(
+                    env, 
+                    objs=[selection["anchor_obj"]], 
+                    colors=[selection["anchor_color"]], 
+                    pattern_prior=None,
+                    use_existing=False, 
+                    stack_prob=0.0)  # add anchor object
             else:
                 anchor_id = -1
             # generate pattern
@@ -237,13 +245,19 @@ class StructRearrange(BaseTask):
             rearrange_obj_ids = []
             pattern_info = {}
             for i in range(max_try):
-                try:
-                    pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
-                    rearrange_obj_ids, obj_status = self.add_objects_to_pattern(env, selection["in_obj"], selection["in_color"], pattern_prior, False, 0.0)
-                    assert len(rearrange_obj_ids) > 0, "No object is added to the pattern"
-                    break
-                except:
+                pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
+                num_limit = PATTERN_DICT[pattern_type]._num_limit
+                rearrange_obj_ids, obj_status = self.add_objects_to_pattern(
+                    env, 
+                    objs=selection["in_obj"], 
+                    colors=selection["in_color"], 
+                    pattern_prior=pattern_prior, 
+                    num_limit=num_limit,
+                    use_existing=False, 
+                    stack_prob=0.0)
+                if len(rearrange_obj_ids) == 0:
                     continue
+                break
             if anchor_id == -1:
                 anchor_id = rearrange_obj_ids[0]
             # update goals
