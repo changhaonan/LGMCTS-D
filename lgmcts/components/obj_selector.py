@@ -132,28 +132,30 @@ class ObjectSelector:
                 if entry["pattern"] != "spatial":
                     goal_entry["type"] = f"pattern:{entry['pattern']}"
                     goal_entry["obj_ids"] = []
-                    anchor_ind = obj_list.index(entry["anchor"])
-                    goal_entry["anchor_id"] = anchor_ind
-                    if entry["anchor_relation"] == "same":
-                        for obj, color in zip(obj_list, texture_list):
-                            if color == texture_list[anchor_ind]:
-                                goal_entry["obj_ids"].append(obj_list.index(obj))
+                    anchor_color = None
+                    for item in env_state["obj_id_reverse_mapping"]:
+                        if env_state["obj_id_reverse_mapping"][item]["obj_name"] == entry["anchor"]:
+                            goal_entry["anchor_id"].append(item)
+                            anchor_color = env_state["obj_id_reverse_mapping"][item]["texture_name"]
+                            break
 
+                    if entry["anchor_relation"] == "same":
+                        for item in env_state["obj_id_reverse_mapping"]:
+                            if env_state["obj_id_reverse_mapping"][item]["texture_name"] == anchor_color:
+                                goal_entry["obj_ids"].append(item)
                     else:
-                        for obj, color in zip(obj_list, texture_list):
-                            if color != texture_list[anchor_ind]:
-                                goal_entry["obj_ids"].append(obj_list.index(obj))
+                        for item in env_state["obj_id_reverse_mapping"]:
+                            if env_state["obj_id_reverse_mapping"][item]["texture_name"] != anchor_color:
+                                goal_entry["obj_ids"].append(item)
                     goal.append(goal_entry)
                 else:
                     goal_entry["type"] = f"pattern:{entry['pattern']}"
                     goal_entry["obj_ids"] = []
-                    # for obj_name, obj_color in zip(entry["objects"], entry["colors"]):
-                    #     for obj, color, k in zip(obj_list, texture_list, range(len(obj_list))):
-                    #         if obj == obj_name and color == obj_color:
-                    #             goal_entry["obj_ids"].append(k)
                     for obj_name in entry["objects"]:
-                        if obj_name in obj_list:
-                            goal_entry["obj_ids"].append(obj_list.index(obj_name))
+                        for item in env_state["obj_id_reverse_mapping"]:
+                            if env_state["obj_id_reverse_mapping"][item]["obj_name"] == obj_name:
+                                goal_entry["obj_ids"].append(item)
+                                break
                     goal_entry["obj_ids"] = goal_entry["obj_ids"][::-1]
                     goal_entry["spatial_label"] = np.array([0, 0, 0, 0], dtype=np.int32)
                     if "left" in entry["spatial_label"]:

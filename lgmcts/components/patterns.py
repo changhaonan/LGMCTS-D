@@ -12,9 +12,16 @@ import cv2
 PATTERN_CONSTANTS = {
     "circle": {
         "radius": {
-            "L" : [0.5, 0.7],
-            "M" : [0.3, 0.5],
-            "S" : [0.1, 0.3]
+            "L" : [0.4, 0.5],
+            "M" : [0.4, 0.5],
+            "S" : [0.1, 0.2]
+        }
+    },
+    "rectangle": {
+        "edge_len" : {
+            "L" : [0.45, 0.5],
+            "M" : [0.4, 0.45],
+            "S" : [0.35, 0.4]
         }
     }
 }
@@ -24,6 +31,7 @@ class Pattern(ABC):
     """Base pattern type, needs to implement generate, check method
     """
     name: str = ""
+    _num_limit = [0, 100]  # [min, max]
 
     @abstractclassmethod
     def gen_prior(cls, size, rng, **kwargs):
@@ -39,12 +47,13 @@ class Pattern(ABC):
         """
         raise NotImplementedError
 
-
+    
 ## Implementation of patterns
 
 class LinePattern(Pattern):
     """Line pattern, obj poses should formulate a line"""
     name = "line"
+    _num_limit = [0, 10]
 
     @classmethod
     def gen_prior(cls, img_size, rng, **kwargs):
@@ -55,6 +64,8 @@ class LinePattern(Pattern):
         obj_id = kwargs.get("obj_id", -1)
         obj_ids = kwargs.get("obj_ids", [])
         thickness = kwargs.get("thickness", 1)
+        assert len(obj_ids) == 0 or (len(obj_ids) >= cls._num_limit[0] and len(obj_ids) <= cls._num_limit[1]), "Number of objects should be within the limit!"
+
         # extract relative obj & poses
         rel_obj_ids = []
         rel_obj_poses_pix = []
@@ -86,11 +97,9 @@ class LinePattern(Pattern):
         if x1 - x0 == 0:  # vertical line
             start_point = (int(x0), 0)
             end_point = (int(x0), height-1)
-            cv2.line(prior, start_point, end_point, 1.0, thickness)
         elif y1 - y0 == 0:  # horizontal line
             start_point = (0, int(y0))
             end_point = (width-1, int(y0))
-            cv2.line(prior, start_point, end_point, 1.0, thickness)
         else:
             m = (y1 - y0) / (x1 - x0)
             c = y0 - m * x0
@@ -110,11 +119,16 @@ class LinePattern(Pattern):
             # Draw the line on the prior
             start_point = pt_candidate[0]
             end_point = pt_candidate[-1]
-            cv2.line(prior, pt_candidate[0], pt_candidate[1], 1.0, thickness)
+        use_guassian = kwargs.get("use_guassian", True)
+        if use_guassian:
+            cv2.line(prior, start_point, end_point, 1.0, 3 * thickness)
+            cv2.line(prior, start_point, end_point, 2.0, thickness)
+        else:
+            cv2.line(prior, start_point, end_point, 1.0, thickness)
 
         # Debug
         # cv2.imshow("prior", prior)
-        # cv2.waitKey(0.01)
+        # cv2.waitKey(1)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
@@ -165,6 +179,7 @@ class LinePattern(Pattern):
 class CirclePattern(Pattern):
     """Circle pattern, obj poses should formulate a circle"""
     name = "circle"
+    _num_limit = [3, 10]  # at least 3 points
 
     @classmethod
     def gen_prior(cls, img_size, rng, **kwargs):
@@ -174,6 +189,7 @@ class CirclePattern(Pattern):
         obj_ids = kwargs.get("obj_ids", [])
         thickness = kwargs.get("thickness", 1)
         rel_size = kwargs.get("rel_size", "M")
+        assert len(obj_ids) == 0 or (len(obj_ids) >= self._num_limit[0] and len(obj_ids) <= self._num_limit[1]), "Number of objects should be within the limit!"
 
         # extract relative obj & poses
         rel_obj_ids = []
@@ -183,77 +199,76 @@ class CirclePattern(Pattern):
                 rel_obj_ids.append(id)
                 rel_obj_poses_pix.append(obj_poses_pix[id])
 
-        height, width = img_size
-        prior = np.zeros(img_size, dtype=np.float32)
+        height, width = img_size[0], img_size[1]
+        prior = np.zeros([height, width], dtype=np.float32)
+        max_rad = int(min([height, width])/2)
+        scaled_min_rad = PATTERN_CONSTANTS["circle"]["radius"][rel_size][0] * max_rad
+        scaled_max_rad = PATTERN_CONSTANTS["circle"]["radius"][rel_size][1] * max_rad
+        radius = rng.integers(scaled_min_rad, scaled_max_rad)
 
         if len(rel_obj_ids) == 0:
-            center_x = rng.integers(0, width)
-            center_y = rng.integers(0, height)
-            #radius = rng.integers(0, min([center_x, center_y, width - center_x - 1, height - center_y - 1]))
-            max_rad = min([height, width])
-            scaled_min_rad = PATTERN_CONSTANTS["circle"]["radius"][rel_size][0] * max_rad
-            scaled_max_rad = PATTERN_CONSTANTS["circle"]["radius"][rel_size][1] * max_rad
-            radius = rng.integers(scaled_min_rad, scaled_max_rad)
-            
+            # first point can be anywhere
+            return np.ones_like(prior), {"type": "pattern:circle", "position_pixel": [0, 0, width-1, height-1], "radius": 0.3}
         elif len(rel_obj_ids) == 1:
-            x0, y0 = rel_obj_poses_pix[0]
-            max_rad = int(min([height, width])/2)
-            scaled_min_rad = PATTERN_CONSTANTS["circle"]["radius"][rel_size][0] * max_rad
-            scaled_max_rad = PATTERN_CONSTANTS["circle"]["radius"][rel_size][1] * max_rad
-            radius = rng.integers(scaled_min_rad, scaled_max_rad)
-            angle_direction = rng.integers(0,8)
-            angle_degrees = angle_direction * 45
-            angle_radians = math.radians(angle_degrees)
-            new_x = int(x0 + radius * math.cos(angle_radians))
-            new_y = int(y0 - radius * math.sin(angle_radians))
-            center_x, center_y = new_x, new_y
-        elif len(rel_obj_ids) == 2:
-            x0, y0 = rel_obj_poses_pix[0]
-            x1, y1 = rel_obj_poses_pix[1]
+            # given an pix, the next point can be anywhere within a radius
+            x0, y0 = rel_obj_poses_pix[0][1], rel_obj_poses_pix[0][0]
             
-            midpoint = [(x0 + x1) / 2, (y0 + y1) / 2]
-            distances = [
-                midpoint[0],             
-                width - midpoint[0],      
-                midpoint[1],               
-                height - midpoint[1]      
-            ]
-            max_distance = max(distances)
-            chord_len = math.sqrt((x1 - x0)**2 + (y1 - y0)**2)/2
-
-            max_rad = int(-((-4*(max_distance**2)) - (chord_len**2))/(8*max_distance))
-            scaled_min_rad = PATTERN_CONSTANTS["circle"]["radius"][rel_size][0] * max_rad
-            scaled_max_rad = PATTERN_CONSTANTS["circle"]["radius"][rel_size][1] * max_rad
-            radius = rng.integers(scaled_min_rad, scaled_max_rad)
-
-            direction = rng.choice([-1, 1])
-            distance = np.sqrt(radius**2 - ((x1 - x0)**2 + (y1 - y0)**2) / 4)
-
-            center_vector = [direction * (y0 - y1) * distance / (2 * np.sqrt((x1 - x0)**2 + (y1 - y0)**2)),
-                            direction * (x1 - x0) * distance / (2 * np.sqrt((x1 - x0)**2 + (y1 - y0)**2))]
-
-            center_x = midpoint[0] + center_vector[0]
-            center_y = midpoint[1] + center_vector[1]
-
+            # HACK: currently the second point will be put the same height as the first point
+            cv2.circle(prior, (x0 + 2 * radius, y0), 3, 1.0, -1)
+            cv2.circle(prior, (x0 - 2 * radius, y0), 3, 1.0, -1)
+            # ##DEBUG
+            # cv2.circle(prior, (x0, y0), 1, 1.0, -1)
+            # cv2.imshow("prior-1", prior)
+            # cv2.waitKey(0)
+        elif len(rel_obj_ids) == 2:
+            # given two pix, locate the third point
+            # HACK: assume the two points are on the same height
+            x0, y0 = rel_obj_poses_pix[0][1], rel_obj_poses_pix[0][0]
+            x1, y1 = rel_obj_poses_pix[1][1], rel_obj_poses_pix[1][0]
+            midpoint = [int((x0 + x1) / 2), int((y0 + y1) / 2)]
+            chord_len = math.sqrt((x1 - x0)**2 + (y1 - y0)**2) / 2
+            radius = max(radius, chord_len)
+            y_offset = int(math.sqrt(radius**2 - chord_len**2))
+            cv2.circle(prior, (midpoint[0], midpoint[1] + int(radius) + y_offset), 1, 1.0, -1)
+            cv2.circle(prior, (midpoint[0], midpoint[1] - int(radius) + y_offset), 1, 1.0, -1)
+            cv2.circle(prior, (midpoint[0], midpoint[1] + int(radius) - y_offset), 1, 1.0, -1)
+            cv2.circle(prior, (midpoint[0], midpoint[1] - int(radius) - y_offset), 1, 1.0, -1)
+            ##DEBUG
+            # cv2.circle(prior, (midpoint[0], midpoint[1]), 3, 1.0, -1)
+            # cv2.circle(prior, (x0, y0), 3, 1.0, -1)
+            # cv2.circle(prior, (x1, y1), 3, 1.0, -1)
+            # cv2.imshow("prior-2", prior)
+            # cv2.waitKey(0)
         else:
             # if more than one object is sampled, we generate a circle based on the objects
+            rel_obj_poses_pix = [pix[:2] for pix in rel_obj_poses_pix]
             points = np.array(rel_obj_poses_pix)
-            # Find the minimum enclosing circle
-            (center_x, center_y), radius = cv2.minEnclosingCircle(points)
+            points = points[:, [1, 0]]  # swap x, y
+            # Find the minimum enclosing circle of first 3 points
+            (center_x, center_y), radius = cls.cercle_circonscrit(points[:3, :])
             center_x = int(center_x)
             center_y = int(center_y)
             radius = int(radius)
+            cv2.circle(prior, (center_x, center_y), radius, 1.0, thickness)
+            ##DEBUG
+            cv2.circle(prior, (center_x, center_y), 3, 1.0, -1)
+            cv2.circle(prior, (points[0, 0], points[0, 1]), 3, 1.0, -1)
+            cv2.circle(prior, (points[1, 0], points[1, 1]), 3, 1.0, -1)
+            cv2.circle(prior, (points[2, 0], points[2, 1]), 3, 1.0, -1)
+            cv2.imshow("prior-3", prior)
+            cv2.waitKey(0)
 
         # Draw the circle on the image
-        cv2.circle(prior, (center_x, center_y), radius, 1.0, thickness)
-        #cv2.imshow("prior", prior)
+        # cv2.circle(prior, (center_x, center_y), radius, 1.0, thickness)
+        # cv2.imshow("prior", prior)
+        # cv2.waitKey(0)
         #cv2.waitKey(500)
         
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:circle"
-        pattern_info["center_pixel"] = [center_x, center_y]
-        pattern_info["radius"] = radius
+        # pattern_info["center_pixel"] = [center_x, center_y]
+        # pattern_info["radius"] = radius
         pattern_info["obj_ids"] = obj_ids
         return prior, pattern_info
 
@@ -299,12 +314,24 @@ class CirclePattern(Pattern):
         distances = circle_equation(result.x, point_list)
         return distances
 
-    
+    @classmethod
+    def cercle_circonscrit(cls, T):
+        (x1, y1), (x2, y2), (x3, y3) = T
+        A = np.array([[x3 - x1,y3 - y1], [x3 - x2, y3 - y2]])
+        Y = np.array([(x3**2 + y3**2 - x1**2 - y1**2), (x3**2+y3**2 - x2**2-y2**2)])
+        if np.linalg.det(A) == 0:
+            return False
+        Ainv = np.linalg.inv(A)
+        X = 0.5 * np.dot(Ainv, Y)
+        x, y = X[0], X[1]
+        r = np.sqrt((x - x1)**2 + (y - y1)**2)
+        return (x, y), r
     
 
 class RectanglePattern(Pattern):
     """Rectangle pattern, obj poses should formulate a rectangle"""
     name = "rectangle"
+    _num_limit = [3, 4]  # at least 3 points, at most 4 points
 
     @classmethod
     def gen_prior(cls, img_size, rng, **kwargs):
@@ -313,6 +340,8 @@ class RectanglePattern(Pattern):
         obj_id = kwargs.get("obj_id", -1)
         obj_ids = kwargs.get("obj_ids", [])
         thickness = kwargs.get("thickness", 1)
+        assert len(obj_ids) == 0 or (len(obj_ids) >= cls._num_limit[0] and len(obj_ids) <= cls._num_limit[1]), "Number of objects should be within the limit!"
+
         # extract relative obj & poses
         rel_obj_ids = []
         rel_obj_poses_pix = []
@@ -321,122 +350,99 @@ class RectanglePattern(Pattern):
                 rel_obj_ids.append(id)
                 rel_obj_poses_pix.append(obj_poses_pix[id])
 
-        height, width = img_size
-        prior = np.zeros(img_size, dtype=np.float32)
-
+        height, width = img_size[0], img_size[1]
+        prior = np.zeros([height, width], dtype=np.float32)
+        
+        # some constants
+        clearance = int(0.1 * min(height, width))
+        scale_max = PATTERN_CONSTANTS["rectangle"]["edge_len"]["M"][0]
+        scale_min = PATTERN_CONSTANTS["rectangle"]["edge_len"]["M"][1]
+        scale = rng.random() * (scale_max - scale_min) + scale_min
+        edge_len = int(scale * (min(height, width) - clearance))
         if len(rel_obj_ids) == 0:
-            x0 = rng.integers(0, width)
-            y0 = rng.integers(0, height)
-            x1 = rng.integers(0, width)
-            y1 = rng.integers(0, height)
-            max_len = rng.integers(0, min([width, height]))
-            length = rng.integers(2, max_len)
-            same_edge = rng.integers(0, 2) # 0 = both corners along edge, 1 = corners opposite
-            same_edge = 0
-            if same_edge == 0:
-                x2, y2, x3, y3 = cls.calc_same_edge_corners(x0, y0, x1, y1, rng, length)
+            if len(obj_ids) == 0:
+                # pure pattern
+                x0, y0, x1, y1, x2, y2, x3, y3 = cls.rec_in_region(edge_len, height, width, clearance)
+                rect_points = [[x0, y0], [x1, y1], [x2, y2], [x3, y3]]
+                cv2.circle(prior, (x0, y0), 1, 1.0, -1)
+                cv2.circle(prior, (x1, y1), 1, 1.0, -1)
+                cv2.circle(prior, (x2, y2), 1, 1.0, -1)
+                cv2.circle(prior, (x3, y3), 1, 1.0, -1)
+                # cv2.imshow("prior-0", prior)
+                # cv2.waitKey(0)
             else:
-                x2 = x0
-                y2 = y1
-                x3 = x1
-                y3 = y0
-            p0 = [x0, y0]
-            p1 = [x1, y1]
-            p2 = [x2, y2]
-            p3 = [x3, y3]
-            diagonal, point0, point1 = cls.find_diagonal(p0, p1, p2)
-            rect_points = [point0, diagonal, point1, p3]
+                # no points are provided
+                prior[clearance:height-clearance, clearance:width-clearance] = 1.0
+                rect_points = []
         elif len(rel_obj_ids) == 1:
-            #use rel_obj_poses_pix[0] as a random corner
-            x0 = rel_obj_poses_pix[0][0]
-            y0 = rel_obj_poses_pix[0][1]
-            x1 = rng.integers(0, width)
-            y1 = rng.integers(0, height)
-            max_len = rng.integers(0, min([width, height]))
-            length = rng.integers(2, max_len)
-            same_edge = rng.integers(0, 2) # 0 = both corners along edge, 1 = corners opposite
-            same_edge = 0
-            if same_edge == 0:
-                x2, y2, x3, y3 = cls.calc_same_edge_corners(x0, y0, x1, y1, rng, length)
-            else:
-                x2 = x0
-                y2 = y1
-                x3 = x1
-                y3 = y0
-            p0 = [x0, y0]
-            p1 = [x1, y1]
-            p2 = [x2, y2]
-            p3 = [x3, y3]
-            diagonal, point0, point1 = cls.find_diagonal(p0, p1, p2)
-            rect_points = [point0, diagonal, point1, p3]
+            # if one point is already given, the next point should be on two lines, x = x0 and y = y0
+            x0 = rel_obj_poses_pix[0][1]
+            y0 = rel_obj_poses_pix[0][0]
+            rect_points = [[x0, y0]]
+            cv2.circle(prior, (x0 - edge_len, y0), 1, 1.0, -1)
+            cv2.circle(prior, (x0 + edge_len, y0), 1, 1.0, -1)
+            cv2.circle(prior, (x0, y0 - edge_len), 1, 1.0, -1)
+            cv2.circle(prior, (x0, y0 + edge_len), 1, 1.0, -1)
+            # cv2.imshow("prior-1", prior)
+            # cv2.waitKey(0)
         elif len(rel_obj_ids) == 2:
-            #use bottom left and top right to create rectangle
-            x0 = rel_obj_poses_pix[0][0]
-            y0 = rel_obj_poses_pix[0][1]
-            x1 = rel_obj_poses_pix[1][0]
-            y1 = rel_obj_poses_pix[1][1]
-            max_len = rng.integers(0, min([width, height]))
-            length = rng.integers(2, max_len)
-            same_edge = rng.integers(0, 2) # 0 = both corners along edge, 1 = corners opposite
-            same_edge = 0
-            if same_edge == 0:
-                x2, y2, x3, y3 = cls.calc_same_edge_corners(x0, y0, x1, y1, rng, length)
-            else:
-                x2 = x0
+            # if two points are already given, the third point shuold formulate a right triangle with the two points
+            x0 = rel_obj_poses_pix[0][1]
+            y0 = rel_obj_poses_pix[0][0]
+            x1 = rel_obj_poses_pix[1][1]
+            y1 = rel_obj_poses_pix[1][0]
+            if np.abs(x1 - x0) < np.abs(y1 - y0):
+                # p3 should be on the same x axis as p1 or p2
+                edge_len = np.abs(y1 - y0)
+                x2 = x0 + edge_len
+                y2 = y0
+                cv2.circle(prior, (x2, y2), 1, 1.0, -1)  # 1
                 y2 = y1
-                x3 = x1
-                y3 = y0
-            p0 = [x0, y0]
-            p1 = [x1, y1]
-            p2 = [x2, y2]
-            p3 = [x3, y3]
-            diagonal, point0, point1 = cls.find_diagonal(p0, p1, p2)
-            rect_points = [point0, diagonal, point1, p3]
-
+                cv2.circle(prior, (x2, y2), 1, 1.0, -1)  # 2
+                x2 = x0 - edge_len
+                y2 = y0
+                cv2.circle(prior, (x2, y2), 1, 1.0, -1)  # 3
+                y2 = y1
+                cv2.circle(prior, (x2, y2), 1, 1.0, -1)  # 4
+            else:
+                # p3 should be on the same y axis as p1 or p2
+                edge_len = np.abs(x1 - x0)
+                y2 = y0 + edge_len
+                x2 = x0
+                cv2.circle(prior, (x2, y2), 1, 1.0, -1)
+                x2 = x1
+                cv2.circle(prior, (x2, y2), 1, 1.0, -1)
+                y2 = y0 - edge_len
+                x2 = x0
+                cv2.circle(prior, (x2, y2), 1, 1.0, -1)
+                x2 = x1
+                cv2.circle(prior, (x2, y2), 1, 1.0, -1)
+            rect_points = [[x0, y0], [x1, y1], [x2, y2]]
+            # cv2.imshow("prior-2", prior)
+            # cv2.waitKey(0)
         elif len(rel_obj_ids) == 3:
-            x0 = rel_obj_poses_pix[0][0]
-            y0 = rel_obj_poses_pix[0][1]
-            x1 = rel_obj_poses_pix[1][0]
-            y1 = rel_obj_poses_pix[1][1]
-            x2 = rel_obj_poses_pix[2][0]
-            y2 = rel_obj_poses_pix[2][1]
+            # if three points are already given, the fourth one is fixed.
+            x0 = rel_obj_poses_pix[0][1]
+            y0 = rel_obj_poses_pix[0][0]
+            x1 = rel_obj_poses_pix[1][1]
+            y1 = rel_obj_poses_pix[1][0]
+            x2 = rel_obj_poses_pix[2][1]
+            y2 = rel_obj_poses_pix[2][0]
             p0 = [x0, y0]
             p1 = [x1, y1]
             p2 = [x2, y2]
             diagonal, point0, point1 = cls.find_diagonal(p0, p1, p2)
             x3, y3 = cls.find_fourth_point(point0, diagonal, point1)
-            point4 = [x3, y3]
-            rect_points = [point0, diagonal, point1, point4]
-        elif len(rel_obj_ids) == 4:
-            x0 = rel_obj_poses_pix[0][0]
-            y0 = rel_obj_poses_pix[0][1]
-            x1 = rel_obj_poses_pix[1][0]
-            y1 = rel_obj_poses_pix[1][1]
-            x2 = rel_obj_poses_pix[2][0]
-            y2 = rel_obj_poses_pix[2][1]
-            x3 = rel_obj_poses_pix[3][0]
-            y3 = rel_obj_poses_pix[3][1]
-            p0 = [x0, y0]
-            p1 = [x1, y1]
-            p2 = [x2, y2]
-            p3 = [x3, y3]
-            diagonal, point0, point1 = cls.find_diagonal(p0, p1, p2)
-            rect_points = [point0, diagonal, point1, p3]
-
-        # Draw the rectangle on the image
-        #use lines for visualization but circles to restrain poses to corners
-        #cv2.line(prior, rect_points[0], rect_points[1], (255,255,255), thickness)
-        #cv2.line(prior, rect_points[1], rect_points[2], (255,255,255), thickness)
-        #cv2.line(prior, rect_points[2], rect_points[3], (255,255,255), thickness)
-        #cv2.line(prior, rect_points[3], rect_points[0], (255,255,255), thickness)
-        cv2.circle(prior, rect_points[0], radius=thickness, color=(255,255,255), thickness=-1)
-        cv2.circle(prior, rect_points[1], radius=thickness, color=(255,255,255), thickness=-1)
-        cv2.circle(prior, rect_points[2], radius=thickness, color=(255,255,255), thickness=-1)
-        cv2.circle(prior, rect_points[3], radius=thickness, color=(255,255,255), thickness=-1)
-
-
-        #cv2.imshow("prior", prior)
-        #cv2.waitKey(5000)
+            cv2.circle(prior, (x3, y3), 1, 1.0, -1)
+            rect_points = [p0, p1, p2]
+            ##DEBUG
+            cv2.circle(prior, (x0, y0), 3, 1.0, -1)
+            cv2.circle(prior, (x1, y1), 3, 1.0, -1)
+            cv2.circle(prior, (x2, y2), 3, 1.0, -1)
+            cv2.imshow("prior-3", prior)
+            cv2.waitKey(1)
+        else:
+            raise ValueError("Too many points are given!")
 
         # Pattern info
         pattern_info = {}
@@ -457,44 +463,68 @@ class RectanglePattern(Pattern):
         # assemble obj_poses
         obj_poses_pattern = []
         for obj_id in pattern_info["obj_ids"]:
-            obj_poses_pattern.append(obj_poses[obj_id][:3])
+            obj_poses_pattern.append(obj_poses[obj_id][:2])
         obj_poses_pattern = np.vstack(obj_poses_pattern)
         if len(obj_poses_pattern) < 4:
             warnings.warn("not enough points")
+            return False
         else:
-            dists = cls.dist_corners([[sublist[0], sublist[1]] for sublist in obj_poses_pattern])
-            return not(np.max(dists) > threshold)
+            dists = cls.rec_dist(obj_poses_pattern)
+            status = not(np.max(dists) > threshold)
+            if not status:
+                print(f"Rectangle pattern not met; dists: {dists}")
+            return status
 
     @classmethod
-    def calc_same_edge_corners(cls, x0, y0, x1, y1, rng, length):
-        dx = x1 - x0
-        dy = y1 - y0
-
-        px = -dy
-        py = dx
-
-        magnitude = math.sqrt(px**2 + py**2)
-        px /= magnitude
-        py /= magnitude
-
-        direction = rng.choice([-1, 1])
-
-
-        x2 = int(x0 + direction * length * px)
-        y2 = int(y0 + direction * length * py)
-        x3 = int(x1 + direction * length * px)
-        y3 = int(y1 + direction * length * py)
-        return x2, y2, x3, y3
+    def rec_in_region(cls, edge_len, height, width, clearance):
+        x0 = np.random.randint(clearance, width - edge_len - clearance)
+        y0 = np.random.randint(clearance, height - edge_len - clearance)
+        x1 = int(x0 + edge_len)
+        y1 = y0
+        x2 = x1
+        y2 = int(y1 + edge_len)
+        x3 = x0
+        y3 = y2
+        return x0, y0, x1, y1, x2, y2, x3, y3
     
     @classmethod
+    def rec_dist(cls, rec_points):
+        """Dist shift compared with same rec"""
+        p0, p1, p2, p3 = rec_points
+        dist_01 = math.sqrt((p0[0] - p1[0])**2 + (p0[1] - p1[1])**2)
+        dist_02 = math.sqrt((p0[0] - p2[0])**2 + (p0[1] - p2[1])**2)
+        dist_03 = math.sqrt((p0[0] - p3[0])**2 + (p0[1] - p3[1])**2)
+        dist_12 = math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+        dist_13 = math.sqrt((p1[0] - p3[0])**2 + (p1[1] - p3[1])**2)
+        dist_23 = math.sqrt((p2[0] - p3[0])**2 + (p2[1] - p3[1])**2)
+        edge_dists = [dist_01, dist_02, dist_03, dist_12, dist_13, dist_23]
+        edge_dists.sort()
+        edge_dists = np.array(edge_dists[:4])
+        dist_variance = (edge_dists - edge_dists.mean()).max()
+        return dist_variance
+
+    @classmethod
     def find_fourth_point(cls, p1, p2, p3):
+        # HACK: only support axia aligned rec
         p1 = np.array(p1)
         p2 = np.array(p2)
         p3 = np.array(p3)
-        side1 = p3 - p2
-        p4 = p1 + side1
-        return p4[0], p4[1]
-
+        # boundary
+        x_min = np.min([p1[0], p2[0], p3[0]])
+        x_max = np.max([p1[0], p2[0], p3[0]])
+        y_min = np.min([p1[1], p2[1], p3[1]])
+        y_max = np.max([p1[1], p2[1], p3[1]])
+        ps_cand = np.array([[x_min, y_min], [x_min, y_max], [x_max, y_max], [x_max, y_min]])  # (4, 2)
+        # dist between candidate and ps
+        ps = np.vstack([p1, p2, p3])  # (3, 2)
+        #
+        dist_mat = np.zeros([4, 3], dtype=np.float32)
+        for i in range(4):
+            for j in range(3):
+                dist_mat[i, j] = np.linalg.norm(ps[j] - ps_cand[i])
+        dist_mat = dist_mat.min(axis=1)  # (4, 1)
+        id_max = np.argmax(dist_mat) # id of max distance from candidates
+        return ps_cand[id_max]
 
     @classmethod
     def find_diagonal(cls, p1, p2, p3):
@@ -653,6 +683,7 @@ class SineCurvePattern(Pattern):
 class SpatialPattern:
     """Spatial pattern, describing spatial relationship"""
     name = "spatial"
+    _num_limit = [2, 2]  # spatial pattern are between 2 objects
 
     @classmethod
     def gen_prior(cls, img_size, rng, **kwargs):

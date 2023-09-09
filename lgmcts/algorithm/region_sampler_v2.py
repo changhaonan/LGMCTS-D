@@ -333,6 +333,8 @@ class Region2DSampler():
 
         # ## DEBUG
         # scene_image = self.project_pcd(self.scene_pcd)
+        # cv2.imshow("scene_image", scene_image)
+        # cv2.waitKey(0)
         # # augment free_space to 3 channels
         # free_space_3c = (np.concatenate([free_space[:, :, None], free_space[:, :, None],
         #                  free_space[:, :, None]], axis=2) * 255).astype(np.uint8)

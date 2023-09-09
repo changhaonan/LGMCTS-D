@@ -211,7 +211,7 @@ class Node(object):
             ] # pattern objects at goal
         #FIXME: this could be a problem here, because there is an offset
         sampled_obj_poses_pix = {
-            obj:tuple(region._world2pix(object_states[obj][:3] + region.objects[obj].pos_offset)) 
+            obj:region._world2pix(object_states[obj][:3] + region.objects[obj].pos_offset)
             for obj in objs_at_goal}
 
         # update prior
