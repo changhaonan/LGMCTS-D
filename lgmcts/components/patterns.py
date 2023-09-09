@@ -10,6 +10,13 @@ from scipy.optimize import minimize
 import cv2
 
 PATTERN_CONSTANTS = {
+    "line": {
+        "line_len": {
+            "L": [0.4, 0.45],
+            "M": [0.3, 0.4],
+            "S": [0.2, 0.3]
+        }
+    },
     "circle": {
         "radius": {
             "L": [0.4, 0.5],
@@ -77,64 +84,54 @@ class LinePattern(Pattern):
         # if no other objects are sampled, we generate a random line
         height, width = img_size[0], img_size[1]
         prior = np.zeros([height, width], dtype=np.float32)
+
+        # some constants
+        clearance = 0.05
+        scale_max = PATTERN_CONSTANTS["line"]["line_len"]["M"][0]
+        scale_min = PATTERN_CONSTANTS["line"]["line_len"]["M"][1]
+        scale = rng.random() * (scale_max - scale_min) + scale_min
+
         if len(rel_obj_ids) == 0:
-            # first point can be anywhere
-            return np.ones_like(prior), {"type": "pattern:line", "position_pixel": [0, 0, width-1, height-1], "rotation": [0, 0, 0]}
+            if len(obj_ids) == 0:
+                # pure pattern
+                x0 = rng.integers(int((scale + clearance) * width), int((1.0 - scale - clearance) * width))
+                y0 = rng.integers(int((scale + clearance) * height), int((1.0 - scale - clearance) * height))
+                if rng.random() > 0.5:
+                    # horizontal line
+                    cv2.line(prior, (x0 - int(scale * width), y0), (x0 + int(scale * width), y0), 1.0, thickness)
+                else:
+                    # vertical line
+                    cv2.line(prior, (x0, y0 - int(scale * height)), (x0, y0 + int(scale * height)), 1.0, thickness)
+            else:
+                # no points are provided
+                prior[:, :] = 1.0
         elif len(rel_obj_ids) == 1:
+            # given one pix
+            x0 = rel_obj_poses_pix[0][1]
+            y0 = rel_obj_poses_pix[0][0]
             # random pixel
-            x0 = 0 if rel_obj_poses_pix[0][1] == 0 else width-1
-            y0 = rel_obj_poses_pix[0][0]  # HACK: line will be parallel to x-axis
-            x1 = rel_obj_poses_pix[0][1]
-            y1 = rel_obj_poses_pix[0][0]
+            if rng.random() > 0.5:
+                # horizontal line
+                cv2.line(prior, (x0 - int(scale * width), y0), (x0 + int(scale * width), y0), 1.0, thickness)
+            else:
+                # vertical line
+                cv2.line(prior, (x0, y0 - int(scale * height)), (x0, y0 + int(scale * height)), 1.0, thickness)
         else:
             # if more than one object is sampled, we generate a line based on the objects
             x0 = rel_obj_poses_pix[0][1]
             y0 = rel_obj_poses_pix[0][0]
             x1 = rel_obj_poses_pix[1][1]
             y1 = rel_obj_poses_pix[1][0]
-        # compute the line that passing (xc1, yc1) & (xc2, yc2), both sides ending at borders
-        # Draw lines & extend to the borders
-        # calculate the line's equation: y = mx + c
-        if x1 - x0 == 0:  # vertical line
-            start_point = (int(x0), 0)
-            end_point = (int(x0), height-1)
-        elif y1 - y0 == 0:  # horizontal line
-            start_point = (0, int(y0))
-            end_point = (width-1, int(y0))
-        else:
-            m = (y1 - y0) / (x1 - x0)
-            c = y0 - m * x0
-
-            # Calculate intersection with the boundaries
-            x_at_y0 = int(-c / (m+1e-6))
-            x_at_y_max = int((height - c) / (m+1e-6))
-
-            y_at_x0 = int(c)
-            y_at_x_max = int(m * width + c)
-
-            # Find points on the prior boundaries
-            pt_candidate = [(x_at_y0, 0), (x_at_y_max, height-1), (0, y_at_x0), (width-1, y_at_x_max)]
-            pt_candidate = [pt for pt in pt_candidate if 0 <= pt[0] <= width-1 and 0 <= pt[1] <= height-1]
-            # sort by x
-            pt_candidate = sorted(pt_candidate, key=lambda x: x[0])
-            # Draw the line on the prior
-            start_point = pt_candidate[0]
-            end_point = pt_candidate[-1]
-        use_guassian = kwargs.get("use_guassian", True)
-        if use_guassian:
-            cv2.line(prior, start_point, end_point, 1.0, 3 * thickness)
-            cv2.line(prior, start_point, end_point, 2.0, thickness)
-        else:
-            cv2.line(prior, start_point, end_point, 1.0, thickness)
+            cls.draw_line(prior, x0, y0, x1, y1, thickness)
 
         # Debug
-        # cv2.imshow("prior", prior)
-        # cv2.waitKey(1)
+        cv2.imshow("prior", prior)
+        cv2.waitKey(1)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
-        pattern_info["position_pixel"] = [start_point[0], start_point[1], end_point[0], end_point[1]]
-        pattern_info["rotation"] = [0, 0, np.arctan2(y1 - y0, x1 - x0)]
+        # pattern_info["position_pixel"] = [start_point[0], start_point[1], end_point[0], end_point[1]]
+        # pattern_info["rotation"] = [0, 0, np.arctan2(y1 - y0, x1 - x0)]
 
         return prior, pattern_info
 
@@ -166,6 +163,42 @@ class LinePattern(Pattern):
         if not status:
             print("Line pattern check failed!")
         return status
+
+    @classmethod
+    def draw_line(cls, img, x0, y0, x1, y1, thickness, use_guassian=True):
+        """Draw lines & extend to the borders"""
+        height, width = img.shape[0], img.shape[1]
+        # calculate the line's equation: y = mx + c
+        if x1 - x0 == 0:  # vertical line
+            start_point = (int(x0), 0)
+            end_point = (int(x0), height-1)
+        elif y1 - y0 == 0:  # horizontal line
+            start_point = (0, int(y0))
+            end_point = (width-1, int(y0))
+        else:
+            m = (y1 - y0) / (x1 - x0)
+            c = y0 - m * x0
+
+            # Calculate intersection with the boundaries
+            x_at_y0 = int(-c / (m+1e-6))
+            x_at_y_max = int((height - c) / (m+1e-6))
+
+            y_at_x0 = int(c)
+            y_at_x_max = int(m * width + c)
+
+            # Find points on the prior boundaries
+            pt_candidate = [(x_at_y0, 0), (x_at_y_max, height-1), (0, y_at_x0), (width-1, y_at_x_max)]
+            pt_candidate = [pt for pt in pt_candidate if 0 <= pt[0] <= width-1 and 0 <= pt[1] <= height-1]
+            # sort by x
+            pt_candidate = sorted(pt_candidate, key=lambda x: x[0])
+            # Draw the line on the prior
+            start_point = pt_candidate[0]
+            end_point = pt_candidate[-1]
+        if use_guassian:
+            cv2.line(img, start_point, end_point, 1.0, 3 * thickness)
+            cv2.line(img, start_point, end_point, 2.0, thickness)
+        else:
+            cv2.line(img, start_point, end_point, 1.0, thickness)
 
     @classmethod
     def dist_p2l(cls, p, o, k):
@@ -248,9 +281,7 @@ class CirclePattern(Pattern):
             center_y = int(center_y)
             radius = int(radius)
             cls.draw_seg_circle(prior, (center_x, center_y), radius, 1.0, thickness, segments)
-        # Draw the circle on the image
-        # cv2.circle(prior, (center_x, center_y), radius, 1.0, thickness)
-        cv2.imshow("prior", prior)
+        cv2.imshow("cricle", prior)
         cv2.waitKey(1)
 
         # Pattern info
@@ -370,8 +401,6 @@ class RectanglePattern(Pattern):
                 cv2.circle(prior, (x1, y1), 1, 1.0, -1)
                 cv2.circle(prior, (x2, y2), 1, 1.0, -1)
                 cv2.circle(prior, (x3, y3), 1, 1.0, -1)
-                # cv2.imshow("prior-0", prior)
-                # cv2.waitKey(0)
             else:
                 # no points are provided
                 prior[clearance:height-clearance, clearance:width-clearance] = 1.0
@@ -385,8 +414,6 @@ class RectanglePattern(Pattern):
             cv2.circle(prior, (x0 + edge_len, y0), 1, 1.0, -1)
             cv2.circle(prior, (x0, y0 - edge_len), 1, 1.0, -1)
             cv2.circle(prior, (x0, y0 + edge_len), 1, 1.0, -1)
-            # cv2.imshow("prior-1", prior)
-            # cv2.waitKey(0)
         elif len(rel_obj_ids) == 2:
             # if two points are already given, the third point shuold formulate a right triangle with the two points
             x0 = rel_obj_poses_pix[0][1]
@@ -420,8 +447,6 @@ class RectanglePattern(Pattern):
                 x2 = x1
                 cv2.circle(prior, (x2, y2), 1, 1.0, -1)
             rect_points = [[x0, y0], [x1, y1], [x2, y2]]
-            # cv2.imshow("prior-2", prior)
-            # cv2.waitKey(0)
         elif len(rel_obj_ids) == 3:
             # if three points are already given, the fourth one is fixed.
             x0 = rel_obj_poses_pix[0][1]
@@ -433,16 +458,9 @@ class RectanglePattern(Pattern):
             p0 = [x0, y0]
             p1 = [x1, y1]
             p2 = [x2, y2]
-            diagonal, point0, point1 = cls.find_diagonal(p0, p1, p2)
-            x3, y3 = cls.find_fourth_point(point0, diagonal, point1)
+            x3, y3 = cls.find_fourth_point(p0, p1, p2)
             cv2.circle(prior, (x3, y3), 1, 1.0, -1)
             rect_points = [p0, p1, p2]
-            # DEBUG
-            cv2.circle(prior, (x0, y0), 3, 1.0, -1)
-            cv2.circle(prior, (x1, y1), 3, 1.0, -1)
-            cv2.circle(prior, (x2, y2), 3, 1.0, -1)
-            cv2.imshow("prior-3", prior)
-            cv2.waitKey(1)
         else:
             raise ValueError("Too many points are given!")
 

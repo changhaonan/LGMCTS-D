@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_lgmcts.py",
             "args": [
-                "--num_episodes=20",
+                "--num_episodes=10",
                 "--debug",
             ],
             "console": "integratedTerminal",
