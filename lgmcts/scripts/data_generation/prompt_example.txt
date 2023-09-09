@@ -19,10 +19,10 @@ Put red and yellow polka dot letter A left and front of blue L-shaped block; Put
 
 <round>
 <user>
-Place a line pattern using objects whose color is equivalent to mug2; while Leave yellow and blue polka dot sodacan2 in front right of yellow and green stripe winebottle1
+Place a line pattern using objects whose color is equivalent to mug2; while Leave yellow and blue polka dot sodacan2 in back right of yellow and green stripe winebottle1
 </user>
 <assistant>
-[{'pattern': 'line', 'anchor': 'mug2', 'anchor_relation': 'same'}, {'pattern': 'spatial', 'objects': ['sodacan2', 'winebottle1'], 'colors': ['yellow and blue polka dot', 'yellow and green stripe'], 'spatial_label': ['front', 'right'], 'spatial_str': 'A is front and right of B'}]
+[{'pattern': 'line', 'anchor': 'mug2', 'anchor_relation': 'same'}, {'pattern': 'spatial', 'objects': ['sodacan2', 'winebottle1'], 'colors': ['yellow and blue polka dot', 'yellow and green stripe'], 'spatial_label': ['behind', 'right'], 'spatial_str': 'A is front and right of B'}]
 </assistant>
 </round>
 </root>

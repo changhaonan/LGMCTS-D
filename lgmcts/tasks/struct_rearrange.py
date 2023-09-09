@@ -119,6 +119,8 @@ class StructRearrange(BaseTask):
                 )
                 if obj_id is not None:
                     added_obj_ids.append(obj_id)
+                else:
+                    print("Could not add object with id: ", obj_id)
         else:
             # Using existing objects
             env.move_all_objects_to_buffer()

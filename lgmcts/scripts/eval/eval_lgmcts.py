@@ -50,8 +50,8 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     checkpoint_list = list(filter(lambda f: f.endswith(".pkl"), os.listdir(dataset_path)))
     checkpoint_list.sort()
     n_epoches = min(n_epoches, len(checkpoint_list)) if n_epoches > 0 else len(checkpoint_list)
-
-    use_llm = False
+    n_epoches = 20
+    use_llm = True
     run_llm = False
     prompt_goals = None
     # Generate goals using llm and object selector
@@ -63,8 +63,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 pickle.dump(res, fp)
             obj_selector = ObjectSelector(env.rng)
             obj_selector.parse_llm_result(dataset_path, res, checkpoint_list[:20], len(task.obj_list))
-        else:    
-            with open(os.path.join(dataset_path, "goal.pkl"), "rb") as fp:
+        with open(os.path.join(dataset_path, "goal.pkl"), "rb") as fp:
                 prompt_goals = pickle.load(fp)
 
     for i in range(n_epoches):
