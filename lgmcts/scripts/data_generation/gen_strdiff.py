@@ -24,6 +24,7 @@ from lgmcts.components.obj_selector import ObjectSelector
 
 MAX_TRIES_PER_SEED = 999
 
+
 def _generate_data_for_one_task(
     task_name: str,
     task_kwargs: dict | None,
@@ -47,11 +48,11 @@ def _generate_data_for_one_task(
 
     # init
     env = lgmcts.make(
-        task_name=task_name, 
-        task_kwargs=task_kwargs, 
-        modalities=modalities, 
-        seed=seed, 
-        debug=debug, 
+        task_name=task_name,
+        task_kwargs=task_kwargs,
+        modalities=modalities,
+        seed=seed,
+        debug=debug,
         display_debug_window=debug,
         hide_arm_rgb=not debug,
     )
@@ -76,7 +77,7 @@ def _generate_data_for_one_task(
             prompt_str, obs = task.gen_goal_config(env, prompt_generator, obj_selector)
             obs_cache.append(obs)
 
-            # generate start    
+            # generate start
             obs = task.gen_start_config(env)
             goal_spec = task.gen_goal_spec(env)
             obs_cache.append(obs)
@@ -87,8 +88,8 @@ def _generate_data_for_one_task(
             seed += 1
             num_tried_this_seed = 0
             continue
-        
-        ## Process output data
+
+        # Process output data
         obs = U.stack_sequence_fields(obs_cache)
         # save data into hdf5, which is required by the data loader
         view = "top"
@@ -145,7 +146,7 @@ def _generate_data_for_one_task(
             # goal spec
             f.create_dataset("goal_specification", data=json.dumps(goal_spec))
 
-            ## DEBUG
+            # DEBUG
             # print(rgb.shape)
             # check sem is not empty
             for i, obj_id in enumerate(env.obj_ids["rigid"]):

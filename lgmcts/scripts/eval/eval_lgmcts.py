@@ -57,13 +57,14 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     # Generate goals using llm and object selector
     if use_llm:
         if run_llm:
-            result = perform_llm_parsing(prompt_bg_file=f"{dataset_path}/prompt_bg.txt", prompt_str_file=f"{dataset_path}/prompt_str_list.txt", debug=debug)
+            result = perform_llm_parsing(prompt_bg_file=f"{dataset_path}/prompt_bg.txt",
+                                         prompt_str_file=f"{dataset_path}/prompt_str_list.txt", debug=debug)
             res = [ast.literal_eval(r) for r in result]
             with open(os.path.join(os.path.dirname(dataset_path), "prompt", "llm_result.pkl"), "wb") as fp:
                 pickle.dump(res, fp)
             obj_selector = ObjectSelector(env.rng)
             obj_selector.parse_llm_result(dataset_path, res, checkpoint_list[:20], len(task.obj_list))
-        else:    
+        else:
             with open(os.path.join(dataset_path, "goal.pkl"), "rb") as fp:
                 prompt_goals = pickle.load(fp)
 
@@ -83,12 +84,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
             # region_sampler.visualize()
             prompt_generator.render()
 
-        ## Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
-        # goals = task.goals
-        # for ind, en in enumerate(task.goals):
-        #     for ky in en:
-        #         if ky in prompt_goals[i][ind]:
-        #             assert en[ky] == prompt_goals[i][ind][ky]
+        # Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
         if use_llm:
             goals = prompt_goals[i]
         else:

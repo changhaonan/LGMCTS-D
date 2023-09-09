@@ -21,6 +21,7 @@ from lgmcts.components.obj_selector import ObjectSelector
 
 MAX_TRIES_PER_SEED = 999
 
+
 def _generate_data_for_one_task(
     task_name: str,
     task_kwargs: dict | None,
@@ -33,11 +34,11 @@ def _generate_data_for_one_task(
 ):
     # init
     env = lgmcts.make(
-        task_name=task_name, 
-        task_kwargs=task_kwargs, 
-        modalities=modalities, 
-        seed=seed, 
-        debug=debug, 
+        task_name=task_name,
+        task_kwargs=task_kwargs,
+        modalities=modalities,
+        seed=seed,
+        debug=debug,
         display_debug_window=debug,
         hide_arm_rgb=not debug,
     )
@@ -74,7 +75,7 @@ def _generate_data_for_one_task(
         # generate goal
         task.gen_goal_config(env, prompt_generator, obj_selector)
         task.gen_start_config(env)
-        
+
         # save
         prompt_str_list.append(task.prompt)
         env.save_checkpoint(os.path.join(save_path, task_name, f"checkpoint_{i:0{num_save_digits}d}.pkl"))

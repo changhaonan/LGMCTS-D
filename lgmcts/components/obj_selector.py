@@ -4,18 +4,20 @@ import warnings
 from lgmcts.components.encyclopedia import ObjEntry, TextureEntry, SizeRange
 from lgmcts.components.attribute import COMPARE_DICT, CompareRel, EqualRel, DifferentRel, SmallerRel, BiggerRel
 from lgmcts.components.attribute import ObjectBag, get_object_bag
-import os 
+import os
 import numpy as np
-import pickle 
+import pickle
+
 
 class ObjectSelector:
     """Obj selector"""
+
     def __init__(self,  rng):
         self.rng = rng
         self.obj_bag_list = []
         self.obj_list = []
         self.texture_list = []
-        self.size_list = []  #FIXME: to implement it
+        self.size_list = []  # FIXME: to implement it
 
     def reset(self):
         """Reset"""
@@ -23,10 +25,10 @@ class ObjectSelector:
         self.obj_list = []
         self.texture_list = []
         self.size_list = []
-    
+
     def set_objs(self, obj_list: list[ObjEntry], texture_list: list[TextureEntry]):
         """Set objects"""
-        #TODO: add size and other pre-selection
+        # TODO: add size and other pre-selection
         self.obj_list = obj_list
         self.texture_list = texture_list
         assert len(obj_list) == len(texture_list), "Object and texture list should have the same length"
@@ -63,8 +65,8 @@ class ObjectSelector:
 
     def gen_anchor_obj_prompt(self):
         """Based on the obj we have, generate a valid anchor obj prompt"""
-        ## random select anchor
-        ##FIXME: Rewrite the logic for anchor selection
+        # random select anchor
+        # FIXME: Rewrite the logic for anchor selection
         max_try = 10
         for i in range(max_try):
             anchor_obj_bag = self.rng.choice(self.obj_bag_list)
@@ -72,7 +74,7 @@ class ObjectSelector:
             attribute = self.rng.choice(list(COMPARE_DICT.keys()))
             if attribute == "color":
                 # compare_rel = self.rng.choice([EqualRel(), DifferentRel()]) if i < max_try - 1 else EqualRel()
-                compare_rel = EqualRel() #To accomodate queries for StructFormer
+                compare_rel = EqualRel()  # To accomodate queries for StructFormer
             elif attribute == "size":
                 compare_rel = self.rng.choice([EqualRel(), DifferentRel(), SmallerRel(), BiggerRel()]) if i < max_try - 1 else EqualRel()
             else:
@@ -80,7 +82,7 @@ class ObjectSelector:
             compare_rel_str = self.rng.choice(compare_rel.words)
             prompt_str = f"objects whose {attribute} {compare_rel_str} {anchor_obj}"
 
-            ## select objects
+            # select objects
             self_include, in_obj, in_color, in_size, out_obj, out_color, out_size = self.select_obj(anchor_obj_bag, attribute, compare_rel)
             if len(in_obj) >= 3:  # at least 3 objects to formulate a pattern
                 if not self_include:
@@ -106,10 +108,10 @@ class ObjectSelector:
         # warnings.warn("Cannot generate a valid prompt")
         assert False, "Cannot generate a valid prompt"
         return {"anchor_obj": None, "in_obj": [], "in_color": [], "in_size": [], "out_obj": [], "out_color": [], "out_size": []}
-    
+
     def parse_llm_result(self, dataset_path: str, llm_result: str, check_point_list: list[str], num_objs: int):
         """Parse the result from LLM"""
-            # generate prompt
+        # generate prompt
         prompt_folder = os.path.join(os.path.dirname(dataset_path), "prompt")
         if not os.path.exists(prompt_folder):
             os.makedirs(prompt_folder)
@@ -119,8 +121,8 @@ class ObjectSelector:
             env_state = None
             with open(os.path.join(dataset_path, check_point_list[ind]), "rb") as f:
                 env_state = pickle.load(f)
-            obj_list = [None]* num_objs
-            texture_list = [None]* num_objs
+            obj_list = [None] * num_objs
+            texture_list = [None] * num_objs
             for entry in env_state["obj_id_reverse_mapping"]:
                 obj_list[entry] = env_state["obj_id_reverse_mapping"][entry]["obj_name"]
                 texture_list[entry] = env_state["obj_id_reverse_mapping"][entry]["texture_name"]
@@ -136,7 +138,7 @@ class ObjectSelector:
                         for obj, color in zip(obj_list, texture_list):
                             if color == texture_list[anchor_ind]:
                                 goal_entry["obj_ids"].append(obj_list.index(obj))
-                                
+
                     else:
                         for obj, color in zip(obj_list, texture_list):
                             if color != texture_list[anchor_ind]:
@@ -164,20 +166,6 @@ class ObjectSelector:
                         goal_entry["spatial_label"][3] = 1
                     goal_entry["spatial_str"] = entry["spatial_str"]
                     goal.append(goal_entry)
-            goals.append(goal)           
+            goals.append(goal)
         with open(f"{dataset_path}/goal.pkl", "wb") as fp:
             pickle.dump(goals, fp)
-
-
-        # prompt_bg = "Assume you are a language-based motion planner. You will parse user's requirement into goal configuration and constraints. Follow the examples we provide. You should strictly adhere to our format. \n"
-        # obj_id_list = list(range(len(self.obj_list)))
-        # obj_name_list = []
-        # obj_color_list = []
-        # for obj_id in obj_id_list:
-        #     # obj_name_list.append(entry["obj_name"] for entry in env.obj_id_reverse_mapping[obj_id])
-        #     obj_name_list.append(self.obj_list[obj_id].name.lower().replace("shapenet_", ""))
-        #     obj_color_list.append(self.color_list[obj_id].name.lower().replace("_", " "))
-        # prompt_bg += f"Object_id of the objects in the scene are: {obj_id_list} for {obj_name_list}\n"
-        # prompt_bg += f"And correspondingly colors of the objects in the scene are:  {obj_color_list}\n"
-        # with open(f"{prompt_folder}/prompt_bg.txt", "w") as f:
-        #     f.write(prompt_bg)
