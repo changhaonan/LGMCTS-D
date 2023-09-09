@@ -51,7 +51,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     checkpoint_list.sort()
     n_epoches = min(n_epoches, len(checkpoint_list)) if n_epoches > 0 else len(checkpoint_list)
     n_epoches = 20
-    use_llm = True
+    use_llm = False
     run_llm = False
     prompt_goals = None
     # Generate goals using llm and object selector
