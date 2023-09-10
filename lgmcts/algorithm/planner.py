@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import cv2
 import warnings
-from lgmcts.algorithm.region_sampler_v2 import Region2DSampler, SampleData, SampleStatus
+from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData, SampleStatus
 from lgmcts.algorithm.mcts import MCTS
 
 

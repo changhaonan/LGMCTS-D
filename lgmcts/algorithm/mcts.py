@@ -12,7 +12,7 @@ from typing import Union
 import cv2
 import anytree
 
-from lgmcts.algorithm.region_sampler_v2 import Region2DSampler, SampleData, SampleStatus,\
+from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData, SampleStatus,\
     sample_distribution, ObjectData
 
 ORDERED_PATTERNS = ["spatial"]

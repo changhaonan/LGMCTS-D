@@ -45,9 +45,7 @@ def eval_real(real_data_path: str, method: str, mask_mode: str, n_samples: int =
     init_objects_poses = region_sampler.get_object_poses()
     # Step 2. load the goal
     # FIXME: manually set the goal for now
-    goals = []
-    goal = {"type": "pattern:rectangle", "obj_ids": [12, 6, 10, 7]}
-    goals.append(goal)
+    goals = [{"type": "pattern:line", "obj_ids": [12, 6, 10, 7]}, {"type": "pattern:line", "obj_ids": [1, 2, 3]}]
 
     L = []
     for goal in goals:
