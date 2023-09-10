@@ -5,6 +5,68 @@ import random
 from lgmcts.components.llm_chatgpt import ChatGPTAPI
 
 
+def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings: list[dict], num_objs: int):
+    """Parse the result from LLM"""
+    # generate prompt
+    prompt_folder = os.path.join(os.path.dirname(dataset_path), "prompt")
+    if not os.path.exists(prompt_folder):
+        os.makedirs(prompt_folder)
+
+    goals = []
+    for ind, res in enumerate(llm_result):
+        obj_id_reverse_mapping = obj_id_reverse_mappings[ind]
+        obj_list = [None] * num_objs
+        texture_list = [None] * num_objs
+        for entry in obj_id_reverse_mapping:
+            obj_list[entry] = obj_id_reverse_mapping[entry]["obj_name"]
+            texture_list[entry] = obj_id_reverse_mapping[entry]["texture_name"]
+        goal = []
+        for entry in res:
+            goal_entry = dict()
+            if entry["pattern"] != "spatial":
+                goal_entry["type"] = f"pattern:{entry['pattern']}"
+                goal_entry["obj_ids"] = []
+                anchor_color = None
+                for item in obj_id_reverse_mapping:
+                    if obj_id_reverse_mapping[item]["obj_name"] == entry["anchor"]:
+                        goal_entry["anchor_id"].append(item)
+                        anchor_color = obj_id_reverse_mapping[item]["texture_name"]
+                        break
+
+                if entry["anchor_relation"] == "same":
+                    for item in obj_id_reverse_mapping:
+                        if obj_id_reverse_mapping[item]["texture_name"] == anchor_color:
+                            goal_entry["obj_ids"].append(item)
+                else:
+                    for item in obj_id_reverse_mapping:
+                        if obj_id_reverse_mapping[item]["texture_name"] != anchor_color:
+                            goal_entry["obj_ids"].append(item)
+                goal.append(goal_entry)
+            else:
+                goal_entry["type"] = f"pattern:{entry['pattern']}"
+                goal_entry["obj_ids"] = []
+                for obj_name in entry["objects"]:
+                    for item in obj_id_reverse_mapping:
+                        if obj_id_reverse_mapping[item]["obj_name"] == obj_name:
+                            goal_entry["obj_ids"].append(item)
+                            break
+                goal_entry["obj_ids"] = goal_entry["obj_ids"][::-1]
+                goal_entry["spatial_label"] = np.array([0, 0, 0, 0], dtype=np.int32)
+                if "left" in entry["spatial_label"]:
+                    goal_entry["spatial_label"][0] = 1
+                if "right" in entry["spatial_label"]:
+                    goal_entry["spatial_label"][1] = 1
+                if "front" in entry["spatial_label"]:
+                    goal_entry["spatial_label"][2] = 1
+                if "behind" in entry["spatial_label"]:
+                    goal_entry["spatial_label"][3] = 1
+                goal_entry["spatial_str"] = entry["spatial_str"]
+                goal.append(goal_entry)
+        goals.append(goal)
+    with open(f"{dataset_path}/goal.pkl", "wb") as fp:
+        pickle.dump(goals, fp)
+
+
 def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_example_file: str = None, encode_ids_to_llm: bool = False, num_save_digits: int = 6, debug: bool = False):
     with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(prompt_bg_file))), "lgmcts", "conf", "api_key.pkl"), "rb") as fp:
         api_keys = pickle.load(fp)
@@ -27,7 +89,7 @@ def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_exampl
                     ids = []
                     names = []
                     textures = []
-                    for k,v in checkpoint["obj_id_reverse_mapping"].items():
+                    for k, v in checkpoint["obj_id_reverse_mapping"].items():
                         ids.append(k)
                         names.append(v["obj_name"])
                         textures.append(v["texture_name"])
@@ -36,7 +98,7 @@ def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_exampl
                 prompt_prior += f"And the corresponding object colors are {textures}.\n"
                 prompts.append(prompt_prior + "<user>\n" + line.strip() + "\n</user>")
             else:
-               prompts.append(line.strip())
+                prompts.append(line.strip())
     # gpt-3.5-turbo-16k-0613
     chatgpt = ChatGPTAPI(model="gpt-4", api_key=api_key, db=prompt_db)
     ret = chatgpt.chat(str_msg=prompts)
