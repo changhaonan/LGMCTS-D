@@ -1,11 +1,42 @@
 """Parse the language prompt using LLM"""
+import ast
 import os
+import numpy as np
 import pickle
 import random
 from lgmcts.components.llm_chatgpt import ChatGPTAPI
 
 
-def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings: list[dict], num_objs: int):
+def gen_prompt_goal_from_llm(prompt_path: str, n_epoches: int = 0, checkpoint_list: list[str] = [], use_llm: bool = True, run_llm: bool = True, encode_ids_to_llm: bool = True, num_save_digits: int = 6, debug: bool = False):
+    prompt_goals = None
+    if not encode_ids_to_llm:
+        if use_llm:
+            if run_llm:
+                result = perform_llm_parsing(prompt_bg_file=f"{prompt_path}/prompt_bg.txt",
+                                             prompt_str_file=f"{prompt_path}/prompt_str_list.txt", prompt_example_file=f"{prompt_path}/prompt_example_indirect.txt", debug=debug)
+                res = [ast.literal_eval(r) for r in result]
+                with open(os.path.join(os.path.dirname(prompt_path), "prompt", "llm_result.pkl"), "wb") as fp:
+                    pickle.dump(res, fp)
+                # read obj_id_reverse_mapping
+                obj_id_reverse_mappings = []
+                for i in range(n_epoches):
+                    checkpoint_path = os.path.join(prompt_path, checkpoint_list[i])
+                    with open(checkpoint_path, "rb") as f:
+                        env_state = pickle.load(f)
+                    obj_id_reverse_mappings.append(env_state["obj_id_reverse_mapping"])
+                parse_llm_result(prompt_path, res, obj_id_reverse_mappings)
+            with open(os.path.join(prompt_path, "goal.pkl"), "rb") as fp:
+                prompt_goals = pickle.load(fp)
+    else:
+        if use_llm:
+            if run_llm:
+                result = perform_llm_parsing(prompt_bg_file=f"{prompt_path}/prompt_bg.txt", prompt_str_file=f"{prompt_path}/prompt_str_list.txt",
+                                             prompt_example_file=f"{prompt_path}/prompt_example_direct.txt", encode_ids_to_llm=encode_ids_to_llm, num_save_digits=num_save_digits, debug=debug)
+                prompt_goals = [ast.literal_eval(r.split("```")[1].replace("\n", "")) for r in result]
+    return prompt_goals
+
+
+def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings: list[dict]):
     """Parse the result from LLM"""
     # generate prompt
     prompt_folder = os.path.join(os.path.dirname(dataset_path), "prompt")
@@ -15,11 +46,6 @@ def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings
     goals = []
     for ind, res in enumerate(llm_result):
         obj_id_reverse_mapping = obj_id_reverse_mappings[ind]
-        obj_list = [None] * num_objs
-        texture_list = [None] * num_objs
-        for entry in obj_id_reverse_mapping:
-            obj_list[entry] = obj_id_reverse_mapping[entry]["obj_name"]
-            texture_list[entry] = obj_id_reverse_mapping[entry]["texture_name"]
         goal = []
         for entry in res:
             goal_entry = dict()
@@ -72,7 +98,6 @@ def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_exampl
         api_keys = pickle.load(fp)
     api_key = random.choice(api_keys)
     root_path = os.path.dirname(os.path.dirname(os.path.dirname(prompt_bg_file)))
-    # prompt_example_file = f"{root_path}/lgmcts/scripts/data_generation/prompt_example.txt"
     prompt_db = ""
     prompt_db += open(prompt_bg_file, "r").read()
     prompt_db += open(prompt_example_file, "r").read()
@@ -82,7 +107,7 @@ def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_exampl
         for line in fp.readlines():
             if encode_ids_to_llm:
                 prompt_prior = f"Please be mindful of the object ids, names, and their colors accordingly."
-                prompt_prior += "There are {len(fp.readlines())} objects in the scene."
+                prompt_prior += f"There are {len(fp.readlines())} objects in the scene."
                 with open(f"{root_path}/output/struct_rearrange/checkpoint_{iter:0{num_save_digits}d}.pkl", "rb") as f:
                     iter += 1
                     checkpoint = pickle.load(f)

@@ -18,7 +18,7 @@ from lgmcts.components.prompt import PromptGenerator
 from lgmcts.components.obj_selector import ObjectSelector
 from lgmcts.components.patterns import PATTERN_DICT
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
-from lgmcts.scripts.data_generation.llm_parse import perform_llm_parsing, parse_llm_result
+from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
 
 
 # Eval method
@@ -50,35 +50,12 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     checkpoint_list = list(filter(lambda f: f.endswith(".pkl"), os.listdir(dataset_path)))
     checkpoint_list.sort()
     n_epoches = min(n_epoches, len(checkpoint_list))
-    use_llm = True
-    run_llm = True
-    prompt_goals = None
-    encode_ids_to_llm = True
+    use_llm = False
+    run_llm = False
+    encode_ids_to_llm = False
     # Generate goals using llm and object selector
-    if not encode_ids_to_llm:
-        if use_llm:
-            if run_llm:
-                result = perform_llm_parsing(prompt_bg_file=f"{dataset_path}/prompt_bg.txt",
-                                             prompt_str_file=f"{dataset_path}/prompt_str_list.txt", prompt_example_file=f"{root_path}/lgmcts/scripts/data_generation/prompt_example.txt", debug=debug)
-                res = [ast.literal_eval(r) for r in result]
-                with open(os.path.join(os.path.dirname(dataset_path), "prompt", "llm_result.pkl"), "wb") as fp:
-                    pickle.dump(res, fp)
-                # read obj_id_reverse_mapping
-                obj_id_reverse_mappings = []
-                for i in range(n_epoches):
-                    checkpoint_path = os.path.join(dataset_path, checkpoint_list[i])
-                    with open(checkpoint_path, "rb") as f:
-                        env_state = pickle.load(f)
-                    obj_id_reverse_mappings.append(env_state["obj_id_reverse_mapping"])
-                parse_llm_result(dataset_path, res, obj_id_reverse_mappings, len(task.obj_list))
-            with open(os.path.join(dataset_path, "goal.pkl"), "rb") as fp:
-                prompt_goals = pickle.load(fp)
-    else:
-        if use_llm:
-            if run_llm:
-                result = perform_llm_parsing(prompt_bg_file=f"{dataset_path}/prompt_bg.txt", prompt_str_file=f"{dataset_path}/prompt_str_list.txt",
-                                             prompt_example_file=f"{dataset_path}/prompt_example.txt", encode_ids_to_llm=encode_ids_to_llm, num_save_digits=num_save_digits, debug=debug)
-                prompt_goals = [ast.literal_eval(r.split("```")[1].replace("\n", "")) for r in result]
+    prompt_goals = gen_prompt_goal_from_llm(dataset_path, n_epoches, checkpoint_list, use_llm=use_llm,
+                                            run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, num_save_digits=num_save_digits, debug=debug)
 
     for i in range(n_epoches):
         print(f"==== Episode {i} ====")
