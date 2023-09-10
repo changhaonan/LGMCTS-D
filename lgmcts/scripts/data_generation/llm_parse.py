@@ -7,7 +7,7 @@ import random
 from lgmcts.components.llm_chatgpt import ChatGPTAPI
 
 
-def gen_prompt_goal_from_llm(prompt_path: str, n_epoches: int = 0, checkpoint_list: list[str] = [], use_llm: bool = True, run_llm: bool = True, encode_ids_to_llm: bool = True, num_save_digits: int = 6, debug: bool = False):
+def gen_prompt_goal_from_llm(prompt_path: str, n_epoches: int = 0, checkpoint_list: list = [], use_llm: bool = True, run_llm: bool = True, encode_ids_to_llm: bool = True, obj_id_reverse_mappings: list = None, num_save_digits: int = 6, debug: bool = False):
     prompt_goals = None
     if not encode_ids_to_llm:
         if use_llm:
@@ -18,25 +18,31 @@ def gen_prompt_goal_from_llm(prompt_path: str, n_epoches: int = 0, checkpoint_li
                 with open(os.path.join(os.path.dirname(prompt_path), "prompt", "llm_result.pkl"), "wb") as fp:
                     pickle.dump(res, fp)
                 # read obj_id_reverse_mapping
-                obj_id_reverse_mappings = []
-                for i in range(n_epoches):
-                    checkpoint_path = os.path.join(prompt_path, checkpoint_list[i])
-                    with open(checkpoint_path, "rb") as f:
-                        env_state = pickle.load(f)
-                    obj_id_reverse_mappings.append(env_state["obj_id_reverse_mapping"])
+                if obj_id_reverse_mappings is None:
+                    obj_id_reverse_mappings = []
+                    for i in range(n_epoches):
+                        checkpoint_path = os.path.join(prompt_path, checkpoint_list[i])
+                        with open(checkpoint_path, "rb") as f:
+                            env_state = pickle.load(f)
+                        obj_id_reverse_mappings.append(env_state["obj_id_reverse_mapping"])
                 parse_llm_result(prompt_path, res, obj_id_reverse_mappings)
             with open(os.path.join(prompt_path, "goal.pkl"), "rb") as fp:
                 prompt_goals = pickle.load(fp)
     else:
         if use_llm:
             if run_llm:
-                result = perform_llm_parsing(prompt_bg_file=f"{prompt_path}/prompt_bg.txt", prompt_str_file=f"{prompt_path}/prompt_str_list.txt",
-                                             prompt_example_file=f"{prompt_path}/prompt_example_direct.txt", encode_ids_to_llm=encode_ids_to_llm, num_save_digits=num_save_digits, debug=debug)
+                result = perform_llm_parsing(prompt_bg_file=f"{prompt_path}/prompt_bg.txt", prompt_str_file=f"{prompt_path}/prompt_str_list_real.txt",
+                                             prompt_example_file=f"{prompt_path}/prompt_example_direct.txt", encode_ids_to_llm=encode_ids_to_llm, obj_id_reverse_mappings=obj_id_reverse_mappings, num_save_digits=num_save_digits, debug=debug)
                 prompt_goals = [ast.literal_eval(r.split("```")[1].replace("\n", "")) for r in result]
+                with open(os.path.join(prompt_path, "goal.pkl"), "wb") as fp:
+                    pickle.dump(prompt_goals, fp)
+            else:
+                with open(os.path.join(prompt_path, "goal.pkl"), "rb") as fp:
+                    prompt_goals = pickle.load(fp)
     return prompt_goals
 
 
-def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings: list[dict]):
+def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings: list):
     """Parse the result from LLM"""
     # generate prompt
     prompt_folder = os.path.join(os.path.dirname(dataset_path), "prompt")
@@ -76,7 +82,7 @@ def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings
                         if obj_id_reverse_mapping[item]["obj_name"] == obj_name:
                             goal_entry["obj_ids"].append(item)
                             break
-                goal_entry["obj_ids"] = goal_entry["obj_ids"][::-1]
+                goal_entry["obj_ids"] = goal_entry["obj_ids"]
                 goal_entry["spatial_label"] = np.array([0, 0, 0, 0], dtype=np.int32)
                 if "left" in entry["spatial_label"]:
                     goal_entry["spatial_label"][0] = 1
@@ -93,7 +99,7 @@ def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings
         pickle.dump(goals, fp)
 
 
-def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_example_file: str = None, encode_ids_to_llm: bool = False, num_save_digits: int = 6, debug: bool = False):
+def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_example_file: str = None, encode_ids_to_llm: bool = False, obj_id_reverse_mappings: list = None, num_save_digits: int = 6, debug: bool = False):
     with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(prompt_bg_file))), "lgmcts", "conf", "api_key.pkl"), "rb") as fp:
         api_keys = pickle.load(fp)
     api_key = random.choice(api_keys)
@@ -108,13 +114,22 @@ def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_exampl
             if encode_ids_to_llm:
                 prompt_prior = f"Please be mindful of the object ids, names, and their colors accordingly."
                 prompt_prior += f"There are {len(fp.readlines())} objects in the scene."
-                with open(f"{root_path}/output/struct_rearrange/checkpoint_{iter:0{num_save_digits}d}.pkl", "rb") as f:
-                    iter += 1
-                    checkpoint = pickle.load(f)
+                if obj_id_reverse_mappings is None:
+                    with open(f"{root_path}/output/struct_rearrange/checkpoint_{iter:0{num_save_digits}d}.pkl", "rb") as f:
+                        iter += 1
+                        checkpoint = pickle.load(f)
+                        ids = []
+                        names = []
+                        textures = []
+                        for k, v in checkpoint["obj_id_reverse_mapping"].items():
+                            ids.append(k)
+                            names.append(v["obj_name"])
+                            textures.append(v["texture_name"])
+                else:
                     ids = []
                     names = []
                     textures = []
-                    for k, v in checkpoint["obj_id_reverse_mapping"].items():
+                    for k, v in obj_id_reverse_mappings[iter].items():
                         ids.append(k)
                         names.append(v["obj_name"])
                         textures.append(v["texture_name"])

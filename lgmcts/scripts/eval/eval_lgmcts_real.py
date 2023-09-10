@@ -45,20 +45,32 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
     region_sampler.visualize()
     init_objects_poses = region_sampler.get_object_poses()
     # create an object id reverse mapping
+    texture_mapping = {
+        "toothpaste": "ruby blue",
+        "smartphone2" : "pearl white",
+        "cube" : "orange",
+        "ketchup bottle" : "red",
+        "bottle" : "yellow",
+        "ranch bottle" : "white green blend",
+        "dessert box2" : "chocolate",
+        "smartphone1" : "graphite black",
+        "dessert box1" : "strawberry splash",
+        "box" :  "yellow"
+    }
     obj_id_reverse_mapping = {}
     for name_id in name_ids:
-        obj_id_reverse_mapping[name_id[1]] = {"obj_name": name_id[0], "texture_name": "orange"}
+        obj_id_reverse_mapping[name_id[1]] = {"obj_name": name_id[0], "texture_name": texture_mapping[name_id[0]]}
     # Step 2. parse the goal using LLM
     # FIXME: manually set the goal for now
     use_llm = True
     run_llm = True
     encode_ids_to_llm = True
     # Generate goals using llm and object selector
-    # prompt_goals = gen_prompt_goal_from_llm(prompt_path, use_llm=use_llm,
-    #                                         run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, debug=debug)
+    prompt_goals = gen_prompt_goal_from_llm(prompt_path, use_llm=use_llm,
+                                            run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, obj_id_reverse_mappings=[obj_id_reverse_mapping], debug=debug)
 
-    # goals = prompt_goals[0]
-    goals = [{"type": "pattern:rectangle", "obj_ids": [12, 6, 10, 7]}, {"type": "pattern:line", "obj_ids": [7, 2, 3]}]
+    goals = prompt_goals[0]
+    # goals = [{"type": "pattern:rectangle", "obj_ids": [12, 6, 10, 7]}, {"type": "pattern:line", "obj_ids": [7, 2, 3]}]
     sampled_ids = []
     L = []
     for goal in goals:
@@ -69,6 +81,8 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
         ordered = False
         for _i, goal_obj_id in enumerate(goal_obj_ids):
             sample_info = {"ordered": ordered}
+            if goal["type"] == "pattern:spatial":
+                sample_info["spatial_label"] = goal["spatial_label"]
             if goal_obj_id in sampled_ids:
                 # meaning that this object has been sampled before
                 ordered = True
