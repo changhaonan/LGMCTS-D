@@ -1,7 +1,9 @@
 *.pyc
 *.egg-info
 output
-
+!output/struct_rearrange/prompt_example.txt
+!output/struct_rearrange/prompt_bg.txt
+!lgmcts/scripts/data_generation/prompt_example.txt
 # test data
 examples/
 build/
@@ -11,3 +13,5 @@ build/
 
 # GPT API keys
 lgmcts/conf/
+
+# prompt
