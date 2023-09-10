@@ -86,7 +86,6 @@ class LinePattern(Pattern):
         prior = np.zeros([height, width], dtype=np.float32)
 
         # some constants
-        clearance = 0.05
         scale_max = PATTERN_CONSTANTS["line"]["line_len"]["M"][0]
         scale_min = PATTERN_CONSTANTS["line"]["line_len"]["M"][1]
         scale = rng.random() * (scale_max - scale_min) + scale_min
@@ -94,8 +93,8 @@ class LinePattern(Pattern):
         if len(rel_obj_ids) == 0:
             if len(obj_ids) == 0:
                 # pure pattern
-                x0 = rng.integers(int((scale + clearance) * width), int((1.0 - scale - clearance) * width))
-                y0 = rng.integers(int((scale + clearance) * height), int((1.0 - scale - clearance) * height))
+                x0 = rng.integers(int(scale * width), int((1.0 - scale) * width))
+                y0 = rng.integers(int(scale * height), int((1.0 - scale) * height))
                 if rng.random() > 0.5:
                     # horizontal line
                     cv2.line(prior, (x0 - int(scale * width), y0), (x0 + int(scale * width), y0), 1.0, thickness)

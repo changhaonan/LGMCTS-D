@@ -15,7 +15,6 @@ import anytree
 from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData, SampleStatus,\
     sample_distribution, ObjectData
 
-ORDERED_PATTERNS = ["spatial"]
 
 class Sampler:
     """
@@ -78,7 +77,8 @@ class Node(object):
         """
         no_sample_objs = set() # objects that cannot be sampled because of ordering
         for obj_id, sampler in self.sampler_dict.items(): # check ordering
-            if sampler.pattern in ORDERED_PATTERNS:
+            ordered = sampler.sample_info.get("ordered", False)
+            if ordered:
                 prior_objs = sampler.obj_ids[:sampler.obj_ids.index(obj_id)]
                 for prior_obj in prior_objs:
                     if prior_obj in self.sampler_dict:
@@ -232,11 +232,6 @@ class Node(object):
             # sample
             valid_pose, _, samples_status, _ = region.sample(sample_data.obj_id, 1, prior, allow_outside=False)
             if valid_pose.shape[0] > 0:
-                # if sample_data.pattern == "spatial":
-                #     print(objs_at_goal)
-                #     print([object_states[obj][:3] for obj in objs_at_goal])
-                #     print(valid_pose)
-                #     print(region._world2region(valid_pose[0,:3]+region.objects[obj_id].pos_offset)[:2])
                 valid_pose = valid_pose.reshape(-1)
         else:
             raise NotImplementedError

@@ -45,24 +45,24 @@ def eval_real(real_data_path: str, method: str, mask_mode: str, n_samples: int =
     init_objects_poses = region_sampler.get_object_poses()
     # Step 2. load the goal
     # FIXME: manually set the goal for now
-    goals = [{"type": "pattern:line", "obj_ids": [12, 6, 10, 7]}, {"type": "pattern:line", "obj_ids": [1, 2, 3]}]
-
+    goals = [{"type": "pattern:rectangle", "obj_ids": [12, 6, 10, 7]}, {"type": "pattern:line", "obj_ids": [7, 2, 3]}]
+    sampled_ids = []
     L = []
     for goal in goals:
         goal_obj_ids = goal["obj_ids"]
         goal_pattern = goal["type"].split(":")[-1]
         print(f"Goal: {goal_pattern}; {goal_obj_ids}")
 
+        ordered = False
         for _i, goal_obj_id in enumerate(goal_obj_ids):
-            sample_info = {}
-            if goal_pattern == "spatial":
-                # spatial only sample the second obj
-                if _i == 0:
-                    continue
-                else:
-                    sample_info = {"spatial_label": goal["spatial_label"], "ordered": True}
+            sample_info = {"ordered": ordered}
+            if goal_obj_id in sampled_ids:
+                # meaning that this object has been sampled before
+                ordered = True
+                continue
             sample_data = SampleData(goal_pattern, goal_obj_id, goal["obj_ids"], {}, sample_info)
             L.append(sample_data)
+            sampled_ids.append(goal_obj_id)
 
     # Step 3. generate & exectue plan
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
