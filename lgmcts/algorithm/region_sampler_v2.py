@@ -420,8 +420,9 @@ class Region2DSampler():
                     value=obj_color_np,
                 )
                 # put the object id
-                cv2.putText(img, str(obj_id), (obj_data.pos[1], obj_data.pos[0]), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
-                            (255, 255, 255), 2, cv2.LINE_AA)
+                font_size = 0.002 / self.resolution * 0.8
+                cv2.putText(img, str(obj_id), (obj_data.pos[1], obj_data.pos[0]), cv2.FONT_HERSHEY_SIMPLEX, font_size,
+                            (255, 255, 255), 1, cv2.LINE_AA)
             except:
                 continue
         # circle out the moving object

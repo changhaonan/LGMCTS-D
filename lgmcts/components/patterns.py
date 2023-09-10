@@ -27,7 +27,7 @@ PATTERN_CONSTANTS = {
     "rectangle": {
         "edge_len": {
             "L": [0.45, 0.5],
-            "M": [0.4, 0.45],
+            "M": [0.35, 0.8],
             "S": [0.35, 0.4]
         }
     }
@@ -125,8 +125,8 @@ class LinePattern(Pattern):
             cls.draw_line(prior, x0, y0, x1, y1, thickness)
 
         # Debug
-        # cv2.imshow("prior", prior)
-        # cv2.waitKey(1)
+        cv2.imshow("prior", prior)
+        cv2.waitKey(1)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
@@ -281,8 +281,8 @@ class CirclePattern(Pattern):
             center_y = int(center_y)
             radius = int(radius)
             cls.draw_seg_circle(prior, (center_x, center_y), radius, 1.0, thickness, segments)
-        # cv2.imshow("cricle", prior)
-        # cv2.waitKey(1)
+        cv2.imshow("cricle", prior)
+        cv2.waitKey(1)
 
         # Pattern info
         pattern_info = {}
@@ -464,6 +464,12 @@ class RectanglePattern(Pattern):
         else:
             raise ValueError("Too many points are given!")
 
+        # DEBUG
+        debug_image = prior.copy()
+        for i in range(len(rect_points)):
+            cv2.circle(debug_image, (rect_points[i][0], rect_points[i][1]), 1, 1.0, -1)
+        cv2.imshow("rectangle", debug_image)
+        cv2.waitKey(1)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:rectangle"

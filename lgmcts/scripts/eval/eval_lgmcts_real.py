@@ -38,14 +38,15 @@ def eval_real(real_data_path: str, method: str, mask_mode: str, n_samples: int =
     # init region_sampler
     resolution = 0.002
     pix_padding = 1  # padding for clearance
-    bounds = np.array([[-0.35, 0.35], [-0.5, 0.5], [0.0, 0.5]])  # (height, width, depth)
+    bounds = np.array([[-0.5, 0.5], [-0.5, 0.5], [0.0, 0.5]])  # (height, width, depth)
     region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
     region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="raw_mask")
+    region_sampler.visualize()
     init_objects_poses = region_sampler.get_object_poses()
     # Step 2. load the goal
     # FIXME: manually set the goal for now
     goals = []
-    goal = {"type": "pattern:line", "obj_ids": [1, 2, 3, 4]}
+    goal = {"type": "pattern:rectangle", "obj_ids": [12, 6, 10, 7]}
     goals.append(goal)
 
     L = []
