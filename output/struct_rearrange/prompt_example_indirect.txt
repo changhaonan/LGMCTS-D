@@ -1,0 +1,38 @@
+<root>
+<round>
+<user>
+Put red and yellow polka dot cross left and front of red winebottle; Put objects whose color is identical to basket1 at a line pattern
+</user>
+<assistant>
+[{'pattern': 'line', 'anchor': 'basket1', 'anchor_relation' : 'same'}, {'pattern': 'spatial', 'objects': ['cross', 'winebottle'], 'colors': ['red and yellow polka dot', 'red'], 'spatial_label': ['left', 'front'], 'spatial_str': 'A is left and front of B'}]
+</assistant>
+</round>
+
+<round>
+<user>
+Put red and yellow polka dot letter A left and front of blue L-shaped block; Put objects whose color is identical to letter E at a line pattern
+</user>
+<assistant>
+[{'pattern': 'line', 'anchor': 'letter E', 'anchor_relation' : 'same'}, {'pattern': 'spatial', 'objects': ['letter A', 'L-shaped block'], 'colors': ['red and yellow polka dot', 'blue'], 'spatial_label': ['left', 'front'], 'spatial_str': 'A is left and front of B'}]
+</assistant>
+</round>
+
+<round>
+<user>
+Place a line pattern using objects whose color is equivalent to mug2; while Leave yellow and blue polka dot sodacan2 in back right of yellow and green stripe winebottle1
+</user>
+<assistant>
+[{'pattern': 'line', 'anchor': 'mug2', 'anchor_relation': 'same'}, {'pattern': 'spatial', 'objects': ['sodacan2', 'winebottle1'], 'colors': ['yellow and blue polka dot', 'yellow and green stripe'], 'spatial_label': ['behind', 'right'], 'spatial_str': 'A is front and right of B'}]
+</assistant>
+</round>
+</root>
+
+<round>
+<user>
+Leave objects whose color is not equivalent to shapenet_bowl on a line pattern; while Put polka dot pillbottle behind right of green knife
+</user>
+<assistant>
+[{'pattern': 'line', 'anchor': 'shapenet_bowl', 'anchor_relation': 'not same'}, {'pattern': 'spatial', 'objects': ['pillbottle', 'knife'], 'colors': ['polka dot', 'green'], 'spatial_label': ['behind', 'right'], 'spatial_str': 'A is behind right of B'}]
+</assistant>
+</round>
+</root>
