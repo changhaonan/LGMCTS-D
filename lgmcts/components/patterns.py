@@ -102,6 +102,8 @@ class LinePattern(Pattern):
                     # vertical line
                     cv2.line(prior, (x0, y0 - int(scale * height)), (x0, y0 + int(scale * height)), 1.0, thickness)
             else:
+                x0 = 0
+                y0 = 0
                 # no points are provided
                 prior[:, :] = 1.0
         elif len(rel_obj_ids) == 1:
@@ -124,14 +126,16 @@ class LinePattern(Pattern):
             cls.draw_line(prior, x0, y0, x1, y1, thickness)
 
         # Debug
-        cv2.imshow("prior", prior)
-        cv2.waitKey(1)
+        # cv2.imshow("prior", prior)
+        # cv2.waitKey(1)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
-        # pattern_info["position_pixel"] = [start_point[0], start_point[1], end_point[0], end_point[1]]
-        # pattern_info["rotation"] = [0, 0, np.arctan2(y1 - y0, x1 - x0)]
-
+        pattern_info["position_pixel"] = [x0, y0, 0.0]
+        pattern_info["min_length"] = scale_max
+        pattern_info["max_length"] = scale_min
+        pattern_info["length"] = scale
+        pattern_info["rotation"] = np.array([0.0, 0.0, 0.0])
         return prior, pattern_info
 
     @classmethod

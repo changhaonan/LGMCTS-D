@@ -192,11 +192,7 @@ class StructRearrange(BaseTask):
         # shape information (pattern)
         # append pattern information
         goal = self.goals[0]  # FIXME: currently we only support one goal for struct_diffusion
-        shape_info = {}
-        shape_info["position"] = utils.pix_to_xyz(goal["position_pixel"][:2], None, env.bounds, env.pix_size, True)
-        if "radius_pixel" in goal:
-            shape_info["radius"] = goal["radius_pixel"] * env.pix_size
-        spec["shape"] = shape_info
+        spec["shape"] = goal
 
         return spec
 
