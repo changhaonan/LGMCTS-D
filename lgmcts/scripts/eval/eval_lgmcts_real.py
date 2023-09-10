@@ -38,41 +38,40 @@ def eval_real(real_data_path: str, method: str, mask_mode: str, n_samples: int =
     # init region_sampler
     resolution = 0.002
     pix_padding = 1  # padding for clearance
-    bounds = np.array([[-0.35, 0.35], [-0.5, 0.5], [0.0, 0.5]])  # (height, width, depth)
+    bounds = np.array([[-0.5, 0.5], [-0.5, 0.5], [0.0, 0.5]])  # (height, width, depth)
     region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
     region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="raw_mask")
     region_sampler.visualize()
-    region_sampler.visualize_3d(show_origin=True)
-
+    init_objects_poses = region_sampler.get_object_poses()
     # Step 2. load the goal
     # FIXME: manually set the goal for now
-    goals = []
-    goal = {"type": "pattern:line", "obj_ids": [1, 2, 3]}
-    goals.append(goal)
-
+    goals = [{"type": "pattern:rectangle", "obj_ids": [12, 6, 10, 7]}, {"type": "pattern:line", "obj_ids": [7, 2, 3]}]
+    sampled_ids = []
     L = []
     for goal in goals:
         goal_obj_ids = goal["obj_ids"]
         goal_pattern = goal["type"].split(":")[-1]
         print(f"Goal: {goal_pattern}; {goal_obj_ids}")
 
+        ordered = False
         for _i, goal_obj_id in enumerate(goal_obj_ids):
-            sample_info = {}
-            if goal_pattern == "spatial":
-                # spatial only sample the second obj
-                if _i == 0:
-                    continue
-                else:
-                    sample_info = {"spatial_label": goal["spatial_label"], "ordered": True}
+            sample_info = {"ordered": ordered}
+            if goal_obj_id in sampled_ids:
+                # meaning that this object has been sampled before
+                ordered = True
+                continue
             sample_data = SampleData(goal_pattern, goal_obj_id, goal["obj_ids"], {}, sample_info)
             L.append(sample_data)
+            sampled_ids.append(goal_obj_id)
 
     # Step 3. generate & exectue plan
-    # sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
-    # action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
-    # for step in action_list:
-    #     region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
-    #     region_sampler.visualize()
+    sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
+    action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
+    region_sampler.set_object_poses(init_objects_poses)
+    region_sampler.visualize()
+    for step in action_list:
+        region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
+        region_sampler.visualize()
 
 
 if __name__ == "__main__":

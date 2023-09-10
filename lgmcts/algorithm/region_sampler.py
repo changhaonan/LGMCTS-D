@@ -17,7 +17,8 @@ import cv2
 import copy
 import open3d as o3d
 import colorsys
-import anytree
+import lgmcts.utils.misc_utils as utils
+from anytree import Node, RenderTree, PostOrderIter
 
 
 class SampleStatus(Enum):
@@ -112,6 +113,8 @@ class Region2DSampler():
         self.pix_padding = pix_padding  # padding in pixel
         self.pose_boundary = pose_boundary  # (3, 2) min, max
         self.scene_pcd = None  # scene point cloud
+        # debug related
+        self.moving_marker = -1  # mark the latest moved object
 
     def reset(self):
         """Reset"""
@@ -252,6 +255,7 @@ class Region2DSampler():
         # mask_center_world = obj_pos[:3]
         if obj_id in self.objects:
             self.objects[obj_id].pos = self._world2pix(mask_center_world)
+            self.moving_marker = obj_id
             if enable_vis:
                 self.visualize()
 
@@ -415,16 +419,31 @@ class Region2DSampler():
                     occupancy_map=img,
                     value=obj_color_np,
                 )
+                # put the object id
+                font_size = 0.002 / self.resolution * 0.8
+                cv2.putText(img, str(obj_id), (obj_data.pos[1], obj_data.pos[0]), cv2.FONT_HERSHEY_SIMPLEX, font_size,
+                            (255, 255, 255), 1, cv2.LINE_AA)
             except:
                 continue
+        # circle out the moving object
+        if self.moving_marker != -1:
+            obj_data = self.objects[self.moving_marker]
+            cv2.circle(img, (obj_data.pos[1], obj_data.pos[0]), 1, (255, 0, 0), thickness=-1)
+            cv2.rectangle(img, (obj_data.pos[1] - obj_data.mask.shape[1] // 2,
+                                obj_data.pos[0] - obj_data.mask.shape[0] // 2),
+                          (obj_data.pos[1] + obj_data.mask.shape[1] // 2,
+                           obj_data.pos[0] + obj_data.mask.shape[0] // 2), (0, 255, 0), thickness=3)
         # concat with scene image
         if self.scene_pcd is not None:
             scene_image = self.project_pcd(self.scene_pcd)
             assert scene_image.shape == img.shape, "scene image and occupancy grid should have the same size"
             alpha = 0.5  # Adjust this value as needed (0.0 for fully transparent, 1.0 for fully opaque)
             overlay = cv2.addWeighted(scene_image, 1 - alpha, img, alpha, 0)
-            img = np.concatenate([img, scene_image, overlay], axis=1)
-
+            concat = np.concatenate([img, scene_image, overlay], axis=1)
+            # add a divider
+            concat[:, scene_image.shape[1], :] = 255
+            concat[:, scene_image.shape[1] * 2, :] = 255
+            img = concat
         # resize the image
         vis_img_size = 300
         img_resized = cv2.resize(img, (img.shape[1] * vis_img_size // img.shape[0], vis_img_size),
@@ -437,7 +456,8 @@ class Region2DSampler():
             for j in range(0, img_resized.shape[1], scale_factor):
                 cv2.line(img_resized, (j, 0), (j, img_resized.shape[0]), grid_color, 1)
 
-        cv2.imshow("occpuancy-scene-overlay", img_resized)
+        title = kwargs.get("title", "occpuancy-scene-overlay")
+        cv2.imshow(title, img_resized)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
@@ -547,4 +567,44 @@ class Region2DSamplerLGMCTS(Region2DSampler):
             self.add_object(obj_id=id, points=obj_pcd, pos_ref=pos_ref, name=name, color=obj_color, mask_mode=mask_mode)
             self.set_object_pose(obj_id=id, obj_pos=obj_pcd_center)
             now_pose = self.get_object_pose(id)
-        self.obj_support_tree = None
+
+        # analysing support tree
+        iou_threshold = kwargs.get("iou_threshold", 0.5)
+        self.bulid_support_tree(iou_threshold=iou_threshold)
+
+    def bulid_support_tree(self, iou_threshold: float = 0.5):
+        """Build support tree based on the object poses"""
+        # sorted objects by height
+        obj_ids = sorted(self.objects.keys(), key=lambda x: self.objects[x].points.mean(axis=0)[2], reverse=True)
+        self.obj_support_tree = Node(-1)
+        for obj_id in obj_ids:
+            self._append_obj_to_support_tree(obj_id, iou_threshold)
+        print(RenderTree(self.obj_support_tree))
+
+    def _append_obj_to_support_tree(self, obj_id, iou_threshold: float = 0.5):
+        # traverse the tree in reverse order
+        appended = False
+        for node in PostOrderIter(self.obj_support_tree):
+            if node.name == -1:
+                continue
+            if self._iou(obj_id, node.name) > iou_threshold:
+                # add to the tree
+                Node(obj_id, parent=node)
+                appended = True
+                break
+        # if not found, add to the root
+        if not appended:
+            Node(obj_id, parent=self.obj_support_tree)
+
+    def _iou(self, id_1, id_2):
+        """Compute the iou between two objects"""
+        obj_1 = self.objects[id_1]
+        obj_2 = self.objects[id_2]
+        # compute bbox
+        bbox_1 = np.array([obj_1.pos[0] - obj_1.mask.shape[0] // 2, obj_1.pos[1] - obj_1.mask.shape[1] // 2,
+                           obj_1.pos[0] + obj_1.mask.shape[0] // 2, obj_1.pos[1] + obj_1.mask.shape[1] // 2])
+        bbox_2 = np.array([obj_2.pos[0] - obj_2.mask.shape[0] // 2, obj_2.pos[1] - obj_2.mask.shape[1] // 2,
+                           obj_2.pos[0] + obj_2.mask.shape[0] // 2, obj_2.pos[1] + obj_2.mask.shape[1] // 2])
+        # compute iou
+        iou = utils.compute_iou(bbox_1, bbox_2, iou_type="min")
+        return iou

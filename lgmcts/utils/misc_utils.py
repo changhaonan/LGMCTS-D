@@ -275,7 +275,7 @@ def gen_random_pattern(pattern_type, pattern_shape, rng):
     else:
         pattern = rng.uniform(size=pattern_shape)
         pattern_info["type"] = "random"
-    ## Debug
+    # Debug
     # plt.imshow(pattern)
     # plt.show()
     return pattern, pattern_info
@@ -841,3 +841,46 @@ def separate_pcd_pose(obj_ids, pcd_batch, pose_batch, max_pcd_size):
         pcd_list.append(pcd)
         pose_list.append(pose)
     return obj_ids, pcd_list, pose_list
+
+
+# -----------------------------------------------------------------------------
+# Eval Utils
+# -----------------------------------------------------------------------------
+
+def compute_iou(bbox1, bbox2, iou_type: str = "union"):
+    '''
+    Compute the Intersection over Union (IoU) of two bounding boxes.
+
+    Args:
+    bbox1, bbox2 - each bounding box is a tuple of (x1, y1, x2, y2)
+    iou_type - type of IoU to compute. Can be either 'union' or 'min'
+    where (x1, y1) is the top-left corner and (x2, y2) is the bottom-right corner.
+
+    Returns:
+    float in [0, 1] representing the IoU.
+    '''
+
+    # Destructure the bounding boxes
+    x1_bbox1, y1_bbox1, x2_bbox1, y2_bbox1 = bbox1
+    x1_bbox2, y1_bbox2, x2_bbox2, y2_bbox2 = bbox2
+
+    # Calculate the (x, y)-coordinates of the intersection rectangle's top-left and bottom-right corners
+    x1_intersection = max(x1_bbox1, x1_bbox2)
+    y1_intersection = max(y1_bbox1, y1_bbox2)
+    x2_intersection = min(x2_bbox1, x2_bbox2)
+    y2_intersection = min(y2_bbox1, y2_bbox2)
+
+    # Calculate the area of intersection rectangle
+    intersection_area = max(0, x2_intersection - x1_intersection + 1) * max(0, y2_intersection - y1_intersection + 1)
+
+    # Calculate the area of both bounding boxes
+    bbox1_area = (x2_bbox1 - x1_bbox1 + 1) * (y2_bbox1 - y1_bbox1 + 1)
+    bbox2_area = (x2_bbox2 - x1_bbox2 + 1) * (y2_bbox2 - y1_bbox2 + 1)
+
+    # Compute the IoU
+    if iou_type == "union":
+        iou = intersection_area / float(bbox1_area + bbox2_area - intersection_area)
+    elif iou_type == "min":
+        iou = intersection_area / float(min(bbox1_area, bbox2_area))
+    # Return the computed IoU
+    return iou
