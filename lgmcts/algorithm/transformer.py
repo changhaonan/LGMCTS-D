@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch.utils.data as data
 import torch.optim as optim
 import pytorch_lightning as pl
+import math
 
 
 def scaled_dot_product(q, k, v, mask=None):
@@ -191,12 +192,12 @@ class CosineWarmupScheduler(optim.lr_scheduler._LRScheduler):
 
 class TransformerPredictor(pl.LightningModule):
 
-    def __init__(self, input_dim, model_dim, num_classes, num_heads, num_layers, lr, warmup, max_iters, dropout=0.0, input_dropout=0.0):
+    def __init__(self, input_dim, model_dim, output_dim, num_heads, num_layers, lr, warmup, max_iters, dropout=0.0, input_dropout=0.0):
         """
         Inputs:
             input_dim - Hidden dimensionality of the input
             model_dim - Hidden dimensionality to use inside the Transformer
-            num_classes - Number of classes to predict per sequence element
+            output_dim - Output dimension
             num_heads - Number of heads to use in the Multi-Head Attention blocks
             num_layers - Number of encoder blocks to use.
             lr - Learning rate in the optimizer
@@ -229,7 +230,7 @@ class TransformerPredictor(pl.LightningModule):
             nn.LayerNorm(self.hparams.model_dim),
             nn.ReLU(inplace=True),
             nn.Dropout(self.hparams.dropout),
-            nn.Linear(self.hparams.model_dim, self.hparams.num_classes)
+            nn.Linear(self.hparams.model_dim, self.hparams.output_dim)
         )
 
     def forward(self, x, mask=None, add_positional_encoding=True):
