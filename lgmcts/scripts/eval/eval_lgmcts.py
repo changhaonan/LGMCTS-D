@@ -52,21 +52,29 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     n_epoches = min(n_epoches, len(checkpoint_list)) if n_epoches > 0 else len(checkpoint_list)
     n_epoches = 20
     use_llm = True
-    run_llm = False
+    run_llm = True
     prompt_goals = None
+    encode_ids_to_llm = True
     # Generate goals using llm and object selector
-    if use_llm:
-        if run_llm:
-            result = perform_llm_parsing(prompt_bg_file=f"{dataset_path}/prompt_bg.txt",
-                                         prompt_str_file=f"{dataset_path}/prompt_str_list.txt", debug=debug)
-            res = [ast.literal_eval(r) for r in result]
-            with open(os.path.join(os.path.dirname(dataset_path), "prompt", "llm_result.pkl"), "wb") as fp:
-                pickle.dump(res, fp)
-            obj_selector = ObjectSelector(env.rng)
-            obj_selector.parse_llm_result(dataset_path, res, checkpoint_list[:20], len(task.obj_list))
-        else:
+    if not encode_ids_to_llm:
+        if use_llm:
+            if run_llm:
+                result = perform_llm_parsing(prompt_bg_file=f"{dataset_path}/prompt_bg.txt",
+                                            prompt_str_file=f"{dataset_path}/prompt_str_list.txt", prompt_example_file=f"{root_path}/lgmcts/scripts/data_generation/prompt_example.txt", debug=debug)
+                res = [ast.literal_eval(r) for r in result]
+                with open(os.path.join(os.path.dirname(dataset_path), "prompt", "llm_result.pkl"), "wb") as fp:
+                    pickle.dump(res, fp)
+                obj_selector = ObjectSelector(env.rng)
+                obj_selector.parse_llm_result(dataset_path, res, checkpoint_list[:20], len(task.obj_list))
             with open(os.path.join(dataset_path, "goal.pkl"), "rb") as fp:
                 prompt_goals = pickle.load(fp)
+    else:
+        if use_llm:
+            if run_llm:
+                result = perform_llm_parsing(prompt_bg_file=f"{dataset_path}/prompt_bg.txt", prompt_str_file=f"{dataset_path}/prompt_str_list.txt", 
+                                             prompt_example_file=f"{dataset_path}/prompt_example.txt", encode_ids_to_llm=encode_ids_to_llm, num_save_digits=num_save_digits, debug=debug)
+                prompt_goals = [ast.literal_eval(r.split("```")[1].replace("\n", "")) for r in result]
+                
 
     for i in range(n_epoches):
         print(f"==== Episode {i} ====")
