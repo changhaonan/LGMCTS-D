@@ -41,13 +41,11 @@ def eval_real(real_data_path: str, method: str, mask_mode: str, n_samples: int =
     bounds = np.array([[-0.35, 0.35], [-0.5, 0.5], [0.0, 0.5]])  # (height, width, depth)
     region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
     region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="raw_mask")
-    region_sampler.visualize()
-    region_sampler.visualize_3d(show_origin=True)
-
+    init_objects_poses = region_sampler.get_object_poses()
     # Step 2. load the goal
     # FIXME: manually set the goal for now
     goals = []
-    goal = {"type": "pattern:line", "obj_ids": [1, 2, 3]}
+    goal = {"type": "pattern:line", "obj_ids": [1, 2, 3, 4]}
     goals.append(goal)
 
     L = []
@@ -68,11 +66,13 @@ def eval_real(real_data_path: str, method: str, mask_mode: str, n_samples: int =
             L.append(sample_data)
 
     # Step 3. generate & exectue plan
-    # sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
-    # action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
-    # for step in action_list:
-    #     region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
-    #     region_sampler.visualize()
+    sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
+    action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
+    region_sampler.set_object_poses(init_objects_poses)
+    region_sampler.visualize()
+    for step in action_list:
+        region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
+        region_sampler.visualize()
 
 
 if __name__ == "__main__":

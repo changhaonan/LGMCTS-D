@@ -125,8 +125,8 @@ class LinePattern(Pattern):
             cls.draw_line(prior, x0, y0, x1, y1, thickness)
 
         # Debug
-        cv2.imshow("prior", prior)
-        cv2.waitKey(1)
+        # cv2.imshow("prior", prior)
+        # cv2.waitKey(1)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
@@ -281,8 +281,8 @@ class CirclePattern(Pattern):
             center_y = int(center_y)
             radius = int(radius)
             cls.draw_seg_circle(prior, (center_x, center_y), radius, 1.0, thickness, segments)
-        cv2.imshow("cricle", prior)
-        cv2.waitKey(1)
+        # cv2.imshow("cricle", prior)
+        # cv2.waitKey(1)
 
         # Pattern info
         pattern_info = {}
