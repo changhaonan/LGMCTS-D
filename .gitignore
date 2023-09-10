@@ -3,6 +3,8 @@
 !output/struct_rearrange/prompt_bg.txt
 !lgmcts/scripts/data_generation/prompt_example_direct.txt
 !lgmcts/scripts/data_generation/prompt_example_indirect.txt
+!lgmcts/scripts/data_generation/prompt_str_list.txt
+!lgmcts/scripts/data_generation/prompt_str_list_real.txt
 output
 # test data
 examples/

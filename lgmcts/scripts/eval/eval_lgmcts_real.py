@@ -47,15 +47,15 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
     # create an object id reverse mapping
     texture_mapping = {
         "toothpaste": "ruby blue",
-        "smartphone2" : "pearl white",
-        "cube" : "orange",
-        "ketchup bottle" : "red",
-        "bottle" : "yellow",
-        "ranch bottle" : "white green blend",
-        "dessert box2" : "chocolate",
-        "smartphone1" : "graphite black",
-        "dessert box1" : "strawberry splash",
-        "box" :  "yellow"
+        "smartphone2": "pearl white",
+        "cube": "yellow",
+        "ketchup bottle": "red",
+        "bottle": "yellow",
+        "ranch bottle": "white green blend",
+        "dessert box2": "chocolate",
+        "smartphone1": "graphite black",
+        "dessert box1": "strawberry splash",
+        "box":  "yellow"
     }
     obj_id_reverse_mapping = {}
     for name_id in name_ids:
@@ -70,7 +70,6 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
                                             run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, obj_id_reverse_mappings=[obj_id_reverse_mapping], debug=debug)
 
     goals = prompt_goals[0]
-    # goals = [{"type": "pattern:rectangle", "obj_ids": [12, 6, 10, 7]}, {"type": "pattern:line", "obj_ids": [7, 2, 3]}]
     sampled_ids = []
     L = []
     for goal in goals:
