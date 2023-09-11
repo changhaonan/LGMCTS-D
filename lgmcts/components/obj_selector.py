@@ -35,18 +35,18 @@ class ObjectSelector:
         for id, (obj_entry, texture_entry) in enumerate(zip(obj_list, texture_list)):
             self.obj_bag_list.append(get_object_bag(id, obj_entry.value, texture_entry.value))
 
-    def select_obj(self, anchor_obj_bag: ObjectBag, attribute: str, compare_rel: CompareRel):
+    def select_obj(self, anchor_obj_bag: ObjectBag, attribute: str, compare_rel: CompareRel, force_anchor_exclude: bool = False):
         """Select object based on attribute
         """
         assert attribute in COMPARE_DICT, f"Attribute {attribute} not supported"
         in_obj, in_color, in_size, out_obj, out_color, out_size = [], [], [], [], [], []
         # check self-include
         self_include = False
-        if compare_rel == EqualRel():
-            in_obj.append(self.obj_list[anchor_obj_bag.obj_id])
-            in_color.append(self.texture_list[anchor_obj_bag.obj_id])
-            # selected_size.append(self.size_list[anchor_obj_bag.size_id])
-            self_include = True
+        if not force_anchor_exclude:
+            if compare_rel == EqualRel():
+                in_obj.append(self.obj_list[anchor_obj_bag.obj_id])
+                in_color.append(self.texture_list[anchor_obj_bag.obj_id])
+                self_include = True
         for obj_bag in self.obj_bag_list:
             if compare_rel == COMPARE_DICT[attribute](obj_bag, anchor_obj_bag):
                 if anchor_obj_bag.obj_id == obj_bag.obj_id:
@@ -63,7 +63,7 @@ class ObjectSelector:
                 # out_size.append(self.size_list[obj_bag.size_id])
         return self_include, in_obj, in_color, in_size, out_obj, out_color, out_size
 
-    def gen_anchor_obj_prompt(self):
+    def gen_anchor_obj_prompt(self, force_anchor_exclude: bool = False):
         """Based on the obj we have, generate a valid anchor obj prompt"""
         # random select anchor
         # FIXME: Rewrite the logic for anchor selection
@@ -83,7 +83,7 @@ class ObjectSelector:
             prompt_str = f"objects whose {attribute} {compare_rel_str} {anchor_obj}"
 
             # select objects
-            self_include, in_obj, in_color, in_size, out_obj, out_color, out_size = self.select_obj(anchor_obj_bag, attribute, compare_rel)
+            self_include, in_obj, in_color, in_size, out_obj, out_color, out_size = self.select_obj(anchor_obj_bag, attribute, compare_rel, force_anchor_exclude)
             if len(in_obj) >= 3:  # at least 3 objects to formulate a pattern
                 if not self_include:
                     anchor_obj = self.obj_list[anchor_obj_bag.obj_id]

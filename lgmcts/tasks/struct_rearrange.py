@@ -22,13 +22,13 @@ class ResultTuple(NamedTuple):
     failure: bool
     distance: float | None
 
-    
+
 class StructRearrange(BaseTask):
     """Structured Rearrange Task"""
     task_name = "struct_rearrange"
 
     def __init__(
-        self, 
+        self,
         # ==== task specific ====
         max_num_obj: int = 10,
         max_num_pattern: int = 2,
@@ -40,8 +40,8 @@ class StructRearrange(BaseTask):
         obs_img_views: str | list[str] | None = None,
         obs_img_size: tuple[int, int] = (128, 256),
         seed: int | None = None,
-        debug: bool = False,):
-        
+            debug: bool = False,):
+
         super().__init__(
             modalities=["rgb"],
             obs_img_views=obs_img_views,
@@ -55,7 +55,7 @@ class StructRearrange(BaseTask):
         self.pattern_types = pattern_types
         self.obj_list = [ObjPedia.lookup_object_by_name(obj) for obj in obj_list]
         self.color_list = [TexturePedia.lookup_color_by_name(color) for color in color_list]
-        # 
+        #
         self.obs_img_size = obs_img_size
         # temporary data
         self.goal_pattern_info = {}
@@ -70,7 +70,7 @@ class StructRearrange(BaseTask):
         self.distract_obj_ids = []
 
     def add_objects_to_pattern(
-        self, env, objs, colors, pattern_prior: np.ndarray | None, num_limit: list[int]=[0, 100], use_existing: bool=False, stack_prob: float=0.0):
+            self, env, objs, colors, pattern_prior: np.ndarray | None, num_limit: list[int] = [0, 100], use_existing: bool = False, stack_prob: float = 0.0):
         """Set objects to a line, use_existing decides whether to add new object or not"""
         # Add object
         added_obj_ids = []
@@ -97,7 +97,7 @@ class StructRearrange(BaseTask):
             # assert False, "No object is added to the pattern"
         return added_obj_ids, obj_status
 
-    def add_objects_to_random(self, env, max_num_obj: int, obj_candidates: list=[], color_candidates: list=[], use_existing: bool=False, stack_prob :float=0.0):
+    def add_objects_to_random(self, env, max_num_obj: int, obj_candidates: list = [], color_candidates: list = [], use_existing: bool = False, stack_prob: float = 0.0):
         """Set objects to random positions
         Args:
             max_num_obj: maximum number of objects to add
@@ -131,17 +131,17 @@ class StructRearrange(BaseTask):
 
     def gen_goal_spec(self, env):
         """goal specification; used for StructDiffusion"""
-        #FIXME: what does these contents mean?
+        # FIXME: what does these contents mean?
         spec = super().gen_goal_spec(env)
         goal = self.goals[0]
         # anchor object
         spec["anchor"] = {
             "objects": [],
-            "features" : [
+            "features": [
                 {
-                   "comparator" : None,
-                   "type" : "color_d",
-                   "value" : env.obj_id_reverse_mapping[goal["anchor_id"]]['texture_name']
+                    "comparator": None,
+                    "type": "color_d",
+                    "value": env.obj_id_reverse_mapping[goal["anchor_id"]]['texture_name']
                 }
             ]
         }
@@ -157,11 +157,11 @@ class StructRearrange(BaseTask):
             "combine_features_logic": "None",
             "count": "None",
             "objects": [],
-            "features" : [
+            "features": [
                 {
-                    "comparator" : None,
-                    "type" : "color_d",
-                    "value" : env.obj_id_reverse_mapping[random.choice(goal["obj_ids"])]['texture_name']
+                    "comparator": None,
+                    "type": "color_d",
+                    "value": env.obj_id_reverse_mapping[random.choice(goal["obj_ids"])]['texture_name']
                 }
             ]
         }
@@ -204,7 +204,7 @@ class StructRearrange(BaseTask):
             type_vocabs["class"][obj.name] = i
         type_vocabs["color"] = {}
         for i, color in enumerate(self.color_list):
-            
+
             type_vocabs["color"][color.name] = i
         print("type_vocabs:", type_vocabs)
         return type_vocabs
@@ -212,10 +212,11 @@ class StructRearrange(BaseTask):
     def gen_goal_config(self, env, promptor: PromptGenerator, obj_selector: ObjectSelector, **kwargs):
         """Generate goal config"""
         num_color = kwargs.get("num_color", 2)  # Each scene only has X colors
+        force_anchor_exclude = kwargs.get("force_anchor_exclude", False)
         num_added_objs = 0
         obj_list = self.rng.choice(self.obj_list, min(self.max_num_obj, len(self.obj_list)), replace=False)   # current candidate
         color_list = self.rng.choice(self.color_list, num_color, replace=False)
-        ## Step 1: select object candidates
+        # Step 1: select object candidates
         for i in range(max(self.max_num_pattern - 1, 1)):
             if obj_list is None or len(obj_list) <= 2:
                 break  # no more enough candidate to formulate pattern
@@ -223,17 +224,17 @@ class StructRearrange(BaseTask):
             selected_colors = self.rng.choice(color_list, len(obj_list), replace=True)
             obj_selector.reset()
             obj_selector.set_objs(selected_objs, selected_colors)
-            selection = obj_selector.gen_anchor_obj_prompt()
+            selection = obj_selector.gen_anchor_obj_prompt(force_anchor_exclude=force_anchor_exclude)
             if not selection:  # no valid selection
                 continue
-            ## Step 2: select pattern & add objects to scene
+            # Step 2: select pattern & add objects to scene
             if selection["anchor_obj"] is not None:
                 [anchor_id], _ = self.add_objects_to_pattern(
-                    env, 
-                    objs=[selection["anchor_obj"]], 
-                    colors=[selection["anchor_color"]], 
+                    env,
+                    objs=[selection["anchor_obj"]],
+                    colors=[selection["anchor_color"]],
                     pattern_prior=None,
-                    use_existing=False, 
+                    use_existing=False,
                     stack_prob=0.0)  # add anchor object
             else:
                 anchor_id = -1
@@ -246,12 +247,12 @@ class StructRearrange(BaseTask):
                 pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
                 num_limit = PATTERN_DICT[pattern_type]._num_limit
                 rearrange_obj_ids, obj_status = self.add_objects_to_pattern(
-                    env, 
-                    objs=selection["in_obj"], 
-                    colors=selection["in_color"], 
-                    pattern_prior=pattern_prior, 
+                    env,
+                    objs=selection["in_obj"],
+                    colors=selection["in_color"],
+                    pattern_prior=pattern_prior,
                     num_limit=num_limit,
-                    use_existing=False, 
+                    use_existing=False,
                     stack_prob=0.0)
                 if len(rearrange_obj_ids) == 0:
                     continue
@@ -269,7 +270,7 @@ class StructRearrange(BaseTask):
             obj_list = selection["out_obj"]
             color_list = selection["out_color"]
 
-        ## Step 3: add distract objects
+        # Step 3: add distract objects
         enable_distract = kwargs.get("enable_distract", True)
         if enable_distract:
             num_distract = self.max_num_obj - num_added_objs - 1
@@ -278,7 +279,7 @@ class StructRearrange(BaseTask):
             else:
                 self.distract_obj_ids = []
         num_distract = len(self.distract_obj_ids)
-        ## Step 4: 
+        # Step 4:
         if self.max_num_pattern > 1:
             if len(self.goals) < self.max_num_pattern and num_distract > 0:  # not enough pattern
                 # 4.1 add a spatial prompt
@@ -286,7 +287,8 @@ class StructRearrange(BaseTask):
                 anchor_id = env.rng.choice(rearrange_obj_ids)
                 place_id = env.rng.choice(self.distract_obj_ids)
                 pair_obj_ids = [anchor_id, place_id]
-                pair_obj_names = [f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pair_obj_ids]
+                pair_obj_names = [
+                    f"{env.obj_id_reverse_mapping[obj_id]['texture_name']} {env.obj_id_reverse_mapping[obj_id]['obj_name']}" for obj_id in pair_obj_ids]
                 # compute spatial from the pair
                 aabb_1 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[0])
                 aabb_2 = pybullet_utils.get_obj_aabb(env, pair_obj_ids[1])
@@ -307,9 +309,9 @@ class StructRearrange(BaseTask):
                             "spatial_label": spatial_label,
                             "spatial_str": spatial_rel
                         }
-                    )      
+                    )
 
-        ## Step 5: assemble prompt and goal specific
+        # Step 5: assemble prompt and goal specific
         # gen prompt
         promptor.gen_prompt()
         self.prompt = promptor.prompt
@@ -318,7 +320,7 @@ class StructRearrange(BaseTask):
         return self.prompt, obs
 
     # def gen_goal_config(self, env, promptor: PromptGenerator, obj_selector: ObjectSelector) -> tuple[str, dict]:
-    #     """Generate goal config. The goal of object selector is selection a set of object, 
+    #     """Generate goal config. The goal of object selector is selection a set of object,
     #     with some specific pattern.
     #     """
     #     #TODO: add region prompt later, currently not supported
@@ -345,7 +347,7 @@ class StructRearrange(BaseTask):
     #             break
     #         except:
     #             continue
-        
+
     #     promptor.gen_pattern_prompt(obj_str, pattern_type)
     #     # update goals
     #     pattern_info["obj_ids"] = pattern_obj_ids
