@@ -74,7 +74,7 @@ def _generate_data_for_one_task(
             obj_selector.reset()
 
             # generate goal
-            prompt_str, obs = task.gen_goal_config(env, prompt_generator, obj_selector)
+            prompt_str, obs = task.gen_goal_config(env, prompt_generator, obj_selector, enable_distract=False)
             obs_cache.append(obs)
 
             # generate start

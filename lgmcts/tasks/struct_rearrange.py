@@ -270,11 +270,13 @@ class StructRearrange(BaseTask):
             color_list = selection["out_color"]
 
         ## Step 3: add distract objects
-        num_distract = self.max_num_obj - num_added_objs - 1
-        if num_distract > 0 and len(selection["out_obj"]) > 0:  # exists unselected
-            self.distract_obj_ids = self.add_objects_to_random(env, num_distract, selection["out_obj"], selection["out_color"], False, 0.0)
-        else:
-            self.distract_obj_ids = []
+        enable_distract = kwargs.get("enable_distract", True)
+        if enable_distract:
+            num_distract = self.max_num_obj - num_added_objs - 1
+            if num_distract > 0 and len(selection["out_obj"]) > 0:  # exists unselected
+                self.distract_obj_ids = self.add_objects_to_random(env, num_distract, selection["out_obj"], selection["out_color"], False, 0.0)
+            else:
+                self.distract_obj_ids = []
         num_distract = len(self.distract_obj_ids)
         ## Step 4: 
         if self.max_num_pattern > 1:
