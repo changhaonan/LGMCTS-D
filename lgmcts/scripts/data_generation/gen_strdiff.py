@@ -134,6 +134,11 @@ def _generate_data_for_one_task(
             f.create_dataset("proj_fov", data=proj_fov)
             f.create_dataset("proj_near", data=0.5)
             f.create_dataset("proj_far", data=5.0)
+            # point cloud
+            scene_point_cloud = obs.pop("scene_point_cloud")[view]
+            scene_point_cloud[:, :, :, 2] = scene_point_cloud[:, :, :, 2] - 1000.0  # because camera is at z=1000
+            f.create_dataset("scene_point_cloud", data=scene_point_cloud)
+
             # objs related
             poses = obs.pop("poses")
             poses = poses[view].transpose(1, 0, 2)

@@ -10,8 +10,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_lgmcts.py",
             "args": [
-                "--num_episodes=10",
-                "--debug",
+                "--num_episodes=100",
+                // "--debug",
             ],
             "console": "integratedTerminal",
             "justMyCode": false

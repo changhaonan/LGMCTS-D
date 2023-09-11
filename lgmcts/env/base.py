@@ -467,6 +467,7 @@ class BaseEnv:
         obs = {f"{modality}": {} for modality in self.modalities}  # sensing
         # obs["oracle"] = {}  # oracle information
         obs["point_cloud"] = {}  # point cloud
+        obs["scene_point_cloud"] = {}  # scene point cloud
         obs["poses"] = {}  # object poses
         # Sensing
         for view, config in self.agent_cams.items():
@@ -480,8 +481,7 @@ class BaseEnv:
             # Notice: convert depth back to mm
             real_depth = depth[0] * 20.0
             scene_pcd = misc_utils.get_pointcloud(real_depth, intrinsic_mat)
-            obs["point_cloud"][view] = {}
-            obs["poses"][view] = {}
+            obs["scene_point_cloud"][view] = scene_pcd
             #
             max_pcd_size = self.obs_img_size[0] * self.obs_img_size[1]
             obj_pcds = np.zeros([self.max_num_obj * max_pcd_size, 3])
