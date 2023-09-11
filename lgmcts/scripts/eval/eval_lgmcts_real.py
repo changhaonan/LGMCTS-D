@@ -63,7 +63,7 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
     # Step 2. parse the goal using LLM
     # FIXME: manually set the goal for now
     use_llm = True
-    run_llm = True
+    run_llm = False
     encode_ids_to_llm = True
     # Generate goals using llm and object selector
     prompt_goals = gen_prompt_goal_from_llm(prompt_path, use_llm=use_llm,

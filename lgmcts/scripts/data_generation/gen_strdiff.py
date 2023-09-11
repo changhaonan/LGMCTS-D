@@ -84,7 +84,7 @@ def _generate_data_for_one_task(
 
             step_t += 1
         except Exception as e:
-            print(e)
+            print('strdiff exception:', e)
             seed += 1
             num_tried_this_seed = 0
             continue

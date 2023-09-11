@@ -131,11 +131,11 @@ class LinePattern(Pattern):
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
-        pattern_info["position_pixel"] = [x0, y0, 0.0]
+        pattern_info["position_pixel"] = [(float(int(x0)/width)*1.1) - 0.1, (float(int(y0)/height)) - 0.5, 0.0]
         pattern_info["min_length"] = scale_max
         pattern_info["max_length"] = scale_min
         pattern_info["length"] = scale
-        pattern_info["rotation"] = np.array([0.0, 0.0, 0.0])
+        pattern_info["rotation"] = [0.0, 0.0, 0.0]
         return prior, pattern_info
 
     @classmethod
