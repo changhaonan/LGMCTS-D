@@ -101,11 +101,13 @@ class LinePattern(Pattern):
                 else:
                     # vertical line
                     cv2.line(prior, (x0, y0 - int(scale * height)), (x0, y0 + int(scale * height)), 1.0, thickness)
+                angle = 0.0
             else:
                 x0 = 0
                 y0 = 0
                 # no points are provided
                 prior[:, :] = 1.0
+                angle = 0.0
         elif len(rel_obj_ids) == 1:
             # given one pix
             x0 = rel_obj_poses_pix[0][1]
@@ -114,15 +116,18 @@ class LinePattern(Pattern):
             if rng.random() > 0.5:
                 # horizontal line
                 cv2.line(prior, (x0 - int(scale * width), y0), (x0 + int(scale * width), y0), 1.0, thickness)
+                angle = 0.0
             else:
                 # vertical line
                 cv2.line(prior, (x0, y0 - int(scale * height)), (x0, y0 + int(scale * height)), 1.0, thickness)
+                angle = np.pi / 2.0
         else:
             # if more than one object is sampled, we generate a line based on the objects
             x0 = rel_obj_poses_pix[0][1]
             y0 = rel_obj_poses_pix[0][0]
             x1 = rel_obj_poses_pix[1][1]
             y1 = rel_obj_poses_pix[1][0]
+            angle = math.atan2(y1 - y0, x1 - x0)
             cls.draw_line(prior, x0, y0, x1, y1, thickness)
 
         # Debug
@@ -131,11 +136,11 @@ class LinePattern(Pattern):
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
-        pattern_info["position_pixel"] = [(float(int(x0)/width)*1.1) - 0.1, (float(int(y0)/height)) - 0.5, 0.0]
         pattern_info["min_length"] = scale_max
         pattern_info["max_length"] = scale_min
         pattern_info["length"] = scale
-        pattern_info["rotation"] = [0.0, 0.0, 0.0]
+        pattern_info["position_pixel"] = [int(x0)/width, float(int(y0)/height), 0.0]
+        pattern_info["rotation"] = [0.0, 0.0, angle]
         return prior, pattern_info
 
     @classmethod
