@@ -109,13 +109,13 @@ def _generate_data_for_one_task(
             depth_tensor = rearrange(depth[view], "t c h w -> t h w c")
             # normalize depth to fit in structFormer
             depth_tensor = depth_tensor * 20.0
-            f.create_dataset("depth", data=depth_tensor)
             # depth_min & depth_max
             depth_min = np.min(depth_tensor) * np.ones([2,], dtype=np.float32)
-            depth_max = np.max(depth_tensor) * np.ones([2,], dtype=np.float32)
-            print(depth_min, depth_max)
             f.create_dataset("depth_min", data=depth_min)
             f.create_dataset("depth_max", data=depth_max)
+            # normalize depth
+            depth_tensor = (depth_tensor - depth_min) / (depth_max - depth_min) * 20000.0
+            f.create_dataset("depth", data=depth_tensor)
             # camera related
             intrinsic = np.array(env.agent_cams[view]["intrinsics"]).reshape(3, 3)
             f.create_dataset("cam_intrinsics", data=intrinsic)
