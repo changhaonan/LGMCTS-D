@@ -81,6 +81,7 @@ class SamplingPlanner:
         """
         seed = kwargs.get("seed", 0)  # update seed
         prior_dict = kwargs.get("prior_dict", {})
+        max_iter = kwargs.get("max_iter", 10000)
         sampled_obj_poses_pix = {}  # keep track of sampled object poses
         action_list = []
         cur_obj_poses = self.sampler.get_object_poses()
@@ -95,5 +96,5 @@ class SamplingPlanner:
             seed=seed,
         )
 
-        sampler_planner.search()
+        sampler_planner.search(max_iter=max_iter)
         return sampler_planner.action_list

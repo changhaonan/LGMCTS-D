@@ -1,5 +1,6 @@
 """Miscellaneous utilities."""
 import cv2
+import warnings
 import kornia
 import matplotlib
 import matplotlib.pyplot as plt
@@ -87,6 +88,8 @@ def get_pointcloud_list(color, depth, mask, mask_name_ids, intrinisc, extrinsic,
     for (mask_name, mask_id) in mask_name_ids:
         obj_mask = (mask == mask_id)[:, :, 0] & valid_mask
         obj_points = scene_points[obj_mask].reshape(-1, 3)
+        if obj_points.shape[0] == 0:
+            warnings.warn(f"Object {mask_name} has no points")
         # transform
         obj_points = (extrinsic[:3, :3] @ obj_points.T).T + (extrinsic[:3, 3])[None, :]
         obj_colors = color[obj_mask].reshape(-1, 3) / 255.0

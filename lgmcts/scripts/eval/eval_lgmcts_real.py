@@ -15,11 +15,12 @@ import lgmcts.utils.misc_utils as utils
 
 def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_samples: int = 10, debug: bool = True):
     # Step 1. load the scene
-    camera_pose = np.array([[-9.98961852e-01,  4.55540366e-02, -2.20703533e-04,  2.41992141e-02],
-                            [4.55544520e-02, 9.98936424e-01, -7.12825762e-03, -4.90078981e-01],
-                            [-1.04252110e-04, -7.13091146e-03, -9.99974569e-01, 5.98174172e-01],
-                            [0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 1.00000000e+00],]
-                           )
+    camera_pose = np.array([
+        [-9.99019040e-01,  4.42819236e-02,  2.62008166e-04,  2.40630148e-02],
+        [ 4.42787021e-02,  9.98990882e-01, -7.52417562e-03, -4.88996877e-01],
+        [-5.94928738e-04, -7.50519333e-03, -9.99971659e-01,  5.96053361e-01],
+        [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]
+        ])
     intrinsics_matrix = np.array([[635.41156006,   0., 644.21557617],
                                   [0.,  634.80944824, 368.45831299],
                                   [0.,    0.,   1.]])
@@ -32,44 +33,43 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
     color = cv2.imread(os.path.join(data_path, "color_image.png"))
     color = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
     # load pointcloud
-    name_ids = [(mask_info["label"], mask_info["value"])
-                for mask_info in label["mask"] if mask_info["label"] != "background"]
+    name_ids = []
+    texture_mapping = {}
+    for mask_info in label["mask"]:
+        if mask_info["label"] == "background":
+            continue
+        name_ids.append((mask_info["label"].split(" ")[0], mask_info["value"]))
+        if "color" in mask_info:
+            texture_mapping[mask_info["value"]] = mask_info["color"]
+        else:
+            texture_mapping[mask_info["value"]] = "unknown"
     pcd_list = utils.get_pointcloud_list(color, depth, mask, name_ids,
                                          intrinsics_matrix, np.eye(4, dtype=np.float32))
     # init region_sampler
     resolution = 0.002
     pix_padding = 1  # padding for clearance
-    bounds = np.array([[-0.5, 0.5], [-0.5, 0.5], [0.0, 0.5]])  # (height, width, depth)
+    bounds = np.array([[-0.4, 0.4], [-0.5, 0.5], [0.0, 0.5]])  # (height, width, depth)
     region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
     region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="raw_mask")
     region_sampler.visualize()
     init_objects_poses = region_sampler.get_object_poses()
-    # create an object id reverse mapping
-    texture_mapping = {
-        "toothpaste": "ruby blue",
-        "smartphone2": "pearl white",
-        "cube": "yellow",
-        "ketchup bottle": "red",
-        "bottle": "yellow",
-        "ranch bottle": "white green blend",
-        "dessert box2": "chocolate",
-        "smartphone1": "graphite black",
-        "dessert box1": "strawberry splash",
-        "box":  "yellow"
-    }
     obj_id_reverse_mapping = {}
     for name_id in name_ids:
-        obj_id_reverse_mapping[name_id[1]] = {"obj_name": name_id[0], "texture_name": texture_mapping[name_id[0]]}
+        obj_id_reverse_mapping[name_id[1]] = {"obj_name": name_id[0], "texture_name": texture_mapping[name_id[1]]}
     # Step 2. parse the goal using LLM
     # FIXME: manually set the goal for now
     use_llm = True
-    run_llm = False
-    encode_ids_to_llm = True
-    # Generate goals using llm and object selector
-    prompt_goals = gen_prompt_goal_from_llm(prompt_path, use_llm=use_llm,
-                                            run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, obj_id_reverse_mappings=[obj_id_reverse_mapping], debug=debug)
+    run_llm = True
+    # encode_ids_to_llm = True
+    # # Generate goals using llm and object selector
+    # prompt_goals = gen_prompt_goal_from_llm(prompt_path, use_llm=use_llm,
+    #                                         run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, obj_id_reverse_mappings=[obj_id_reverse_mapping], debug=debug)
 
-    goals = prompt_goals[0]
+    # goals = prompt_goals[0]
+    goals = [
+        {"type": "pattern:rectangle", "obj_ids": [3, 4, 5, 6]},
+        {"type": "pattern:line", "obj_ids": [4, 1, 2]},
+    ]
     sampled_ids = []
     L = []
     for goal in goals:
@@ -92,13 +92,30 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
 
     # Step 3. generate & exectue plan
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
-    action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
+    action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=20000, seed=1)
+    print("Plan finished!")
     region_sampler.set_object_poses(init_objects_poses)
     region_sampler.visualize()
+    export_action_list = []
     for step in action_list:
         region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
         region_sampler.visualize()
-
+        #
+        pose0_position = camera_pose[:3, :3] @ step["old_pose"][:3] + camera_pose[:3, 3]
+        pose0_position[2] = 0.0
+        pose1_position = camera_pose[:3, :3] @ step["new_pose"][:3] + camera_pose[:3, 3]
+        pose1_position[2] = 0.05
+        action = {
+            "obj_id": int(step["obj_id"]),
+            "pose0_position": pose0_position.tolist(),
+            "pose0_rotation": step["old_pose"][3:].tolist(),
+            "pose1_position": pose1_position.tolist(),
+            "pose1_rotation": step["new_pose"][3:].tolist(),
+        }
+        export_action_list.append(action)
+    # export to json
+    with open(os.path.join(data_path, "action_list.json"), "w") as f:
+        json.dump(export_action_list, f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -112,6 +129,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    real_data_path = os.path.join(root_path, "test_data", "real_000000")
+    real_data_path = os.path.join(root_path, "test_data", "real_000005", "output")
     prompt_path = f"{root_path}/output/struct_rearrange"
     eval_real(real_data_path, prompt_path, args.method, args.mask_mode, args.n_samples, args.debug)

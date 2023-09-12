@@ -9,6 +9,7 @@ output
 # test data
 examples/
 build/
+test_data/
 
 # itermidate data
 *.mtl
