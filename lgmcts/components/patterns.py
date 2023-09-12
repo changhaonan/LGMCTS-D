@@ -12,9 +12,9 @@ import cv2
 PATTERN_CONSTANTS = {
     "line": {
         "line_len": {
-            "L": [0.4, 0.45],
-            "M": [0.3, 0.4],
-            "S": [0.2, 0.3]
+            "L": [0.2, 0.2],
+            "M": [0.1, 0.1],
+            "S": [0.05, 0.05]
         }
     },
     "circle": {
@@ -43,6 +43,14 @@ class Pattern(ABC):
     @abstractclassmethod
     def gen_prior(cls, size, rng, **kwargs):
         """Generate a pattern prior:
+        Args: 
+            rng: random generator
+        """
+        raise NotImplementedError
+
+    @abstractclassmethod
+    def gen_ordered_prior(cls, size, rng, **kwargs):
+        """Generate a fixed pattern prior:
         Args: 
             rng: random generator
         """
@@ -141,6 +149,39 @@ class LinePattern(Pattern):
         pattern_info["length"] = scale
         pattern_info["position_pixel"] = [int(x0)/width, float(int(y0)/height), 0.0]
         pattern_info["rotation"] = [0.0, 0.0, angle]
+        return prior, pattern_info
+
+    @classmethod
+    def gen_ordered_prior(cls, img_size, rng, **kwargs):
+        obj_id = kwargs.get("obj_id", -1)
+        obj_ids = kwargs.get("obj_ids", [])
+        thickness = kwargs.get("thickness", 1)
+        assert len(obj_ids) == 0 or (len(obj_ids) >= cls._num_limit[0] and len(obj_ids)
+                                     <= cls._num_limit[1]), "Number of objects should be within the limit!"
+
+        # extract relative obj & poses
+        obj_idx_in_list = obj_ids.index(obj_id)
+        assert obj_idx_in_list >= 0, "Object id not found!"
+        # some constants
+        scale = kwargs.get("scale", 0.1)
+
+        position = kwargs.get("position", [0.0, 0.0])
+        angle = kwargs.get("angle", 0.0)
+
+        height, width = img_size[0], img_size[1]
+        prior = np.zeros([height, width], dtype=np.float32)
+
+        x0 = int((position[0] + scale * math.sin(angle) * obj_idx_in_list) * width)
+        y0 = int((position[1] + scale * math.cos(angle) * obj_idx_in_list) * height)
+        cv2.circle(prior, (x0, y0), thickness, 1.0, -1)
+        pattern_info = {
+            "type": "pattern:line",
+            "min_length": scale,
+            "max_length": scale,
+            "length": scale,
+            "position": position.tolist() + [0.0],
+            "rotation": [0.0, 0.0, angle]
+        }
         return prior, pattern_info
 
     @classmethod

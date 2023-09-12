@@ -37,7 +37,7 @@ def _generate_data_for_one_task(
 ):
     # prepare path
     save_path = U.f_join(save_path, task_name)
-    save_path = os.path.join(save_path, "circle/result")
+    save_path = os.path.join(save_path, "line/result")
     os.makedirs(save_path, exist_ok=True)
     os.makedirs(os.path.join(save_path, "batch300"), exist_ok=True)
     os.makedirs(os.path.join(save_path, "index"), exist_ok=True)
@@ -62,32 +62,32 @@ def _generate_data_for_one_task(
     export_file_list = []
 
     while True:
-        try:
-            env.set_seed(seed + n_generated)
-            num_tried_this_seed += 1
-            obs_cache = []
+        # try:
+        env.set_seed(seed + n_generated)
+        num_tried_this_seed += 1
+        obs_cache = []
 
-            step_t = 0
-            # reset
-            env.reset()
-            prompt_generator.reset()
-            obj_selector.reset()
+        step_t = 0
+        # reset
+        env.reset()
+        prompt_generator.reset()
+        obj_selector.reset()
 
-            # generate goal
-            prompt_str, obs = task.gen_goal_config(env, prompt_generator, obj_selector, enable_distract=False, force_anchor_exclude=True)
-            obs_cache.append(obs)
+        # generate goal
+        prompt_str, obs = task.gen_goal_config_ordered(env, prompt_generator, obj_selector, enable_distract=False, force_anchor_exclude=True)
+        obs_cache.append(obs)
 
-            # generate start
-            obs = task.gen_start_config(env)
-            goal_spec = task.gen_goal_spec(env)
-            obs_cache.append(obs)
+        # generate start
+        obs = task.gen_start_config(env)
+        goal_spec = task.gen_goal_spec(env)
+        obs_cache.append(obs)
 
-            step_t += 1
-        except Exception as e:
-            print('strdiff exception:', e)
-            seed += 1
-            num_tried_this_seed = 0
-            continue
+        step_t += 1
+        # except Exception as e:
+        #     print('strdiff exception:', e)
+        #     seed += 1
+        #     num_tried_this_seed = 0
+        #     continue
 
         # Process output data
         obs = U.stack_sequence_fields(obs_cache)
