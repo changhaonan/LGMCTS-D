@@ -25,7 +25,7 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
                                   [0.,  634.80944824, 368.45831299],
                                   [0.,    0.,   1.]])
     label = json.load(open(os.path.join(data_path, "label.json"), "r"))
-    # load images
+    # load images000
     depth_scale = 100000.0
     mask = cv2.imread(os.path.join(data_path, "mask_image.png"))
     depth = cv2.imread(os.path.join(data_path, "depth_image.png"),

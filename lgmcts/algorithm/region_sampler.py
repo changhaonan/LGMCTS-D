@@ -511,7 +511,7 @@ class Region2DSampler():
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def visualize_3d(self, show_origin: bool = False):
+    def visualize_3d(self, show_origin: bool = False, obj_center = None):
         """Visualize the region and obj bbox in 3D"""
         vis_list = []
         if self.scene_pcd is not None:
@@ -537,6 +537,8 @@ class Region2DSampler():
             region2world = np.linalg.inv(self.world2region)
             region_origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0)
             region_origin.transform(region2world)
+            # vis_list.append(region_origin)
+            # region_origin.translate(obj_center.tolist())
             vis_list.append(region_origin)
         o3d.visualization.draw_geometries(vis_list)
 
