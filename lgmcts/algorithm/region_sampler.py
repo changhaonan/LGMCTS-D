@@ -161,7 +161,7 @@ class Region2DSampler():
     ):
         """Add object to scene, create mask from points
         Args:
-            mask_mode: "sphere", "raw_mask", "convex_hull". "sphere" is to provide clearance.
+            mask_mode: "raw_mask", "convex_hull". "sphere" is to provide clearance.
         """
         assert points is not None, "points should not be None"
         if pos_ref is None:
@@ -173,45 +173,22 @@ class Region2DSampler():
         lb_pix = np.array(
             [points_pix[:, 0].min(), points_pix[:, 1].min(), points_pix[:, 2].min()]
         )  # lb, lower bottom
-        if mask_mode == "sphere":
-            mask_height = points_pix[:, 0].max() - points_pix[:, 0].min() + 1
-            mask_width = points_pix[:, 1].max() - points_pix[:, 1].min() + 1
-            mask_size = math.ceil(math.sqrt(mask_height ** 2 + mask_width ** 2))
-            # pad size to odd
-            if mask_size % 2 == 0:
-                mask_size += 1
-            mask = np.zeros((mask_size, mask_size), dtype=np.uint8)
-            # draw a filled circle
-            cv2.circle(mask, (mask_size // 2, mask_size // 2), mask_size // 2, 1, thickness=-1)
-        elif mask_mode == "convex_hull":
-            mask_height = points_pix[:, 0].max() - points_pix[:, 0].min() + 1
-            mask_width = points_pix[:, 1].max() - points_pix[:, 1].min() + 1
-            # pad size to odd
-            if mask_width % 2 == 0:
-                mask_width += 1
-            if mask_height % 2 == 0:
-                mask_height += 1
-            mask = np.zeros((mask_height, mask_width), dtype=np.uint8)
-            points_convex_hull = ConvexHull(points_pix[:, :2])
-            pixels = (points_convex_hull.points[points_convex_hull.vertices]).astype(np.int32) - lb_pix[:2]
+        mask_height = points_pix[:, 0].max() - points_pix[:, 0].min() + 1
+        mask_width = points_pix[:, 1].max() - points_pix[:, 1].min() + 1
+        mask_size = math.ceil(math.sqrt(mask_height ** 2 + mask_width ** 2))
+        mask_size = mask_size if mask_size % 2 == 1 else mask_size + 1  # make sure it is odd
+        x_offset = (mask_size - mask_height) // 2
+        y_offset = (mask_size - mask_width) // 2
+        mask = np.zeros((mask_size, mask_size), dtype=np.uint8)
+        pixels = points_pix[:, :2].astype(np.int32) - lb_pix[:2]
+        pixels[:, 0] += x_offset
+        pixels[:, 1] += y_offset
+        if mask_mode == "convex_hull":
+            points_convex_hull = ConvexHull(pixels[:, [1, 0]])
+            pixels = (points_convex_hull.points[points_convex_hull.vertices]).astype(np.int32)
             cv2.fillConvexPoly(mask, pixels, 1,)
-            # DEBUG start here
-            # contour = draw_convex_contour(mask, pixels)
-            # cv2.imshow("contour", mask * 255)
-            # cv2.waitKey(0)
-            # DEBUG end here
         elif mask_mode == "raw_mask":
-            mask_height = points_pix[:, 0].max() - points_pix[:, 0].min() + 1
-            mask_width = points_pix[:, 1].max() - points_pix[:, 1].min() + 1
-            mask_size = math.ceil(math.sqrt(mask_height ** 2 + mask_width ** 2))
-            x_offset = (mask_size - mask_height) // 2
-            y_offset = (mask_size - mask_width) // 2
-            # pad size to odd
-            if mask_size % 2 == 0:
-                mask_size += 1
-            mask = np.zeros((mask_size, mask_size), dtype=np.uint8)
-            pixels = points_pix[:, :2].astype(np.int32) - lb_pix[:2]
-            mask[pixels[:, 0] + x_offset, pixels[:, 1] + y_offset] = 1
+            mask[pixels[:, 0], pixels[:, 1]] = 1
         height = points_pix[:, 2].max() - points_pix[:, 2].min()
         mask_center = self._world2pix(pos_ref)  # use center of pcd as mask center
         pos_offset = np.zeros(3, np.float32)
@@ -391,8 +368,7 @@ class Region2DSampler():
         """Check collision"""
         collision_map = np.zeros((self.grid_size[0], self.grid_size[1], 1), dtype=np.float32)
         # objects
-        if obj_list is None:
-            obj_list = list(self.objects.keys())
+        obj_list = list(self.objects.keys())
         for obj_id, obj_data in self.objects.items():
             if obj_id in obj_list:
                 self._put_mask(

@@ -20,7 +20,7 @@ PATTERN_CONSTANTS = {
     "circle": {
         "radius": {
             "L": [0.4, 0.5],
-            "M": [0.2, 0.4],
+            "M": [0.1, 0.4],
             "S": [0.1, 0.2]
         }
     },
@@ -283,14 +283,18 @@ class CirclePattern(Pattern):
             # if more than one object is sampled, we generate a circle based on the objects
             rel_obj_poses_pix = [pix[:2] for pix in rel_obj_poses_pix]
             points = np.array(rel_obj_poses_pix)
-            points = points[:2, [1, 0]]  # swap x, y
-            # Find the minimum enclosing circle of first 3 points
-            center_x = (points[0, 0] + points[1, 0]) / 2.0
-            center_y = (points[0, 1] + points[1, 1]) / 2.0
-            radius = np.linalg.norm(points[0, :] - points[1, :]) / 2.0
+            points = points[:, [1, 0]]  # swap x, y
+            if len(rel_obj_ids) == 2:
+                # Find the minimum enclosing circle of first 3 points
+                center_x = (points[0, 0] + points[1, 0]) / 2.0
+                center_y = (points[0, 1] + points[1, 1]) / 2.0
+                radius = np.linalg.norm(points[0, :] - points[1, :]) / 2.0
+            else:
+                # Find the minimum enclosing circle of first 3 points
+                center, radius = cls.cercle_circonscrit(points[:3, :])
+                center_x, center_y = center[0], center[1]
             # provides two candidates
-            obj_idx_within = obj_ids.index(obj_id)
-            angle_circle = (2.0 * np.pi / segments) * obj_idx_within
+            angle_circle = (2.0 * np.pi / segments) * (len(rel_obj_ids) // 2)
             cv2.circle(prior, (int(center_x + radius * math.cos(angle_circle)),
                        int(center_y + radius * math.sin(angle_circle))), thickness, 1.0, -1)
             cv2.circle(prior, (int(center_x - radius * math.cos(angle_circle)),

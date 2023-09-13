@@ -51,7 +51,7 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
     pix_padding = 1  # padding for clearance
     bounds = np.array([[-0.4, 0.4], [-0.5, 0.5], [0.0, 0.5]])  # (height, width, depth)
     region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
-    region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="raw_mask")
+    region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="convex_hull")
     region_sampler.visualize()
     init_objects_poses = region_sampler.get_object_poses()
     obj_id_reverse_mapping = {}
@@ -68,8 +68,8 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
 
     # goals = prompt_goals[0]
     goals = [
-        {"type": "pattern:circle", "obj_ids": [3, 4, 5, 6, 1, 2]},
-        # {"type": "pattern:line", "obj_ids": [4, 1, 2]},
+        # {"type": "pattern:circle", "obj_ids": [3, 4, 1, 2, 5]},
+        {"type": "pattern:line", "obj_ids": [4, 1, 2, 5]},
     ]
     sampled_ids = []
     L = []
@@ -114,6 +114,7 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
             "pose1_rotation": step["new_pose"][3:].tolist(),
         }
         export_action_list.append(action)
+    print(f"Collision status: {region_sampler.check_collision()}.")
     # export to json
     with open(os.path.join(data_path, "action_list.json"), "w") as f:
         json.dump(export_action_list, f)

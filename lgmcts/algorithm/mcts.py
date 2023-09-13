@@ -272,7 +272,7 @@ class Node(object):
                 mask=obj_data.mask,
                 pos=obj_data.pos,
                 rot=obj_data.rot,
-                occupancy_map=segmentation,
+                region_map=segmentation,
                 value=float(obj_id),
             )
         return segmentation
@@ -357,7 +357,7 @@ class MCTS(object):
 
         while num_iter < max_iter:
             if (num_iter % log_step) == 0:
-                print(num_iter)
+                print(f"Searched {num_iter}/{max_iter} iterations")
             num_iter += 1
             current_node = self.selection()
             # an action in MCTS is represented by (sampler_id, trail_id),
