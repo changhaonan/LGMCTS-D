@@ -68,8 +68,8 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
 
     # goals = prompt_goals[0]
     goals = [
-        {"type": "pattern:line", "obj_ids": [3, 4, 5, 6]},
-        {"type": "pattern:line", "obj_ids": [4, 1, 2]},
+        {"type": "pattern:circle", "obj_ids": [3, 4, 5, 6, 1, 2]},
+        # {"type": "pattern:line", "obj_ids": [4, 1, 2]},
     ]
     sampled_ids = []
     L = []

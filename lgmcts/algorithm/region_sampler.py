@@ -289,13 +289,13 @@ class Region2DSampler():
         mask: np.ndarray,
         pos: np.ndarray,
         rot: np.ndarray,
-        occupancy_map: np.ndarray,
+        region_map: np.ndarray,
         **kwargs,
     ) -> bool:
         """Put mask to the occupancy grid, pos is at left bottom corner of mask"""
         # rotate the mask
         mask_rotated = self._rotate_mask(mask, rot[2])  # rot[2] is the rotation along z-axis
-        height, width = occupancy_map.shape[:2]
+        height, width = region_map.shape[:2]
         mask_x = mask_rotated.shape[0]
         mask_y = mask_rotated.shape[1]
         mask_half_x = (mask_x - 1) // 2
@@ -311,12 +311,20 @@ class Region2DSampler():
         if mask_max_x <= mask_min_x or mask_max_y <= mask_min_y:
             return False  # no mask in region
         mask_in_region = mask_rotated[mask_min_x:mask_max_x, mask_min_y:mask_max_y]
-        assert len(occupancy_map.shape) == 3, "Only support 3D occupancy map"
-        occupancy_map[
-            pos[0] - mask_half_x + mask_min_x: pos[0] - mask_half_x + mask_max_x,
-            pos[1] - mask_half_y + mask_min_y: pos[1] - mask_half_y + mask_max_y,
-            :,
-        ][mask_in_region == 1] = value
+        assert len(region_map.shape) == 3, "Only support 3D occupancy map"
+        mode = kwargs.get("mode", "replace")
+        if mode == "replace":
+            region_map[
+                pos[0] - mask_half_x + mask_min_x: pos[0] - mask_half_x + mask_max_x,
+                pos[1] - mask_half_y + mask_min_y: pos[1] - mask_half_y + mask_max_y,
+                :,
+            ][mask_in_region == 1] = value
+        elif mode == "add":
+            region_map[
+                pos[0] - mask_half_x + mask_min_x: pos[0] - mask_half_x + mask_max_x,
+                pos[1] - mask_half_y + mask_min_y: pos[1] - mask_half_y + mask_max_y,
+                :,
+            ][mask_in_region == 1] += value
         # # DEBUG
         # cv2.circle(occupancy_map, (pos[1], pos[0]), 1, (255, 0, 0), thickness=-1)
         # cv2.rectangle(occupancy_map, (pos[1] - mask_half_y, pos[0] - mask_half_x),
@@ -335,7 +343,7 @@ class Region2DSampler():
                     mask=obj_data.mask,
                     pos=obj_data.pos,
                     rot=obj_data.rot,
-                    occupancy_map=occupancy_map,
+                    region_map=occupancy_map,
                     value=0.0,
                 )
         return occupancy_map
@@ -378,6 +386,24 @@ class Region2DSampler():
         # cv2.imshow("free_space", overlay * 255)
         # cv2.waitKey(0)
         return free_space
+
+    def check_collision(self):
+        """Check collision"""
+        collision_map = np.zeros((self.grid_size[0], self.grid_size[1], 1), dtype=np.float32)
+        # objects
+        if obj_list is None:
+            obj_list = list(self.objects.keys())
+        for obj_id, obj_data in self.objects.items():
+            if obj_id in obj_list:
+                self._put_mask(
+                    mask=obj_data.mask,
+                    pos=obj_data.pos,
+                    rot=obj_data.rot,
+                    region_map=collision_map,
+                    value=1.0,
+                    mode="add",
+                )
+        return (collision_map > 1).any()
 
     def sample(
         self, obj_id: int, n_samples: int, prior: np.array | None = None, allow_outside: bool = True,
@@ -449,7 +475,7 @@ class Region2DSampler():
                     mask=obj_data.mask,
                     pos=obj_data.pos,
                     rot=obj_data.rot,
-                    occupancy_map=img,
+                    region_map=img,
                     value=obj_color_np,
                 )
                 # show axis
