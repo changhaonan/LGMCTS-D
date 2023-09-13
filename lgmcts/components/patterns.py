@@ -49,14 +49,6 @@ class Pattern(ABC):
         raise NotImplementedError
 
     @abstractclassmethod
-    def gen_ordered_prior(cls, size, rng, **kwargs):
-        """Generate a fixed pattern prior:
-        Args: 
-            rng: random generator
-        """
-        raise NotImplementedError
-
-    @abstractclassmethod
     def check(cls, obj_poses: dict[int, np.ndarray], **kwargs):
         """Check if the object states meet the pattern requirement
         """
@@ -106,16 +98,17 @@ class LinePattern(Pattern):
                 if rng.random() > 0.5:
                     # horizontal line
                     cv2.line(prior, (0, y0), (x0 + width, y0), 1.0, thickness)
+                    angle = 0.0
                 else:
                     # vertical line
                     cv2.line(prior, (x0, 0), (x0, height), 1.0, thickness)
-                angle = 0.0
+                    angle = np.pi / 2.0
             else:
                 x0 = 0
                 y0 = 0
                 # no points are provided
                 prior[:, :] = 1.0
-                angle = 0.0
+                angle = rng.integers(0, 1) * np.pi / 2.0  # randomly select a horizontal or vertical line
         elif len(rel_obj_ids) == 1:
             # given one pix
             x0 = rel_obj_poses_pix[0][1]
@@ -144,44 +137,12 @@ class LinePattern(Pattern):
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
+        pattern_info["angle"] = angle
         pattern_info["min_length"] = scale_max
         pattern_info["max_length"] = scale_min
         pattern_info["length"] = scale
         pattern_info["position_pixel"] = [int(x0)/width, float(int(y0)/height), 0.0]
         pattern_info["rotation"] = [0.0, 0.0, angle]
-        return prior, pattern_info
-
-    @classmethod
-    def gen_ordered_prior(cls, img_size, rng, **kwargs):
-        obj_id = kwargs.get("obj_id", -1)
-        obj_ids = kwargs.get("obj_ids", [])
-        thickness = kwargs.get("thickness", 1)
-        assert len(obj_ids) == 0 or (len(obj_ids) >= cls._num_limit[0] and len(obj_ids)
-                                     <= cls._num_limit[1]), "Number of objects should be within the limit!"
-
-        # extract relative obj & poses
-        obj_idx_in_list = obj_ids.index(obj_id)
-        assert obj_idx_in_list >= 0, "Object id not found!"
-        # some constants
-        scale = kwargs.get("scale", 0.1)
-
-        position = kwargs.get("position", [0.0, 0.0])
-        angle = kwargs.get("angle", 0.0)
-
-        height, width = img_size[0], img_size[1]
-        prior = np.zeros([height, width], dtype=np.float32)
-
-        x0 = int((position[0] + scale * math.sin(angle) * obj_idx_in_list) * width)
-        y0 = int((position[1] + scale * math.cos(angle) * obj_idx_in_list) * height)
-        cv2.circle(prior, (x0, y0), thickness, 1.0, -1)
-        pattern_info = {
-            "type": "pattern:line",
-            "min_length": scale,
-            "max_length": scale,
-            "length": scale,
-            "position": position.tolist() + [0.0],
-            "rotation": [0.0, 0.0, angle]
-        }
         return prior, pattern_info
 
     @classmethod
@@ -866,7 +827,7 @@ class SpatialPattern:
             close_range = int(close_range * min(height, width))
             cv2.circle(prior_close, (int(anchor[0]), int(anchor[1])), close_range, 1.0, -1)
             prior = prior * prior_close
-        
+
         # cv2.imshow("prior", prior)
         # cv2.waitKey(0)
 

@@ -17,10 +17,10 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
     # Step 1. load the scene
     camera_pose = np.array([
         [-9.99019040e-01,  4.42819236e-02,  2.62008166e-04,  2.40630148e-02],
-        [ 4.42787021e-02,  9.98990882e-01, -7.52417562e-03, -4.88996877e-01],
+        [4.42787021e-02,  9.98990882e-01, -7.52417562e-03, -4.88996877e-01],
         [-5.94928738e-04, -7.50519333e-03, -9.99971659e-01,  5.96053361e-01],
-        [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]
-        ])
+        [0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]
+    ])
     intrinsics_matrix = np.array([[635.41156006,   0., 644.21557617],
                                   [0.,  634.80944824, 368.45831299],
                                   [0.,    0.,   1.]])
@@ -45,6 +45,7 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
             texture_mapping[mask_info["value"]] = "unknown"
     pcd_list = utils.get_pointcloud_list(color, depth, mask, name_ids,
                                          intrinsics_matrix, np.eye(4, dtype=np.float32))
+
     # init region_sampler
     resolution = 0.002
     pix_padding = 1  # padding for clearance
@@ -67,7 +68,7 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
 
     # goals = prompt_goals[0]
     goals = [
-        {"type": "pattern:rectangle", "obj_ids": [3, 4, 5, 6]},
+        {"type": "pattern:line", "obj_ids": [3, 4, 5, 6]},
         {"type": "pattern:line", "obj_ids": [4, 1, 2]},
     ]
     sampled_ids = []
@@ -117,6 +118,7 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
     with open(os.path.join(data_path, "action_list.json"), "w") as f:
         json.dump(export_action_list, f)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, default=None, help="Path to the dataset")
@@ -129,6 +131,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    real_data_path = os.path.join(root_path, "test_data", "real_000005", "output")
+    real_data_path = os.path.join(root_path, "test_data", "real_000001", "output")
     prompt_path = f"{root_path}/output/struct_rearrange"
     eval_real(real_data_path, prompt_path, args.method, args.mask_mode, args.n_samples, args.debug)
