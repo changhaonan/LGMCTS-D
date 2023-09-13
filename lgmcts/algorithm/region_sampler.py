@@ -396,13 +396,17 @@ class Region2DSampler():
                 - free_volume: free volume of the region
                 - sample_probs: probability of each sample
         """
+        collision_mode = kwargs.get("collision_mode", "raw")
         angle_desire = pattern_info.get("angle", 0.0)
         # angle here is the angle disired angle for x-axis
         raw_x_axis = self.objects[obj_id].x_axis
         raw_x_axis_angle = math.atan2(raw_x_axis[1], raw_x_axis[0])
         angle_rot = angle_desire - raw_x_axis_angle
-        collision_mode = kwargs.get("collision_mode", "raw")
-        free_space = self.get_free_space(obj_id, angle_rot, allow_outside, mode=collision_mode).astype(np.float32)  # free is 1, occupied is 0
+        disable_collision_check = pattern_info.get("disable_collision_check", False)
+        if not disable_collision_check:
+            free_space = self.get_free_space(obj_id, angle_rot, allow_outside, mode=collision_mode).astype(np.float32)  # free is 1, occupied is 0
+        else:
+            free_space = np.ones((self.grid_size[0], self.grid_size[1]), dtype=np.float32)
         if prior is not None:
             assert prior.shape[:2] == free_space.shape[:2], "prior shape must be the same as free shape"
             free_space = np.multiply(free_space, prior)

@@ -143,6 +143,7 @@ class LinePattern(Pattern):
         pattern_info["length"] = scale
         pattern_info["position_pixel"] = [int(x0)/width, float(int(y0)/height), 0.0]
         pattern_info["rotation"] = [0.0, 0.0, angle]
+        pattern_info["disable_collision_check"] = False
         return prior, pattern_info
 
     @classmethod
@@ -320,6 +321,7 @@ class CirclePattern(Pattern):
         pattern_info["type"] = "pattern:circle"
         pattern_info["obj_ids"] = obj_ids
         pattern_info["angle"] = angle
+        pattern_info["disable_collision_check"] = False
         return prior, pattern_info
 
     @classmethod
@@ -396,6 +398,65 @@ class CirclePattern(Pattern):
             x = radius * math.cos(i * angle) + center[0]
             y = radius * math.sin(i * angle) + center[1]
             cv2.circle(img, (int(x), int(y)), thickness, color, -1)
+
+
+class TowerPattern(Pattern):
+    """Tower pattern, obj poses should formulate a tower"""
+    name = "tower"
+    _num_limit = [2, 100]  # at least 3 points
+
+    @classmethod
+    def gen_prior(cls, img_size, rng, **kwargs):
+        obj_poses_pix = kwargs.get("obj_poses_pix", {})
+        obj_id = kwargs.get("obj_id", -1)
+        obj_ids = kwargs.get("obj_ids", [])
+        thickness = kwargs.get("thickness", 3)
+        rel_size = kwargs.get("rel_size", "M")
+        assert len(obj_ids) == 0 or (len(obj_ids) >= cls._num_limit[0] and len(obj_ids)
+                                     <= cls._num_limit[1]), "Number of objects should be within the limit!"
+
+        # extract relative obj & poses
+        rel_obj_ids = []
+        rel_obj_poses_pix = []
+        for id in obj_ids:
+            if id != obj_id and id in obj_poses_pix:
+                rel_obj_ids.append(id)
+                rel_obj_poses_pix.append(obj_poses_pix[id])
+
+        height, width = img_size[0], img_size[1]
+        prior = np.zeros([height, width], dtype=np.float32)
+        if len(rel_obj_ids) == 0:
+            # no points are provided
+            prior[:, :] = 1.0
+            angle = 0.0
+        else:
+            # provided points
+            rel_obj_poses_pix = [pix[:2] for pix in rel_obj_poses_pix]
+            points = np.array(rel_obj_poses_pix)
+            prior[points[:, 0], points[:, 1]] = 1.0  # stack on previous objects
+            angle = 0.0
+        # Pattern info
+        pattern_info = {}
+        pattern_info["type"] = "pattern:tower"
+        pattern_info["obj_ids"] = obj_ids
+        pattern_info["angle"] = angle
+        pattern_info["disable_collision_check"] = True  # disable collision check
+        return prior, pattern_info
+
+    @classmethod
+    def check(cls, obj_poses: dict[int, np.ndarray], **kwargs):
+        assert "pattern_info" in kwargs, "Pattern info must be provided!"
+        pattern_info = kwargs["pattern_info"]
+        # Check if distance exceeds threshold
+        threshold = pattern_info.get("threshold", 0.1)
+        # assemble obj_poses
+        obj_poses_pattern = []
+        for obj_id in pattern_info["obj_ids"]:
+            obj_poses_pattern.append(obj_poses[obj_id][:3])
+
+        obj_poses_pattern = np.vstack(obj_poses_pattern)
+        dist = np.linalg.norm(obj_poses_pattern[:, :2] - obj_poses_pattern[0, :2]) / obj_poses_pattern.shape[0]
+        return not (dist > threshold)
 
 
 class RectanglePattern(Pattern):
@@ -514,7 +575,7 @@ class RectanglePattern(Pattern):
         pattern_info["type"] = "pattern:rectangle"
         pattern_info["corners"] = rect_points
         pattern_info["obj_ids"] = obj_ids
-
+        pattern_info["disable_collision_check"] = False
         return prior, pattern_info
 
     @classmethod
@@ -664,86 +725,6 @@ class RectanglePattern(Pattern):
         return min_distances
 
 
-class SineCurvePattern(Pattern):
-    """Sine curve pattern, obj poses should formulate a sine curve"""
-    name = "sine_curve"
-
-    @classmethod
-    def gen_prior(cls, img_size, rng, **kwargs):
-        """Generate sine curve prior"""
-        obj_poses_pix = kwargs.get("obj_poses_pix", {})
-        obj_id = kwargs.get("obj_id", -1)
-        obj_ids = kwargs.get("obj_ids", [])
-        frequency = kwargs.get("frequency", 0.1)
-        amplitude = kwargs.get("amplitude", 0.5)
-        # extract relative obj & poses
-        rel_obj_ids = []
-        rel_obj_poses_pix = []
-        for id in obj_ids:
-            if id != obj_id and id in obj_poses_pix:
-                rel_obj_ids.append(id)
-                rel_obj_poses_pix.append(obj_poses_pix[id])
-
-        height, width = img_size
-        prior = np.zeros(img_size, dtype=np.float32)
-
-        if len(rel_obj_ids) == 0:
-            y_vals = np.linspace(0, width - 1, width)
-            x_vals = (np.sin(x_vals * frequency) + 1) * (amplitude * (height - 1))
-        else:
-            # fit sine curve to points here using scipy curvefit
-            points = np.array(rel_obj_poses_pix)
-
-            def sine_curve(y, phi, c, A=amplitude, f=frequency):
-                return A * np.sin(2 * np.pi * f * y + phi) + c
-
-            initial_guess = [0, 0]
-            popt, _ = curve_fit(sine_curve, np.array(points[:, 1]), np.array(points[:, 0]), p0=initial_guess)
-            x_vals = np.linspace(0, height - 1, height)
-            y_vals = sine_curve(x_vals, *popt)
-
-        # Draw the sine curve on the image
-        for i in range(height):
-            x, y = int(x_vals[i]), int(y_vals[i])
-            if y > width - 1 or y < 0:
-                continue
-            prior[x, y] = 1.0
-
-        # cv2.imshow("prior", prior)
-        # cv2.waitKey(5000)
-
-        # Pattern info
-        pattern_info = {}
-        pattern_info["type"] = "pattern:sine_curve"
-        pattern_info["control_points"] = list(zip(x_vals/width, y_vals/width))
-        pattern_info["frequency"] = frequency
-        pattern_info["amplitude"] = amplitude
-        pattern_info["obj_ids"] = obj_ids
-        return prior, pattern_info
-
-    @classmethod
-    def check(cls, obj_poses: dict[int, np.ndarray], pattern_info, **kwargs):
-        """Check if obj poses meet the sine curve pattern"""
-        control_points = pattern_info["control_points"]
-
-        # assign object poses
-        obj_poses_pattern = []
-        for obj_id in pattern_info["obj_ids"]:
-            obj_poses_pattern.append(obj_poses[obj_id][:3])
-
-        # Calculate distances between object poses and control points on the sine curve
-        dists = []
-        for obj_pose in obj_poses_pattern:
-            min_dist = float("inf")
-            for cp_x, cp_y in control_points:
-                dist = np.linalg.norm(obj_pose[:2] - np.array([cp_x, cp_y]))
-                min_dist = min(min_dist, dist)
-            dists.append(min_dist)
-        # Check if the minimum distance from each object to the sine curve is below the threshold
-        threshold = pattern_info.get("threshold", 0.1)
-        return not (np.max(np.linalg.norm(dists)) > threshold)
-
-
 class SpatialPattern:
     """Spatial pattern, describing spatial relationship"""
     name = "spatial"
@@ -788,45 +769,53 @@ class SpatialPattern:
             anchor[0] = np.max([anchor[0] - 1, 0])
             prior[:, :int(anchor[0])] = 1.0
             spatial_str = "left"
+            angle = 0
         elif spatial_label == [0, 1, 0, 0]:
             # right
             anchor[0] = np.min([anchor[0] + 1, width - 1])
             prior[:, int(anchor[0]):] = 1.0
             spatial_str = "right"
+            angle = 0
         elif spatial_label == [0, 0, 1, 0]:
             # front
             anchor[1] = np.min([anchor[1] + 1, height - 1])
             prior[int(anchor[1]):, :] = 1.0
             spatial_str = "front"
+            angle = np.pi / 2.0
         elif spatial_label == [0, 0, 0, 1]:
             # back
             anchor[1] = np.max([anchor[1] - 1, 0])
             prior[:int(anchor[1]), :] = 1.0
             spatial_str = "back"
+            angle = np.pi / 2.0
         elif spatial_label == [1, 0, 1, 0]:
             # left & front
             anchor[0] = np.max([anchor[0] - 1, 0])
             anchor[1] = np.min([anchor[1] + 1, height - 1])
             prior[int(anchor[1]):, :int(anchor[0])] = 1.0
             spatial_str = "left & front"
+            angle = np.pi / 4.0
         elif spatial_label == [1, 0, 0, 1]:
             # left & back
             anchor[0] = np.max([anchor[0] - 1, 0])
             anchor[1] = np.max([anchor[1] - 1, 0])
             prior[:int(anchor[1]), :int(anchor[0])] = 1.0
             spatial_str = "left & back"
+            angle = -np.pi / 4.0
         elif spatial_label == [0, 1, 1, 0]:
             # right & front
             anchor[0] = np.min([anchor[0] + 1, width - 1])
             anchor[1] = np.min([anchor[1] + 1, height - 1])
             prior[int(anchor[1]):, int(anchor[0]):] = 1.0
             spatial_str = "right & front"
+            angle = np.pi / 4.0
         elif spatial_label == [0, 1, 0, 1]:
             # right & back
             anchor[0] = np.min([anchor[0] + 1, width - 1])
             anchor[1] = np.max([anchor[1] - 1, 0])
             prior[:int(anchor[1]), int(anchor[0]):] = 1.0
             spatial_str = "right & back"
+            angle = -np.pi / 4.0
         else:
             raise NotImplementedError("Spatial label {} not implemented!".format(spatial_label))
 
@@ -848,6 +837,8 @@ class SpatialPattern:
         pattern_info["obj_ids"] = obj_ids
         pattern_info["spatial_label"] = spatial_label
         pattern_info["spatial_str"] = spatial_str
+        pattern_info["angle"] = angle
+        pattern_info["disable_collision_check"] = False
         # cv2.imshow("prior", prior)
         # cv2.waitKey(0)
         return prior, pattern_info
@@ -898,7 +889,33 @@ class SpatialPattern:
                 return False
         return True
 
-# TODO: Arbitrary pattern @Alex
+
+class CompositePattern:
+    name = "composite"
+
+    def gen_prior(cls, img_size, rng, **kwargs):
+        semantic_mappings = {
+            1: "fork",
+            2: "plate",
+            3: "knife",
+        }
+        pattern_descriptions = [
+            {
+                "type": "pattern:spatial",
+                "obj_names": ["fork", "plate"],
+                "spatial_relation": "left"
+            },
+            {
+                "type": "pattern:spatial",
+                "obj_names": ["plate", "knife"],
+                "spatial_relation": "right"
+            },
+            {
+                "type": "pattern:spatial",
+                "obj_names": ["bowl", "plate"],
+                "spatial_relation": "on"
+            },
+        ]
 
 # Example: structformer has a pattern called dinner
 
@@ -921,16 +938,6 @@ PATTERN_DICT = {
     "line": LinePattern,
     "circle": CirclePattern,
     "rectangle": RectanglePattern,
-    "sine": SineCurvePattern,
+    "tower": TowerPattern,
     "spatial": SpatialPattern
 }
-
-# Test code
-# if __name__ == "__main__":
-#   # test spatial
-#    spatial_label = [0, 1, 0, 1]
-#    anchor = [50, 50]
-#    img_size = [200, 200]
-#    prior, pattern_info = SpatialPattern.gen_prior(img_size, None, spatial_label=spatial_label, anchor=anchor)
-#    cv2.imshow("prior", prior)
-#    cv2.waitKey(0)
