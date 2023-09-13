@@ -67,14 +67,15 @@ class ObjectData:
     color: color of object.
     """
     name: str
-    pos: np.ndarray  # center position
-    pos_offset: np.ndarray
+    pos: np.ndarray  # [x, y, z] of mask center
+    pos_offset: np.ndarray  # position offset of mask center and object center
     mask: np.ndarray  # mask
     height: float  # height
     points: np.ndarray
     color: Tuple[int, int, int]
-    rot: np.ndarray = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)  # TODO: currently, rot is not implemented
+    rot: np.ndarray = np.array([0.0, 0.0, 0.0], dtype=np.float32)  # rx, ry, rz
     collision_mask: np.ndarray = None  # TODO: currently, collision mask is not implemented
+    x_axis: np.ndarray = np.array([1.0, 0.0])  # xy-axis
 
 
 @dataclass
@@ -160,73 +161,53 @@ class Region2DSampler():
     ):
         """Add object to scene, create mask from points
         Args:
-            mask_mode: "sphere", "raw_mask", "convex_hull". "sphere" is to provide clearance.
+            mask_mode: "raw_mask", "convex_hull". "sphere" is to provide clearance.
         """
         assert points is not None, "points should not be None"
         if pos_ref is None:
             pos_ref = (points.max(axis=0) + points.min(axis=0)) / 2.0
         # project points to region plane
         points_pix = self._world2pix(points)
+        # get x-axis
+        x_axis = self._get_object_xy_axis(points_pix)
         lb_pix = np.array(
             [points_pix[:, 0].min(), points_pix[:, 1].min(), points_pix[:, 2].min()]
         )  # lb, lower bottom
-        if mask_mode == "sphere":
-            mask_height = points_pix[:, 0].max() - points_pix[:, 0].min() + 1
-            mask_width = points_pix[:, 1].max() - points_pix[:, 1].min() + 1
-            mask_size = math.ceil(math.sqrt(mask_height ** 2 + mask_width ** 2))
-            # pad size to odd
-            if mask_size % 2 == 0:
-                mask_size += 1
-            mask = np.zeros((mask_size, mask_size), dtype=np.uint8)
-            # draw a filled circle
-            cv2.circle(mask, (mask_size // 2, mask_size // 2), mask_size // 2, 1, thickness=-1)
-        elif mask_mode == "convex_hull":
-            mask_height = points_pix[:, 0].max() - points_pix[:, 0].min() + 1
-            mask_width = points_pix[:, 1].max() - points_pix[:, 1].min() + 1
-            # pad size to odd
-            if mask_width % 2 == 0:
-                mask_width += 1
-            if mask_height % 2 == 0:
-                mask_height += 1
-            mask = np.zeros((mask_height, mask_width), dtype=np.uint8)
-            points_convex_hull = ConvexHull(points_pix[:, :2])
-            pixels = (points_convex_hull.points[points_convex_hull.vertices]).astype(np.int32) - lb_pix[:2]
+        mask_height = points_pix[:, 0].max() - points_pix[:, 0].min() + 1
+        mask_width = points_pix[:, 1].max() - points_pix[:, 1].min() + 1
+        mask_size = math.ceil(math.sqrt(mask_height ** 2 + mask_width ** 2))
+        mask_size = mask_size if mask_size % 2 == 1 else mask_size + 1  # make sure it is odd
+        x_offset = (mask_size - mask_height) // 2
+        y_offset = (mask_size - mask_width) // 2
+        mask = np.zeros((mask_size, mask_size), dtype=np.uint8)
+        pixels = points_pix[:, :2].astype(np.int32) - lb_pix[:2]
+        pixels[:, 0] += x_offset
+        pixels[:, 1] += y_offset
+        if mask_mode == "convex_hull":
+            points_convex_hull = ConvexHull(pixels[:, [1, 0]])
+            pixels = (points_convex_hull.points[points_convex_hull.vertices]).astype(np.int32)
             cv2.fillConvexPoly(mask, pixels, 1,)
-            # DEBUG start here
-            # contour = draw_convex_contour(mask, pixels)
-            # cv2.imshow("contour", mask * 255)
-            # cv2.waitKey(0)
-            # DEBUG end here
         elif mask_mode == "raw_mask":
-            mask_height = points_pix[:, 0].max() - points_pix[:, 0].min() + 1
-            mask_width = points_pix[:, 1].max() - points_pix[:, 1].min() + 1
-            # pad size to odd
-            if mask_width % 2 == 0:
-                mask_width += 1
-            if mask_height % 2 == 0:
-                mask_height += 1
-            mask = np.zeros((mask_height, mask_width), dtype=np.uint8)
-            pixels = points_pix[:, :2].astype(np.int32) - lb_pix[:2]
             mask[pixels[:, 0], pixels[:, 1]] = 1
-        # ##DEBUG: check mask
-        # # resize the height to 500
-        # mask_vis = cv2.resize(mask, (mask.shape[1] * 500 // mask.shape[0], 500), interpolation=cv2.INTER_NEAREST)
-        # cv2.imshow("mask", mask_vis * 255)
-        # cv2.waitKey(0)
         height = points_pix[:, 2].max() - points_pix[:, 2].min()
-        # compute offset compared with pos_ref (reference position)
-        mask_center = np.array([mask.shape[0] // 2, mask.shape[1] // 2, 0]) + lb_pix
-        mask_center_world = self._pix2world(mask_center)
-        pos_offset = mask_center_world - pos_ref
+        mask_center = self._world2pix(pos_ref)  # use center of pcd as mask center
+        pos_offset = np.zeros(3, np.float32)
         name = name if name is not None else f"obj_{obj_id}"
         # apply a safety padding to mask
         mask = cv2.copyMakeBorder(mask, self.pix_padding, self.pix_padding, self.pix_padding,
                                   self.pix_padding, cv2.BORDER_CONSTANT, value=0)
         mask = cv2.dilate(mask, np.ones((self.pix_padding, self.pix_padding), dtype=np.uint8), iterations=1)
-        # cv2.imshow("mask", mask * 255)
-        # cv2.waitKey(0)
         self.objects[obj_id] = ObjectData(name=name, pos=mask_center, mask=mask,
-                                          height=height, color=color, points=points, pos_offset=pos_offset)
+                                          height=height, color=color, points=points, pos_offset=pos_offset, x_axis=x_axis)
+
+    def _get_object_xy_axis(self, points_pix: np.ndarray):
+        """Compute xy-axis from points projection in x-y plane"""
+        # compute the eigen vector
+        cov = np.cov(points_pix[:, :2].T)
+        eig_val, eig_vec = np.linalg.eig(cov)
+        # get the largest eigen vector
+        x_axis = eig_vec[:, np.argmax(eig_val)]
+        return x_axis
 
     def get_object_pose(self, obj_id: int) -> np.ndarray:
         """Get object position"""
@@ -247,14 +228,19 @@ class Region2DSampler():
         return obj_poses
 
     def set_object_pose(
-        self, obj_id: int, obj_pos: np.ndarray, enable_vis: bool = False
+        self, obj_id: int, obj_pose: np.ndarray, enable_vis: bool = False
     ) -> None:
         """Update object in scene"""
         assert obj_id in self.objects, "Object not found"
-        mask_center_world = obj_pos[:3] + self.objects[obj_id].pos_offset  # position
-        # mask_center_world = obj_pos[:3]
+        mask_center_world = obj_pose[:3] + self.objects[obj_id].pos_offset  # position
         if obj_id in self.objects:
             self.objects[obj_id].pos = self._world2pix(mask_center_world)
+            if obj_pose.shape[0] == 6:
+                self.objects[obj_id].rot = obj_pose[3:]
+            elif obj_pose.shape[0] == 3:
+                self.objects[obj_id].rot = np.zeros(3, dtype=np.float32)
+            else:
+                raise ValueError("obj_pose should be of shape (3,) or (6,)")
             self.moving_marker = obj_id
             if enable_vis:
                 self.visualize()
@@ -266,17 +252,29 @@ class Region2DSampler():
         for obj_id, obj_pose in obj_states.items():
             self.set_object_pose(obj_id, obj_pose, enable_vis)
 
+    def _rotate_mask(self, mask: np.ndarray, angle: float) -> np.ndarray:
+        """Rotate mask by angle w.r.t to center"""
+        angle_degree = angle * 180 / math.pi
+        rows, cols = mask.shape
+        center = (cols / 2, rows / 2)
+        rotation_matrix = cv2.getRotationMatrix2D(center, angle_degree, 1)
+        rotated_mask = cv2.warpAffine(mask, rotation_matrix, (cols, rows))
+        return rotated_mask
+
     def _put_mask(
         self,
         mask: np.ndarray,
         pos: np.ndarray,
-        occupancy_map: np.ndarray,
+        rot: np.ndarray,
+        region_map: np.ndarray,
         **kwargs,
     ) -> bool:
         """Put mask to the occupancy grid, pos is at left bottom corner of mask"""
-        height, width = occupancy_map.shape[:2]
-        mask_x = mask.shape[0]
-        mask_y = mask.shape[1]
+        # rotate the mask
+        mask_rotated = self._rotate_mask(mask, rot[2])  # rot[2] is the rotation along z-axis
+        height, width = region_map.shape[:2]
+        mask_x = mask_rotated.shape[0]
+        mask_y = mask_rotated.shape[1]
         mask_half_x = (mask_x - 1) // 2
         mask_half_y = (mask_y - 1) // 2
 
@@ -289,13 +287,21 @@ class Region2DSampler():
         mask_max_y = min(mask_y, width - pos[1] + mask_half_y)
         if mask_max_x <= mask_min_x or mask_max_y <= mask_min_y:
             return False  # no mask in region
-        mask_in_region = mask[mask_min_x:mask_max_x, mask_min_y:mask_max_y]
-        assert len(occupancy_map.shape) == 3, "Only support 3D occupancy map"
-        occupancy_map[
-            pos[0] - mask_half_x + mask_min_x: pos[0] - mask_half_x + mask_max_x,
-            pos[1] - mask_half_y + mask_min_y: pos[1] - mask_half_y + mask_max_y,
-            :,
-        ][mask_in_region == 1] = value
+        mask_in_region = mask_rotated[mask_min_x:mask_max_x, mask_min_y:mask_max_y]
+        assert len(region_map.shape) == 3, "Only support 3D occupancy map"
+        mode = kwargs.get("mode", "replace")
+        if mode == "replace":
+            region_map[
+                pos[0] - mask_half_x + mask_min_x: pos[0] - mask_half_x + mask_max_x,
+                pos[1] - mask_half_y + mask_min_y: pos[1] - mask_half_y + mask_max_y,
+                :,
+            ][mask_in_region == 1] = value
+        elif mode == "add":
+            region_map[
+                pos[0] - mask_half_x + mask_min_x: pos[0] - mask_half_x + mask_max_x,
+                pos[1] - mask_half_y + mask_min_y: pos[1] - mask_half_y + mask_max_y,
+                :,
+            ][mask_in_region == 1] += value
         # # DEBUG
         # cv2.circle(occupancy_map, (pos[1], pos[0]), 1, (255, 0, 0), thickness=-1)
         # cv2.rectangle(occupancy_map, (pos[1] - mask_half_y, pos[0] - mask_half_x),
@@ -313,15 +319,16 @@ class Region2DSampler():
                 self._put_mask(
                     mask=obj_data.mask,
                     pos=obj_data.pos,
-                    occupancy_map=occupancy_map,
+                    rot=obj_data.rot,
+                    region_map=occupancy_map,
                     value=0.0,
                 )
         return occupancy_map
 
-    def get_free_space(self, obj_id: int, allow_outside: bool = True) -> np.ndarray:
+    def get_free_space(self, obj_id: int, angle: float = 0.0, allow_outside: bool = True, mode: str = "raw") -> np.ndarray:
         """Get the free space of the object using cv2.erosion"""
         obj = self.objects[obj_id]
-        mask = obj.mask
+        mask = self._rotate_mask(obj.mask, angle)
         obj_list = [id for id in self.objects if id != obj_id]
         occupancy_map = self.get_occupancy(obj_list)
         if not allow_outside:
@@ -331,8 +338,13 @@ class Region2DSampler():
             occupancy_map[:, 0, :] = 0
             occupancy_map[:, -1, :] = 0
         # get free space, free is 1, occupied is 0
-        kernel_size = max(mask.shape[0], mask.shape[1])
-        kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        if mode == "bbox":
+            kernel_size = max(mask.shape[0], mask.shape[1])
+            kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        elif mode == "raw":
+            kernel = mask
+        else:
+            raise ValueError(f"Unknown mode {mode}")
         free_space = cv2.erode(occupancy_map, kernel, iterations=1)
 
         # ## DEBUG
@@ -352,8 +364,26 @@ class Region2DSampler():
         # cv2.waitKey(0)
         return free_space
 
+    def check_collision(self):
+        """Check collision"""
+        collision_map = np.zeros((self.grid_size[0], self.grid_size[1], 1), dtype=np.float32)
+        # objects
+        obj_list = list(self.objects.keys())
+        for obj_id, obj_data in self.objects.items():
+            if obj_id in obj_list:
+                self._put_mask(
+                    mask=obj_data.mask,
+                    pos=obj_data.pos,
+                    rot=obj_data.rot,
+                    region_map=collision_map,
+                    value=1.0,
+                    mode="add",
+                )
+        return (collision_map > 1).any()
+
     def sample(
-        self, obj_id: int, n_samples: int, prior: np.array | None = None, allow_outside: bool = True
+        self, obj_id: int, n_samples: int, prior: np.array | None = None, allow_outside: bool = True,
+        pattern_info: dict[str, any] = {}, **kwargs
     ) -> Tuple[List[np.ndarray], List[np.ndarray], SampleStatus, Dict[str, any]]:
         """General sampling method
         Args:
@@ -366,7 +396,13 @@ class Region2DSampler():
                 - free_volume: free volume of the region
                 - sample_probs: probability of each sample
         """
-        free_space = self.get_free_space(obj_id, allow_outside).astype(np.float32)  # free is 1, occupied is 0
+        angle_desire = pattern_info.get("angle", 0.0)
+        # angle here is the angle disired angle for x-axis
+        raw_x_axis = self.objects[obj_id].x_axis
+        raw_x_axis_angle = math.atan2(raw_x_axis[1], raw_x_axis[0])
+        angle_rot = angle_desire - raw_x_axis_angle
+        collision_mode = kwargs.get("collision_mode", "raw")
+        free_space = self.get_free_space(obj_id, angle_rot, allow_outside, mode=collision_mode).astype(np.float32)  # free is 1, occupied is 0
         if prior is not None:
             assert prior.shape[:2] == free_space.shape[:2], "prior shape must be the same as free shape"
             free_space = np.multiply(free_space, prior)
@@ -376,10 +412,9 @@ class Region2DSampler():
         samples_pix = np.concatenate([samples_pix, np.zeros((samples_pix.shape[0], 1))], axis=1)  # (N, 3)
         samples_wd = self._pix2world(samples_pix)  # (N, 3)
         samples_wd = samples_wd - self.objects[obj_id].pos_offset.reshape(1, 3)
-        # samples_wd = np.clip(samples_wd, a_max=self.pose_boundary[:, 1], a_min=self.pose_boundary[:, 0])
 
-        # FIXME: currently we don't support sample in rotation, so we set it to identity
-        rots = np.tile(np.array([0.0, 0.0, 0.0, 1.0-(1e-6)], dtype=np.float32), (samples_pix.shape[0], 1))
+        # rotation is along z-axis
+        rots = np.tile(np.array([0.0, 0.0, angle_rot], dtype=np.float32), (samples_pix.shape[0], 1))
         samples_wd = np.hstack([samples_wd, rots])
         # Assemble sample info
         sample_info = {
@@ -415,10 +450,21 @@ class Region2DSampler():
                 self._put_mask(
                     mask=obj_data.mask,
                     pos=obj_data.pos,
-                    offset=None,
-                    occupancy_map=img,
+                    rot=obj_data.rot,
+                    region_map=img,
                     value=obj_color_np,
                 )
+                # show axis
+                x_axis = obj_data.x_axis
+                x_axis_rot = [x_axis[0] * math.cos(obj_data.rot[2]) - x_axis[1] * math.sin(obj_data.rot[2]),
+                              x_axis[0] * math.sin(obj_data.rot[2]) + x_axis[1] * math.cos(obj_data.rot[2])]
+                x_axis_rot = [int(x_axis_rot[0] * 10), int(x_axis_rot[1] * 10)]
+                cv2.arrowedLine(img, (obj_data.pos[1], obj_data.pos[0]),
+                                (obj_data.pos[1] + x_axis_rot[1], obj_data.pos[0] + x_axis_rot[0]),
+                                (0, 0, 255), thickness=2)   # red, x-axis
+                cv2.arrowedLine(img, (obj_data.pos[1], obj_data.pos[0]),
+                                (obj_data.pos[1] + x_axis_rot[0], obj_data.pos[0] - x_axis_rot[1]),
+                                (0, 255, 0), thickness=2)   # green, y-axis
                 # put the object id
                 font_size = 0.002 / self.resolution * 0.8
                 cv2.putText(img, str(obj_id), (obj_data.pos[1], obj_data.pos[0]), cv2.FONT_HERSHEY_SIMPLEX, font_size,
@@ -432,7 +478,7 @@ class Region2DSampler():
             cv2.rectangle(img, (obj_data.pos[1] - obj_data.mask.shape[1] // 2,
                                 obj_data.pos[0] - obj_data.mask.shape[0] // 2),
                           (obj_data.pos[1] + obj_data.mask.shape[1] // 2,
-                           obj_data.pos[0] + obj_data.mask.shape[0] // 2), (0, 255, 0), thickness=3)
+                           obj_data.pos[0] + obj_data.mask.shape[0] // 2), (255, 0, 0), thickness=3)
         # concat with scene image
         if self.scene_pcd is not None:
             scene_image = self.project_pcd(self.scene_pcd)
@@ -567,7 +613,7 @@ class Region2DSamplerLGMCTS(Region2DSampler):
             obj_color = obj_color.mean(axis=0) * 255.0
             # add object to region sampler
             self.add_object(obj_id=id, points=obj_pcd, pos_ref=pos_ref, name=name, color=obj_color, mask_mode=mask_mode)
-            self.set_object_pose(obj_id=id, obj_pos=obj_pcd_center)
+            self.set_object_pose(obj_id=id, obj_pose=obj_pcd_center)
             now_pose = self.get_object_pose(id)
 
         # analysing support tree
@@ -581,7 +627,6 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         self.obj_support_tree = Node(-1)
         for obj_id in obj_ids:
             self._append_obj_to_support_tree(obj_id, iou_threshold)
-        print(RenderTree(self.obj_support_tree))
 
     def _append_obj_to_support_tree(self, obj_id, iou_threshold: float = 0.5):
         # traverse the tree in reverse order

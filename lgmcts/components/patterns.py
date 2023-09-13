@@ -20,7 +20,7 @@ PATTERN_CONSTANTS = {
     "circle": {
         "radius": {
             "L": [0.4, 0.5],
-            "M": [0.2, 0.4],
+            "M": [0.1, 0.4],
             "S": [0.1, 0.2]
         }
     },
@@ -43,14 +43,6 @@ class Pattern(ABC):
     @abstractclassmethod
     def gen_prior(cls, size, rng, **kwargs):
         """Generate a pattern prior:
-        Args: 
-            rng: random generator
-        """
-        raise NotImplementedError
-
-    @abstractclassmethod
-    def gen_ordered_prior(cls, size, rng, **kwargs):
-        """Generate a fixed pattern prior:
         Args: 
             rng: random generator
         """
@@ -106,16 +98,17 @@ class LinePattern(Pattern):
                 if rng.random() > 0.5:
                     # horizontal line
                     cv2.line(prior, (0, y0), (x0 + width, y0), 1.0, thickness)
+                    angle = 0.0
                 else:
                     # vertical line
                     cv2.line(prior, (x0, 0), (x0, height), 1.0, thickness)
-                angle = 0.0
+                    angle = np.pi / 2.0
             else:
                 x0 = 0
                 y0 = 0
                 # no points are provided
                 prior[:, :] = 1.0
-                angle = 0.0
+                angle = rng.integers(0, 1) * np.pi / 2.0  # randomly select a horizontal or vertical line
         elif len(rel_obj_ids) == 1:
             # given one pix
             x0 = rel_obj_poses_pix[0][1]
@@ -144,44 +137,12 @@ class LinePattern(Pattern):
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
+        pattern_info["angle"] = angle
         pattern_info["min_length"] = scale_max
         pattern_info["max_length"] = scale_min
         pattern_info["length"] = scale
         pattern_info["position_pixel"] = [int(x0)/width, float(int(y0)/height), 0.0]
         pattern_info["rotation"] = [0.0, 0.0, angle]
-        return prior, pattern_info
-
-    @classmethod
-    def gen_ordered_prior(cls, img_size, rng, **kwargs):
-        obj_id = kwargs.get("obj_id", -1)
-        obj_ids = kwargs.get("obj_ids", [])
-        thickness = kwargs.get("thickness", 1)
-        assert len(obj_ids) == 0 or (len(obj_ids) >= cls._num_limit[0] and len(obj_ids)
-                                     <= cls._num_limit[1]), "Number of objects should be within the limit!"
-
-        # extract relative obj & poses
-        obj_idx_in_list = obj_ids.index(obj_id)
-        assert obj_idx_in_list >= 0, "Object id not found!"
-        # some constants
-        scale = kwargs.get("scale", 0.1)
-
-        position = kwargs.get("position", [0.0, 0.0])
-        angle = kwargs.get("angle", 0.0)
-
-        height, width = img_size[0], img_size[1]
-        prior = np.zeros([height, width], dtype=np.float32)
-
-        x0 = int((position[0] + scale * math.sin(angle) * obj_idx_in_list) * width)
-        y0 = int((position[1] + scale * math.cos(angle) * obj_idx_in_list) * height)
-        cv2.circle(prior, (x0, y0), thickness, 1.0, -1)
-        pattern_info = {
-            "type": "pattern:line",
-            "min_length": scale,
-            "max_length": scale,
-            "length": scale,
-            "position": position.tolist() + [0.0],
-            "rotation": [0.0, 0.0, angle]
-        }
         return prior, pattern_info
 
     @classmethod
@@ -272,7 +233,6 @@ class CirclePattern(Pattern):
         obj_ids = kwargs.get("obj_ids", [])
         thickness = kwargs.get("thickness", 3)
         rel_size = kwargs.get("rel_size", "M")
-        segments = kwargs.get("segments", 6)
         assert len(obj_ids) == 0 or (len(obj_ids) >= cls._num_limit[0] and len(obj_ids)
                                      <= cls._num_limit[1]), "Number of objects should be within the limit!"
 
@@ -288,67 +248,78 @@ class CirclePattern(Pattern):
         prior = np.zeros([height, width], dtype=np.float32)
 
         # some constants
-        # clearance = int(0.1 * min(height, width))
-        clearance = 0
         scale_max = PATTERN_CONSTANTS["circle"]["radius"][rel_size][0]
         scale_min = PATTERN_CONSTANTS["circle"]["radius"][rel_size][1]
         scale = rng.random() * (scale_max - scale_min) + scale_min
         radius = int(scale * (min(height, width)))
-        segments = len(obj_ids)
+        segments = len(obj_ids) if len(obj_ids) % 2 == 0 else len(obj_ids) + 1
 
         block_vis = False
         if len(rel_obj_ids) == 0:
             if len(obj_ids) == 0:
+                # FIXME: Currently, this doesn't support generate proper angle
                 # pure pattern
                 center_x = rng.integers(radius, width - radius)
                 center_y = rng.integers(radius, height - radius)
-                # cv2.circle(prior, (center_x, center_y), radius, 1.0, thickness)
                 cls.draw_seg_circle(prior, (center_x, center_y), radius, 1.0, thickness, segments)
+                angle = 0.0
             else:
                 # no points are provided
                 prior[radius:height - radius, radius:width - radius] = 1.0
+                angle = np.pi / 2.0
                 block_vis = True
         elif len(rel_obj_ids) == 1:
             # given an pix, the next point is on the other side of circle
             # HACK: make sure the circle is within the region
+            angle = -np.pi / 2.0
             x0, y0 = rel_obj_poses_pix[0][1], rel_obj_poses_pix[0][0]
             if cls.check_circle_in_region((x0 - radius, y0), radius, height, width):
-                cv2.circle(prior, (x0 - radius, y0), 1, 1.0, thickness)
+                cv2.circle(prior, (x0 - 2 * radius, y0), 1, 1.0, thickness)
             if cls.check_circle_in_region((x0 + radius, y0), radius, height, width):
                 cv2.circle(prior, (x0 + 2 * radius, y0), 1, 1.0, thickness)
-            if cls.check_circle_in_region((x0, y0 - radius), radius, height, width):
-                cv2.circle(prior, (x0, y0 - 2 * radius), 1, 1.0, thickness)
-            if cls.check_circle_in_region((x0, y0 + radius), radius, height, width):
-                cv2.circle(prior, (x0, y0 + 2 * radius), 1, 1.0, thickness)
-        elif len(rel_obj_ids) == 2:
-            # given two pix, locate the third point
-            # HACK: assume the two points are on the same height; making sure the circle is within the region
-            x0, y0 = rel_obj_poses_pix[0][1], rel_obj_poses_pix[0][0]
-            x1, y1 = rel_obj_poses_pix[1][1], rel_obj_poses_pix[1][0]
-            center = [int((x0 + x1) / 2), int((y0 + y1) / 2)]
-            radius = int(np.linalg.norm(np.array([x0, y0]) - np.array([x1, y1])) / 2)
-            cls.draw_seg_circle(prior, center, radius, 1.0, thickness, segments)
+            center_xs = [x0 - radius, x0 + radius]
+            center_ys = [y0, y0]
         else:
             # if more than one object is sampled, we generate a circle based on the objects
             rel_obj_poses_pix = [pix[:2] for pix in rel_obj_poses_pix]
             points = np.array(rel_obj_poses_pix)
             points = points[:, [1, 0]]  # swap x, y
-            # Find the minimum enclosing circle of first 3 points
-            (center_x, center_y), radius = cls.cercle_circonscrit(points[:3, :])
-            center_x = int(center_x)
-            center_y = int(center_y)
-            radius = int(radius)
-            cls.draw_seg_circle(prior, (center_x, center_y), radius, 1.0, thickness, segments)
+            if len(rel_obj_ids) == 2:
+                # Find the minimum enclosing circle of first 3 points
+                center_x = (points[0, 0] + points[1, 0]) / 2.0
+                center_y = (points[0, 1] + points[1, 1]) / 2.0
+                radius = np.linalg.norm(points[0, :] - points[1, :]) / 2.0
+            else:
+                # Find the minimum enclosing circle of first 3 points
+                center, radius = cls.cercle_circonscrit(points[:3, :])
+                center_x, center_y = center[0], center[1]
+            # provides two candidates
+            angle_circle = (2.0 * np.pi / segments) * (len(rel_obj_ids) // 2)
+            cv2.circle(prior, (int(center_x + radius * math.cos(angle_circle)),
+                       int(center_y + radius * math.sin(angle_circle))), thickness, 1.0, -1)
+            cv2.circle(prior, (int(center_x - radius * math.cos(angle_circle)),
+                       int(center_y - radius * math.sin(angle_circle))), thickness, 1.0, -1)
+            angle = np.pi / 2.0 - angle_circle
+            center_xs = [center_x]
+            center_ys = [center_y]
         if not block_vis:
-            cv2.imshow("cricle", prior)
+            vis_prior = prior.copy()
+            for (center_x, center_y) in zip(center_xs, center_ys):
+                cv2.circle(vis_prior, (int(center_x), int(center_y)), int(radius), 1.0, 1)
+            # add existing
+            for id, rel_pix in zip(rel_obj_ids, rel_obj_poses_pix):
+                cv2.circle(vis_prior, (rel_pix[1], rel_pix[0]), 5, 1.0, 1)
+                cv2.putText(vis_prior, f"{id}", (rel_pix[1] - 30, rel_pix[0]), cv2.FONT_HERSHEY_SIMPLEX, 1, 0.8, 1)
+            # put text
+            cv2.putText(vis_prior, f"angle: {angle}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 0.8, 1)
+            cv2.imshow("cricle", vis_prior)
             cv2.waitKey(1)
             # pass
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:circle"
-        # pattern_info["center_pixel"] = [center_x, center_y]
-        # pattern_info["radius"] = radius
         pattern_info["obj_ids"] = obj_ids
+        pattern_info["angle"] = angle
         return prior, pattern_info
 
     @classmethod
@@ -866,7 +837,7 @@ class SpatialPattern:
             close_range = int(close_range * min(height, width))
             cv2.circle(prior_close, (int(anchor[0]), int(anchor[1])), close_range, 1.0, -1)
             prior = prior * prior_close
-        
+
         # cv2.imshow("prior", prior)
         # cv2.waitKey(0)
 

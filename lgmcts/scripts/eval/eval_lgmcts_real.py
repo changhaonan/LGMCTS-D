@@ -17,10 +17,10 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
     # Step 1. load the scene
     camera_pose = np.array([
         [-9.99019040e-01,  4.42819236e-02,  2.62008166e-04,  2.40630148e-02],
-        [ 4.42787021e-02,  9.98990882e-01, -7.52417562e-03, -4.88996877e-01],
+        [4.42787021e-02,  9.98990882e-01, -7.52417562e-03, -4.88996877e-01],
         [-5.94928738e-04, -7.50519333e-03, -9.99971659e-01,  5.96053361e-01],
-        [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]
-        ])
+        [0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]
+    ])
     intrinsics_matrix = np.array([[635.41156006,   0., 644.21557617],
                                   [0.,  634.80944824, 368.45831299],
                                   [0.,    0.,   1.]])
@@ -45,12 +45,13 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
             texture_mapping[mask_info["value"]] = "unknown"
     pcd_list = utils.get_pointcloud_list(color, depth, mask, name_ids,
                                          intrinsics_matrix, np.eye(4, dtype=np.float32))
+
     # init region_sampler
     resolution = 0.002
     pix_padding = 1  # padding for clearance
     bounds = np.array([[-0.4, 0.4], [-0.5, 0.5], [0.0, 0.5]])  # (height, width, depth)
     region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
-    region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="raw_mask")
+    region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="convex_hull")
     region_sampler.visualize()
     init_objects_poses = region_sampler.get_object_poses()
     obj_id_reverse_mapping = {}
@@ -67,8 +68,8 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
 
     # goals = prompt_goals[0]
     goals = [
-        {"type": "pattern:rectangle", "obj_ids": [3, 4, 5, 6]},
-        {"type": "pattern:line", "obj_ids": [4, 1, 2]},
+        # {"type": "pattern:circle", "obj_ids": [3, 4, 1, 2, 5]},
+        {"type": "pattern:line", "obj_ids": [4, 1, 2, 5]},
     ]
     sampled_ids = []
     L = []
@@ -113,9 +114,11 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
             "pose1_rotation": step["new_pose"][3:].tolist(),
         }
         export_action_list.append(action)
+    print(f"Collision status: {region_sampler.check_collision()}.")
     # export to json
     with open(os.path.join(data_path, "action_list.json"), "w") as f:
         json.dump(export_action_list, f)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -129,6 +132,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    real_data_path = os.path.join(root_path, "test_data", "real_000000")
+    real_data_path = os.path.join(root_path, "test_data", "real_000001", "output")
     prompt_path = f"{root_path}/output/struct_rearrange"
     eval_real(real_data_path, prompt_path, args.method, args.mask_mode, args.n_samples, args.debug)
