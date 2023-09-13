@@ -25,7 +25,7 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
                                   [0.,  634.80944824, 368.45831299],
                                   [0.,    0.,   1.]])
     label = json.load(open(os.path.join(data_path, "label.json"), "r"))
-    # load images
+    # load images000
     depth_scale = 100000.0
     mask = cv2.imread(os.path.join(data_path, "mask_image.png"))
     depth = cv2.imread(os.path.join(data_path, "depth_image.png"),
@@ -129,6 +129,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    real_data_path = os.path.join(root_path, "test_data", "real_000005", "output")
+    real_data_path = os.path.join(root_path, "test_data", "real_000000")
     prompt_path = f"{root_path}/output/struct_rearrange"
     eval_real(real_data_path, prompt_path, args.method, args.mask_mode, args.n_samples, args.debug)
