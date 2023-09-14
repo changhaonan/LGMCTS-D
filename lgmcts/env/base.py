@@ -53,7 +53,7 @@ class BaseEnv:
         ):
         with importlib_resources.files("lgmcts.assets") as _path:
             self.assets_root = str(_path)
-        self.global_scaling = 0.75
+        self.global_scaling = 1.0
         # Obj infos
         self.obj_ids = {"fixed": [], "rigid": []}
         self.obj_dyn_info = { "size": {}, "urdf_full_path": {} }  # obj dynamic info: size, urdf path, etc.
@@ -467,6 +467,7 @@ class BaseEnv:
         obs = {f"{modality}": {} for modality in self.modalities}  # sensing
         # obs["oracle"] = {}  # oracle information
         obs["point_cloud"] = {}  # point cloud
+        obs["scene_point_cloud"] = {}  # scene point cloud
         obs["poses"] = {}  # object poses
         # Sensing
         for view, config in self.agent_cams.items():
@@ -477,11 +478,10 @@ class BaseEnv:
             
             # Pointcloud (from top view)
             intrinsic_mat = np.array(config["intrinsics"]).reshape(3, 3)
-            # Notice: depth is within [0, 1], so we need to scale it back to [0, 20]
+            # Notice: convert depth back to mm
             real_depth = depth[0] * 20.0
             scene_pcd = misc_utils.get_pointcloud(real_depth, intrinsic_mat)
-            obs["point_cloud"][view] = {}
-            obs["poses"][view] = {}
+            obs["scene_point_cloud"][view] = scene_pcd
             #
             max_pcd_size = self.obs_img_size[0] * self.obs_img_size[1]
             obj_pcds = np.zeros([self.max_num_obj * max_pcd_size, 3])
@@ -492,9 +492,6 @@ class BaseEnv:
                 obj_mask = segm == obj_id
                 obj_pcd = scene_pcd[obj_mask].reshape(-1, 3)
                 # misc_utils.plot_3d(f"{view}-{obj_id}", obj_pcd, color='blue')
-                # if obj_pcd.shape[0] == 0:
-                #     cv2.imshow("color", color.transpose(1, 2, 0))
-                #     cv2.waitKey(0)
                 # assert obj_pcd.shape[0] > 0, f"obj_id {obj_id} has no point cloud"
                 offset = counter * max_pcd_size
                 obj_pcds[offset:offset+obj_pcd.shape[0], :] = obj_pcd
@@ -503,7 +500,7 @@ class BaseEnv:
                 position, orientation = pybullet_utils.get_obj_pose(self, obj_id)
                 offset = counter * 7
                 obj_poses[counter, :] = np.array(position + orientation)
-                
+
                 counter += 1
             obs["point_cloud"][view] = obj_pcds
             obs["poses"][view] = obj_poses
@@ -554,18 +551,19 @@ class BaseEnv:
                     free[obj_mask == obj_id] = 0
             free[0, :], free[:, 0], free[-1, :], free[:, -1] = 0, 0, 0, 0
             free = cv2.erode(free, np.ones((erode_size, erode_size), np.uint8))
-            free = free.astype(np.float32) 
+            free = free.astype(np.float32)
+            # print(f"No free; erode_size: {erode_size}, free_size: {free.shape}, obj_size: {obj_size}") 
             # Get the probability union
             if prior is not None:
                 assert prior.shape == free.shape, "prior shape must be the same as free shape"
                 free = np.multiply(free, prior)
             if np.sum(free) == 0:
-                print("There is no free space..")
                 return [None, None], None
             pix = misc_utils.sample_distribution(prob=free, rng=self._random)
             pos = misc_utils.pix_to_xyz(pix, hmap, self.bounds, self.pix_size)
             # print(f"pos: {pos}")
             pos = (pos[0], pos[1], obj_size[2] / 2)
+        # print(f"random pose: {pos}")
         theta = self._random.random() * 2 * np.pi
         rot = misc_utils.eulerXYZ_to_quatXYZW((0, 0, theta))
         return [pos, rot], obj_stack_id
@@ -584,6 +582,8 @@ class BaseEnv:
         **kwargs,
     ):
         """helper function for adding object to env."""
+        if len(self.obj_ids["rigid"]) >= self.max_num_obj:
+            return None, None, None
         scaled_size = self._scale_size(size, scalar)
         if pose is None:
             pose, obj_stack_id = self.get_random_pose(scaled_size, prior=prior, stack_prob=stack_prob)
@@ -592,7 +592,7 @@ class BaseEnv:
             return None, None, None
         else:
             obj_stack_id = None
-
+        
         obj_id, urdf_full_path = pybullet_utils.add_any_object(
             env=self,
             obj_entry=obj_entry,
@@ -637,7 +637,6 @@ class BaseEnv:
             low=sampled_obj.size_range.low,
             high=sampled_obj.size_range.high,
         )
-        sampled_obj_size = sampled_obj_size/2
         if len(color_lists) > 1:
             sampled_obj_color = self._random.choice(color_lists).value
         elif len(color_lists) == 1:
@@ -670,6 +669,7 @@ class BaseEnv:
         obj_size = self.obj_dyn_info["size"][obj_id]
         pose, obj_stack_id = self.get_random_pose(obj_size, prior, stack_prob=stack_prob)
         if pose[0] is None or pose[1] is None:
+            print(f"move object {obj_id} to random pose failed.")
             return None
         pybullet_utils.move_obj(self, obj_id, pose[0], pose[1])
         self._update_support_tree(obj_id, obj_stack_id)
@@ -783,6 +783,7 @@ class BaseEnv:
         # load task
         task_state = env_state["task_state"]
         self.task.set_state(task_state)
+        
 
     # ---------------------------------------------------------------------------
     # Robot Movement Functions

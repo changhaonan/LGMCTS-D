@@ -6,6 +6,8 @@ import pickle
 import lgmcts
 import argparse
 import numpy as np
+import json
+import ast
 from lgmcts import PARTITION_TO_SPECS
 import lgmcts.utils.file_utils as U
 import lgmcts.utils.misc_utils as misc_utils
@@ -16,9 +18,10 @@ from lgmcts.components.prompt import PromptGenerator
 from lgmcts.components.obj_selector import ObjectSelector
 from lgmcts.components.patterns import PATTERN_DICT
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
+from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
 
 
-## Eval method
+# Eval method
 
 def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
     """Eval from newly generated scene"""
@@ -28,27 +31,35 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     n_samples = 5
     num_save_digits = 6
     env = lgmcts.make(
-        task_name=task_name, 
-        task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name], 
-        modalities=["rgb", "segm", "depth"], 
-        seed=0, 
-        debug=debug, 
+        task_name=task_name,
+        task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name],
+        modalities=["rgb", "segm", "depth"],
+        seed=0,
+        debug=debug,
         display_debug_window=debug,
         hide_arm_rgb=(not debug),
     )
     task = env.task
-
-    region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, env)
+    cam2world = env.agent_cams["top"]["transform"]
+    bounds = np.array([[-0.2, 0.2], [-0.4, 0.4], [0.0, 0.5]])  # bounds in camera coordinate
+    region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
     sucess_count = 0
-
+    # LLM parsing
     checkpoint_list = list(filter(lambda f: f.endswith(".pkl"), os.listdir(dataset_path)))
     checkpoint_list.sort()
-    n_epoches = min(n_epoches, len(checkpoint_list)) if n_epoches > 0 else len(checkpoint_list)
-    for i in range(10):
+    n_epoches = min(n_epoches, len(checkpoint_list))
+    use_llm = False
+    run_llm = False
+    encode_ids_to_llm = False
+    # Generate goals using llm and object selector
+    prompt_goals = gen_prompt_goal_from_llm(dataset_path, n_epoches, checkpoint_list, use_llm=use_llm,
+                                            run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, num_save_digits=num_save_digits, debug=debug)
+
+    for i in range(n_epoches):
         print(f"==== Episode {i} ====")
-        ## Step 1. init the env from dataset
+        # Step 1. init the env from dataset
         env.reset()
         prompt_generator.reset()
         region_sampler.reset()
@@ -59,16 +70,22 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         region_sampler.load_env(env, mask_mode=mask_mode)
         # DEBUG
         if debug:
-            region_sampler.visualize()
+            # region_sampler.visualize()
             prompt_generator.render()
+            ##
+            print(env.obj_ids)
 
-        ## Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
-        goals = task.goals
+        # Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
+        if prompt_goals is None:
+            goals = task.goals
+        else:
+            goals = prompt_goals[i]
         L = []
         for goal in goals:
             goal_obj_ids = goal["obj_ids"]
             goal_pattern = goal["type"].split(":")[-1]
             print(f"Goal: {goal_pattern}; {goal_obj_ids}")
+
             for _i, goal_obj_id in enumerate(goal_obj_ids):
                 sample_info = {}
                 if goal_pattern == "spatial":
@@ -85,28 +102,27 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         env.prepare()
         for step in action_list:
             # assemble action
+            pose0_position = cam2world[:3, :3] @ step["old_pose"][:3] + cam2world[:3, 3]
+            pose0_position[2] = 0.0
+            pose1_position = cam2world[:3, :3] @ step["new_pose"][:3] + cam2world[:3, 3]
+            pose1_position[2] = 0.05
             action = {
-                "pose0_position": step["old_pose"][:3],
+                "pose0_position": pose0_position,
                 "pose0_rotation": step["old_pose"][3:],
-                "pose1_position": step["new_pose"][:3],
+                "pose1_position": pose1_position,
                 "pose1_rotation": step["new_pose"][3:],
             }
-            # if debug:
-            #     print(f"{step['obj_id']}: {step['new_pose'][:3]}")
             # execute action
             env.step(action)
 
-        ## Step 4. evaluate the result
+        # Step 4. evaluate the result
         exe_result = task.check_success(obj_poses=env.get_obj_poses())
         print(f"Success: {exe_result.success}")
         if exe_result.success:
             sucess_count += 1
-        
+
         if debug:
             prompt_generator.render(append=" [succes]" if exe_result.success else " [fail]")
-            for step in action_list:
-                region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
-            region_sampler.visualize()
 
     # average result
     print(f"Success rate: {float(sucess_count) / float(n_epoches)}")
@@ -129,4 +145,5 @@ if __name__ == "__main__":
     else:
         root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
         dataset_path = f"{root_path}/output/struct_rearrange"
-    eval_offline(dataset_path=dataset_path, method=args.method, mask_mode=args.mask_mode, n_samples=args.n_samples, n_epoches=args.n_epoches, debug=args.debug)
+    eval_offline(dataset_path=dataset_path, method=args.method, mask_mode=args.mask_mode,
+                 n_samples=args.n_samples, n_epoches=args.n_epoches, debug=args.debug)

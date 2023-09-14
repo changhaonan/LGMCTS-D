@@ -1,0 +1,61 @@
+<root>
+<round>
+You should stick to the following object ids, names, and colors.
+There are 9 objects in the scene. The obj_ids are [5, 6, 7, 8, 9, 10, 11, 12, 13] and object_names are ['heart', 'letter A', 'letter V', 'L-shaped block', 'letter M', 'flower', 'letter E', 'letter E', 'letter T'] respectively.
+And the corresponding colors are ['red', 'red', 'red', 'red', 'red', 'red', 'red and yellow polka dot', 'red and yellow polka dot', 'red and yellow polka dot'].
+<user>
+Put red and yellow polka dot letter E right and behind of red L-shaped block; Put objects whose color is identical to heart at a line pattern
+</user>
+<assistant>
+This command is broken down into two separate tasks, delineated by the semicolon (';'). 
+The first task focuses on a spatial arrangement of two specific objects: a "letter E" with a "red and yellow polka dot" color/texture, and a "L-shaped block" with "red" color/texture. 
+The instruction specifies that the letter E should be positioned to the right and behind of the L-shaped block, so the spatial_label is [0, 1, 0, 1] for left, right, front and behind respectively.
+The obj_ids for the spatial arrangement will be 8 and 11 (or 12 there is one more letter E with that id) for the L-shaped block and letter E, respectively. 
+The second task involves a line rearrangement of objects that share the same color as another object, named "heart" in this case. "heart" is the anchor with anchor_id 5.
+The corresponding objects that are of same color as anchor have the following ids: 8, 11.
+```
+[{'type': 'pattern:spatial', 'obj_ids': [8, 11], 'spatial_label': [0, 1, 0, 1], 'spatial_str': 'A is right and behind of B'}, {'type': 'pattern:line', 'obj_ids': [5, 6, 7, 8, 9, 10], 'anchor_id': 5}]
+```
+</assistant>
+</round>
+
+<round>
+You should stick to the following object ids, names, and colors.
+There are 9 objects in the scene. The obj_ids are [5, 6, 7, 8, 9, 10, 11, 12, 13, 5, 6, 7, 8, 9, 10, 11, 12, 13] and object_names are ['heart', 'letter A', 'letter V', 'L-shaped block', 'letter M', 'flower', 'letter E', 'letter E', 'letter T', 'letter M', 'letter T', 'letter V', 'letter G', 'pentagon', 'ring', 'flower', 'letter A', 'cross'].
+And the corresponding colors are ['red', 'red', 'red', 'red', 'red', 'red', 'red and yellow polka dot', 'red and yellow polka dot', 'red and yellow polka dot', 'yellow and green stripe', 'yellow and green stripe', 'yellow and green stripe', 'yellow and green stripe', 'yellow and green stripe', 'yellow and green stripe', 'yellow and blue polka dot', 'yellow and blue polka dot', 'yellow and blue polka dot'].
+<user>
+Place a line pattern using objects whose color is equivalent to letter M; while Leave yellow and blue polka dot letter A in front right of yellow and green stripe letter V
+</user>
+<assistant> 
+This command is broken down into two separate tasks, delineated by the semicolon (';'). 
+The first task involves a line rearrangement of objects that share the same color as another object, named "letter M" in this case. "letter M" is the anchor with anchor_id 9 or 5. 
+The second task focuses on a spatial arrangement of two specific objects: a "letter A" with a "yellow and blue polka dot" color/texture, and a "letter V" with "yellow and green stripe" color/texture. 
+The instruction specifies that the letter A should be positioned to the front and right of the letter V, so the spatial_label is [0, 1, 1, 0] for left, right, front and behind respectively.
+The obj_ids for the spatial arrangement will be 7 and 12 (or 6 as there is one more letter A with that id) for the letter V and letter A, respectively. 
+The corresponding objects that are of same color as anchor have the following ids: 5, 6, 7, 8, 9, 10.
+```
+[{'type': 'pattern:line', 'obj_ids': [5, 6, 7, 8, 9, 10], 'anchor_id': 5}, {'type': 'pattern:spatial', 'obj_ids': [7, 12], 'spatial_label': [0, 1, 1, 0], 'spatial_str': 'A is front and right of B'}]
+```
+</assistant>
+</round>
+
+<round>
+You should stick to the following object ids, names, and colors.
+There are 9 objects in the scene. The obj_ids are [5, 6, 7, 8, 9, 10, 11, 12, 13, 5, 6, 7, 8, 9, 10, 11, 12, 13, 5, 6, 7, 8, 9, 10, 11, 12, 13] and object_names are ['heart', 'letter A', 'letter V', 'L-shaped block', 'letter M', 'flower', 'letter E', 'letter E', 'letter T', 'letter M', 'letter T', 'letter V', 'letter G', 'pentagon', 'ring', 'flower', 'letter A', 'cross', 'ring', 'flower', 'triangle', 'L-shaped block', 'letter T', 'letter T', 'letter M', 'letter T', 'letter T'].
+And the corresponding colors are ['red', 'red', 'red', 'red', 'red', 'red', 'red and yellow polka dot', 'red and yellow polka dot', 'red and yellow polka dot', 'yellow and green stripe', 'yellow and green stripe', 'yellow and green stripe', 'yellow and green stripe', 'yellow and green stripe', 'yellow and green stripe', 'yellow and blue polka dot', 'yellow and blue polka dot', 'yellow and blue polka dot', 'green', 'green', 'green', 'polka dot', 'polka dot', 'polka dot', 'polka dot', 'polka dot', 'polka dot'].
+<user>
+Leave objects whose color is equivalent to ring on a line pattern; while Put polka dot letter T behind right of green triangle
+</user>
+<assistant>
+This command is broken down into two separate tasks, delineated by the semicolon (';'). 
+The first task involves a line rearrangement of objects that share the same color as another object, named "ring" in this case. "ring" is the anchor with anchor_id 5 or 10. 
+The second task focuses on a spatial arrangement of two specific objects: a "letter T" with a "polka dot" color/texture, and a "triangle" with "green" color/texture. 
+The instruction specifies that the letter T should be positioned to the behind and right of the triangle, so the spatial_label is [0, 1, 0, 1] for left, right, front and behind respectively.
+The obj_ids for the spatial arrangement will be 7 and 9 (or can be any one among other letter T's with ids 6, 10, 12, 13) for the triangle and letter T, respectively. 
+The corresponding objects that are of same color as anchor have the following ids: 5, 6, 7.
+```
+[{'type': 'pattern:line', 'obj_ids': [5, 6, 7], 'anchor_id': 5}, {'type': 'pattern:spatial', 'obj_ids': [7, 9], 'spatial_label': [0, 1, 0, 1], 'spatial_str': 'A is behind right of B'}]
+```
+</assistant>
+</round>
+</root>

@@ -21,6 +21,7 @@ from lgmcts.components.obj_selector import ObjectSelector
 
 MAX_TRIES_PER_SEED = 999
 
+
 def _generate_data_for_one_task(
     task_name: str,
     task_kwargs: dict | None,
@@ -33,13 +34,13 @@ def _generate_data_for_one_task(
 ):
     # init
     env = lgmcts.make(
-        task_name=task_name, 
-        task_kwargs=task_kwargs, 
-        modalities=modalities, 
-        seed=seed, 
-        debug=debug, 
+        task_name=task_name,
+        task_kwargs=task_kwargs,
+        modalities=modalities,
+        seed=seed,
+        debug=debug,
         display_debug_window=debug,
-        hide_arm_rgb=debug,
+        hide_arm_rgb=not debug,
     )
     task = env.task
     prompt_generator = PromptGenerator(env.rng)
@@ -47,8 +48,23 @@ def _generate_data_for_one_task(
     prompt_str_list = []
     tbar = tqdm(total=num_episodes, desc=task_name, leave=True)
 
+    # Prepare prompt background
+    prompt_bg = "Assume you are a language-based motion planner. You will parse user's requirement into goal configuration and constraints. Follow the examples we provide. You should strictly adhere to our format. \n"
+    # obj_id_list = list(range(len(task.obj_list)))
+    # obj_name_list = []
+    # obj_color_list = []
+    # for obj_id in obj_id_list:
+    #     obj_name_list.append(task.obj_list[obj_id].name.lower().replace("shapenet_", ""))
+    #     obj_color_list.append(task.color_list[obj_id].name.lower().replace("_", " "))
+    # prompt_bg += f"Object_id of the objects in the scene are: {obj_id_list} for {obj_name_list}\n"
+    # prompt_bg += f"And correspondingly colors of the objects in the scene are:  {obj_color_list}\n"
+
+    with open(os.path.join(save_path, task_name, "prompt_bg.txt"), "w") as f:
+        f.write(prompt_bg)
+
     print("Generate dataset...")
     for i in range(num_episodes):
+        print(f"==== Episode {i} ====")
         # reset
         seed = env.rng.integers(0, 100)
         env.set_seed(seed)
@@ -59,7 +75,7 @@ def _generate_data_for_one_task(
         # generate goal
         task.gen_goal_config(env, prompt_generator, obj_selector)
         task.gen_start_config(env)
-        
+
         # save
         prompt_str_list.append(task.prompt)
         env.save_checkpoint(os.path.join(save_path, task_name, f"checkpoint_{i:0{num_save_digits}d}.pkl"))

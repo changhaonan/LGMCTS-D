@@ -1,5 +1,7 @@
 """Miscellaneous utilities."""
 import cv2
+import copy
+import warnings
 import kornia
 import matplotlib
 import matplotlib.pyplot as plt
@@ -57,7 +59,7 @@ def get_heightmap(points, colors, bounds, pixel_size):
     return heightmap, colormap
 
 
-def get_pointcloud(depth, intrinsics):
+def get_pointcloud(depth, intrinsic):
     """Get 3D pointcloud from perspective depth image.
 
     Args:
@@ -71,10 +73,32 @@ def get_pointcloud(depth, intrinsics):
     xlin = np.linspace(0, width - 1, width)
     ylin = np.linspace(0, height - 1, height)
     px, py = np.meshgrid(xlin, ylin)
-    px = (px - intrinsics[0, 2]) * (depth / intrinsics[0, 0])
-    py = (py - intrinsics[1, 2]) * (depth / intrinsics[1, 1])
+    px = (px - intrinsic[0, 2]) * (depth / intrinsic[0, 0])
+    py = (py - intrinsic[1, 2]) * (depth / intrinsic[1, 1])
     points = np.float32([px, py, depth]).transpose(1, 2, 0)
     return points
+
+
+def get_pointcloud_list(color, depth, mask, mask_name_ids, intrinisc, extrinsic, **kwargs):
+    """Get point cloud and seperate them by mask ids"""
+    clip_far = kwargs.get("clip_far", 10.0)
+    clip_near = kwargs.get("clip_near", 0.0)
+    valid_mask = (depth > clip_near) & (depth < clip_far)
+    scene_points = get_pointcloud(depth, intrinisc)
+    obj_pcd_list = []
+    for (mask_name, mask_id) in mask_name_ids:
+        obj_mask = (mask == mask_id)[:, :, 0] & valid_mask
+        obj_points = scene_points[obj_mask].reshape(-1, 3)
+        if obj_points.shape[0] == 0:
+            warnings.warn(f"Object {mask_name} has no points")
+        # transform
+        obj_points = (extrinsic[:3, :3] @ obj_points.T).T + (extrinsic[:3, 3])[None, :]
+        obj_colors = color[obj_mask].reshape(-1, 3) / 255.0
+        obj_pcd = o3d.geometry.PointCloud()
+        obj_pcd.points = o3d.utility.Vector3dVector(obj_points)
+        obj_pcd.colors = o3d.utility.Vector3dVector(obj_colors)
+        obj_pcd_list.append(obj_pcd)
+    return obj_pcd_list
 
 
 def transform_pointcloud(points, transform):
@@ -188,6 +212,16 @@ def unproject_depth_vectorized(im_depth, depth_dist, camera_mtx, camera_dist):
     )
 
 
+def visualize_depth_map(depth_map):
+    """Visualize depth map."""
+    # normalize
+    depth_map = depth_map - np.min(depth_map)
+    depth_map = depth_map / np.max(depth_map)
+    plt.figure(figsize=(10, 10))
+    plt.imshow(depth_map)
+    plt.show()
+
+
 # -----------------------------------------------------------------------------
 # MATH UTILS
 # -----------------------------------------------------------------------------
@@ -245,7 +279,7 @@ def gen_random_pattern(pattern_type, pattern_shape, rng):
     else:
         pattern = rng.uniform(size=pattern_shape)
         pattern_info["type"] = "random"
-    ## Debug
+    # Debug
     # plt.imshow(pattern)
     # plt.show()
     return pattern, pattern_info
@@ -767,6 +801,26 @@ def plot_3d(title: str, points, color, block: bool = True):
     plt.show(block=block)
 
 
+def plot_pcd_o3d(pcd_list, transform_list=None, show_origin: bool = True):
+    """Plot point cloud with open3d."""
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    if show_origin:
+        vis.add_geometry(o3d.geometry.TriangleMesh.create_coordinate_frame())
+    for i, pcd in enumerate(pcd_list):
+        if isinstance(pcd, np.ndarray):
+            pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(pcd))
+        elif isinstance(pcd, o3d.geometry.PointCloud):
+            pcd = copy.deepcopy(pcd)
+        else:
+            raise TypeError("pcd must be numpy array or open3d point cloud")
+        if transform_list is not None:
+            pcd.transform(transform_list[i])
+        vis.add_geometry(pcd)
+    vis.run()
+    vis.destroy_window()
+
+
 # -----------------------------------------------------------------------------
 # Transform Utils
 # -----------------------------------------------------------------------------
@@ -811,3 +865,46 @@ def separate_pcd_pose(obj_ids, pcd_batch, pose_batch, max_pcd_size):
         pcd_list.append(pcd)
         pose_list.append(pose)
     return obj_ids, pcd_list, pose_list
+
+
+# -----------------------------------------------------------------------------
+# Eval Utils
+# -----------------------------------------------------------------------------
+
+def compute_iou(bbox1, bbox2, iou_type: str = "union"):
+    '''
+    Compute the Intersection over Union (IoU) of two bounding boxes.
+
+    Args:
+    bbox1, bbox2 - each bounding box is a tuple of (x1, y1, x2, y2)
+    iou_type - type of IoU to compute. Can be either 'union' or 'min'
+    where (x1, y1) is the top-left corner and (x2, y2) is the bottom-right corner.
+
+    Returns:
+    float in [0, 1] representing the IoU.
+    '''
+
+    # Destructure the bounding boxes
+    x1_bbox1, y1_bbox1, x2_bbox1, y2_bbox1 = bbox1
+    x1_bbox2, y1_bbox2, x2_bbox2, y2_bbox2 = bbox2
+
+    # Calculate the (x, y)-coordinates of the intersection rectangle's top-left and bottom-right corners
+    x1_intersection = max(x1_bbox1, x1_bbox2)
+    y1_intersection = max(y1_bbox1, y1_bbox2)
+    x2_intersection = min(x2_bbox1, x2_bbox2)
+    y2_intersection = min(y2_bbox1, y2_bbox2)
+
+    # Calculate the area of intersection rectangle
+    intersection_area = max(0, x2_intersection - x1_intersection + 1) * max(0, y2_intersection - y1_intersection + 1)
+
+    # Calculate the area of both bounding boxes
+    bbox1_area = (x2_bbox1 - x1_bbox1 + 1) * (y2_bbox1 - y1_bbox1 + 1)
+    bbox2_area = (x2_bbox2 - x1_bbox2 + 1) * (y2_bbox2 - y1_bbox2 + 1)
+
+    # Compute the IoU
+    if iou_type == "union":
+        iou = intersection_area / float(bbox1_area + bbox2_area - intersection_area)
+    elif iou_type == "min":
+        iou = intersection_area / float(min(bbox1_area, bbox2_area))
+    # Return the computed IoU
+    return iou

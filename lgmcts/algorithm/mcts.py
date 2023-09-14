@@ -15,18 +15,18 @@ import anytree
 from lgmcts.algorithm.region_sampler import Region2DSampler, SampleData, SampleStatus,\
     sample_distribution, ObjectData
 
-ORDERED_PATTERNS = ["spatial"]
 
 class Sampler:
     """
     manipulating_object, aligning_object, direction
     """
+
     def __init__(self, obj_name, origin_name, direction, region: Region2DSampler):
         self.obj_name = obj_name
         self.origin_name = origin_name
         self.direction = direction
         self.region = region
-    
+
 
 class Node(object):
     """MCTS Node"""
@@ -42,12 +42,13 @@ class Node(object):
         updated_obj_id=None,
         UCB_scalar=1.0,
         num_sampling=1,
-        obj_support_tree:anytree.Node = None,
+        obj_support_tree: anytree.Node = None,
         prior_dict={},
         reward_mode='same',
         reward_dict={},
+        is_virtual=False,
         verbose=False,
-        rng = None
+        rng=None
     ) -> None:
 
         self.node_id = node_id
@@ -69,10 +70,11 @@ class Node(object):
         self.prior_dict = prior_dict
         self.reward_mode = reward_mode
         self.reward_dict = reward_dict
+        self.is_virtual = is_virtual
         self.verbose = verbose
         self.rng = rng
 
-        self.segmentation = None # segmentation of the workspace, will be generated only once when needed
+        self.segmentation = None  # segmentation of the workspace, will be generated only once when needed
 
     def generate_actions(self):
         """
@@ -80,16 +82,16 @@ class Node(object):
         That is, what samplers can be sampled 
         without breaking the pattern ordering
         """
-        no_sample_objs = set() # objects that cannot be sampled because of ordering
-        for obj_id, sampler in self.sampler_dict.items(): # check ordering
-            # if sampler.pattern in ORDERED_PATTERNS:
-            if ('ordered' in sampler.sample_info) and sampler.sample_info['ordered']:
+        no_sample_objs = set()  # objects that cannot be sampled because of ordering
+        for obj_id, sampler in self.sampler_dict.items():  # check ordering
+            ordered = sampler.sample_info.get("ordered", False)
+            if ordered:
                 prior_objs = sampler.obj_ids[:sampler.obj_ids.index(obj_id)]
                 for prior_obj in prior_objs:
                     if prior_obj in self.sampler_dict:
                         no_sample_objs.add(obj_id)
                         break
-            
+
         return [obj_id for obj_id in self.sampler_dict.keys() if obj_id not in no_sample_objs]
 
     def UCB(self):
@@ -140,7 +142,7 @@ class Node(object):
         # check graspability
         found_node = anytree.search.find(
             self.obj_support_tree, lambda node: node.name == action[0]
-            )
+        )
         if found_node and len(found_node.children) > 0:
             # not graspable, move a leave on the subtree away
             # Search for all leaf nodes
@@ -167,7 +169,7 @@ class Node(object):
             sampler,
         )
         solved_sampler_obj_id, _ = action
-        if not success: # fails to complete the sampling, do 
+        if not success:  # fails to complete the sampling, do
             if obs is None:
                 # fails but not because of collision (e.g., out of workspace)
                 solved_sampler_obj_id = float('inf')
@@ -188,12 +190,12 @@ class Node(object):
         return action, moved_obj, new_position, solved_sampler_obj_id, solution_quality
 
     def sampling_function(
-            self,
-            region: Region2DSampler,
-            object_states: dict,
-            sample_data: SampleData,
-            verbose: bool = False,
-        ):
+        self,
+        region: Region2DSampler,
+        object_states: dict,
+        sample_data: SampleData,
+        verbose: bool = False,
+    ):
         """
         sampling function
         If sampling succeeded, return True, None, (moved_obj_id, new_pose)
@@ -207,59 +209,61 @@ class Node(object):
         sample_quality = 0
 
         obj_id = sample_data.obj_id
-        
+
         # update region
         region.set_object_poses(obj_states=object_states)
-        
         # keep track of sampled object poses
-        sampled_obj_poses_pix = {} 
+        sampled_obj_poses_pix = {}
         pattern_objs = sample_data.obj_ids  # objects involved in the sampling pattern
         objs_away_from_goal = list(self.sampler_dict.keys())  # pattern objects away from goal
         objs_at_goal = [
-            pattern_obj for pattern_obj in pattern_objs 
-            if (pattern_obj != obj_id) and (pattern_obj not in objs_away_from_goal) 
-            ] # pattern objects at goal
-        #FIXME: this could be a problem here, because there is an offset
+            pattern_obj for pattern_obj in pattern_objs
+            if (pattern_obj != obj_id) and (pattern_obj not in objs_away_from_goal)
+        ]  # pattern objects at goal
+        # FIXME: this could be a problem here, because there is an offset
         sampled_obj_poses_pix = {
-            obj:tuple(region._world2region(object_states[obj][:3]+region.objects[obj].pos_offset)[:2]) 
+            obj: region._world2pix(object_states[obj][:3] + region.objects[obj].pos_offset)
             for obj in objs_at_goal}
 
         # update prior
         if sample_data.pattern in self.prior_dict:
             prior, pattern_info = self.prior_dict[sample_data.pattern].gen_prior(
-                region.grid_size, region.rng, 
-                obj_id=sample_data.obj_id, 
+                region.grid_size, region.rng,
+                obj_id=sample_data.obj_id,
                 obj_ids=sample_data.obj_ids,
                 obj_poses_pix=sampled_obj_poses_pix,
-                sample_info = sample_data.sample_info
-                )
+                sample_info=sample_data.sample_info
+            )
             # cv2.imshow("prior", prior)
             # cv2.waitKey(0)
             # the prior object is too close to the boundary so that no sampling is possible
             if np.sum(prior) <= 0:
                 obs = self.rng.choice([obj for obj in sample_data.obj_ids if obj != obj_id])
                 return False, obs, (obj_id, None)
+            if self.is_virtual:
+                # scene is virtual, so don't need to consider other objects
+                region.set_objects_as_virtual(objs_away_from_goal)
+            # DEBUG
+            # region.visualize(block=False)
             # sample
-            valid_pose, _, samples_status, sample_info = region.sample(sample_data.obj_id, 1, prior, allow_outside=False)
+            valid_pose, _, samples_status, sample_info = region.sample(sample_data.obj_id, 1, prior, allow_outside=False, pattern_info=pattern_info)
+            if self.is_virtual:
+                # reset to real objects
+                region.set_objects_as_real(objs_away_from_goal)
             if valid_pose.shape[0] > 0:
-                # if sample_data.pattern == "spatial":
-                #     print(objs_at_goal)
-                #     print([object_states[obj][:3] for obj in objs_at_goal])
-                #     print(valid_pose)
-                #     print(region._world2region(valid_pose[0,:3]+region.objects[obj_id].pos_offset)[:2])
                 valid_pose = valid_pose.reshape(-1)
                 
                 if 'sample_probs' in sample_info:
                     sample_quality = sample_info['sample_probs']*sample_info['free_volume']/np.max(prior)
         else:
             raise NotImplementedError
-        
+
         success = samples_status == SampleStatus.SUCCESS
 
         # test
         # print(f"sample status: {samples_status.name}, valid_pose: {valid_pose}")
 
-        if not success: # find an obstacle
+        if not success:  # find an obstacle
             if self.segmentation is None:
                 self.segmentation = self.semantic_segmentation(region)
             leaf_nodes = self.obj_support_tree.leaves
@@ -267,8 +271,8 @@ class Node(object):
             counter = 100
             while (counter > 0):
                 counter -= 1
-                samples_reg, sample_probs = sample_distribution(prob=prior, rng=region.rng, n_samples=1)  # (N, 2)
-                obs_id  = self.segmentation[samples_reg[0][0], samples_reg[0][1], 0]
+                sample_pix, sample_probs = sample_distribution(prob=prior, rng=region.rng, n_samples=1)  # (N, 2)
+                obs_id = self.segmentation[sample_pix[0][0], sample_pix[0][1], 0]
                 if (obs_id not in [-1, obj_id]) and (obs_id in leaf_objs):
                     break
             if counter <= 0:
@@ -279,8 +283,8 @@ class Node(object):
 
         return success, obs_id, action, sample_quality
 
-    def semantic_segmentation(self, region:Region2DSampler):
-        #TODO: Merge this part into sampler
+    def semantic_segmentation(self, region: Region2DSampler):
+        # TODO: Merge this part into sampler
         # semetic segmentation of the workspace
         segmentation = -1.0 * np.ones((region.grid_size[0], region.grid_size[1], 3), dtype=np.float32)
         # objects
@@ -288,7 +292,8 @@ class Node(object):
             region._put_mask(
                 mask=obj_data.mask,
                 pos=obj_data.pos,
-                occupancy_map=segmentation,
+                rot=obj_data.rot,
+                region_map=segmentation,
                 value=float(obj_id),
             )
         return segmentation
@@ -310,12 +315,13 @@ class MCTS(object):
         region_sampler: Region2DSampler,
         L: List[SampleData],
         UCB_scalar=1.0,
-        obj_support_tree:anytree.Node = None,
+        obj_support_tree: anytree.Node = None,
         prior_dict={},
-        n_samples = 1,
         reward_mode = 'same', # 'same' or 'prop'
+        n_samples=1,
+        is_virtual=False,
         verbose: bool = False,
-        seed = 0
+        seed=0
     ) -> None:
         self.rng = np.random.default_rng(seed=seed)
         self.settings = {
@@ -327,7 +333,7 @@ class MCTS(object):
         }
         self.region_sampler = region_sampler
         self.sampler_dict = {s.obj_id: s for s in L}
-        self.obj_support_tree = obj_support_tree # initial object support tree
+        self.obj_support_tree = obj_support_tree  # initial object support tree
         self.start_state = region_sampler.get_object_poses()
 
         # intialize MCTS tree
@@ -341,6 +347,7 @@ class MCTS(object):
             updated_obj_id=None,
             obj_support_tree=self.obj_support_tree,
             reward_dict={},
+            is_virtual=is_virtual,
             verbose=verbose,
             **self.settings,
         )
@@ -350,6 +357,7 @@ class MCTS(object):
         self.isfeasible = False
         self.num_iter = 0
         # config
+        self.is_virtual = is_virtual
         self.verbose = verbose
 
     def reset(self):
@@ -364,6 +372,7 @@ class MCTS(object):
             updated_obj_id=None,
             obj_support_tree=self.obj_support_tree,
             reward_dict={},
+            is_virtual=self.is_virtual,
             verbose=self.verbose,
             **self.settings,
         )
@@ -377,10 +386,10 @@ class MCTS(object):
 
         while num_iter < max_iter:
             if (num_iter % log_step) == 0:
-                print(num_iter)
+                print(f"Searched {num_iter}/{max_iter} iterations")
             num_iter += 1
             current_node = self.selection()
-            # an action in MCTS is represented by (sampler_id, trail_id), 
+            # an action in MCTS is represented by (sampler_id, trail_id),
             # the index is according to L and the num_sample children list
             #TODO: do K sampling at the same time @KAI
             action, moved_obj, new_position, solved_sampler_obj_id, solution_quality = current_node.expansion()
@@ -394,7 +403,7 @@ class MCTS(object):
                     solution_quality,
                     current_node,
                 )
-            else: # stay in the same state
+            else:  # stay in the same state
                 new_node = Node(
                     num_iter,
                     region_sampler=self.region_sampler,
@@ -405,6 +414,7 @@ class MCTS(object):
                     updated_obj_id=moved_obj,
                     obj_support_tree=copy_tree(current_node.obj_support_tree),
                     reward_dict={k:v for k,v in current_node.reward_dict.items()},
+                    is_virtual=self.is_virtual,
                     verbose=self.verbose,
                     **self.settings,
                 )
@@ -415,14 +425,15 @@ class MCTS(object):
             current_node.children[action[0]].append(new_node)
 
             # update reward
-            #TODO: new reward function @KAI
+            # TODO: new reward function @KAI
             reward = self.reward_detection(new_node)
             self.back_propagation(new_node, reward)
             if reward == len(self.sampler_dict):
                 self.isfeasible = True
                 self.construct_plan(new_node)
                 return True
-
+        # if not found, construct the best plan we can get
+        self.construct_best_plan()
         # recording
         self.num_iter = num_iter
         return False
@@ -489,6 +500,7 @@ class MCTS(object):
             updated_obj_id=obj,
             obj_support_tree=new_tree,
             reward_dict=new_reward_dict,
+            is_virtual=self.is_virtual,
             verbose=self.verbose,
             **self.settings,
         )
@@ -520,27 +532,39 @@ class MCTS(object):
             moved_object = current_node.updated_obj_id
             # current_node.show_arrangement()
             if moved_object is not None:
-                old_pose = np.concatenate(
-                    [parent_node.object_states[moved_object][:3], np.array([0, 0, 0, 1])],
-                    axis=0).reshape(-1).astype(np.float32)
-                new_pose = np.concatenate(
-                    [current_node.object_states[moved_object][:3], np.array([0, 0, 0, 1])],
-                    axis=0).reshape(-1).astype(np.float32)
+                old_pose = parent_node.object_states[moved_object].reshape(-1).astype(np.float32)
+                new_pose = current_node.object_states[moved_object].reshape(-1).astype(np.float32)
                 self.action_list.append(
                     {
-                    "obj_id": moved_object,
-                    "old_pose": old_pose,
-                    "new_pose": new_pose,
-                }
+                        "obj_id": moved_object,
+                        "old_pose": old_pose,
+                        "new_pose": new_pose,
+                    }
                 )
             current_node = parent_node
         self.action_list.reverse()
 
+    def construct_best_plan(self):
+        """get the best plan"""
+        # search the node which has leaset left samplers
+        best_node = self.root
+        # traverse the tree
+        queue = [self.root]
+        while len(queue) > 0:
+            node = queue.pop(0)
+            if len(node.sampler_dict) < len(best_node.sampler_dict):
+                best_node = node
+            children_list = list(node.children.values())
+            flattened_list = [item for sublist in children_list for item in sublist]
+            queue.extend(flattened_list)
+        # construct the plan
+        self.construct_plan(best_node)
+
 
 # copy anytree
-def copy_tree(node:anytree.Node):
+def copy_tree(node: anytree.Node):
     copied_node = anytree.Node(copy.deepcopy(node.name))
-    
+
     for child in node.children:
         child_copy = copy_tree(child)
         child_copy.parent = copied_node

@@ -36,10 +36,6 @@ Point cloud & pose are all padded with zero. Their shape is of (max_num_obj * ma
 
 - Currently, the sequential sampling is not working. Need to be fixed.
 - Is the sampling repeatable??
-- The current loading is not OS-free.
-- BUG: collision, is it because the movement action has error?? Because movement has a shift.
-- BUG: the current planner will return a negative value, this BUG should be solved along with the X-Y collision BUG.
-- BUG: pose0 has negative value.
 
 ## TODO:
 

@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_lgmcts.py",
             "args": [
                 "--num_episodes=100",
-                "--debug",
+                // "--debug",
             ],
             "console": "integratedTerminal",
             "justMyCode": false
@@ -21,6 +21,9 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/lgmcts/scripts/data_generation/gen_strdiff.py",
+            "args": [
+                "--num_episodes=100",
+            ],
             "console": "integratedTerminal",
             "justMyCode": false
         },
@@ -40,6 +43,34 @@
             "args": [
                 "--method=mcts",
                 "--n_epoches=10",
+                "--mask_mode=raw_mask",
+                "--debug",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Eval online Real",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/lgmcts/scripts/eval/eval_lgmcts_real.py",
+            "args": [
+                "--method=mcts",
+                "--n_epoches=10",
+                "--mask_mode=raw_mask",
+                "--debug",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Eval online SFormer",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/lgmcts/scripts/eval/eval_lgmcts_struct.py",
+            "args": [
+                "--method=mcts",
+                "--n_epoches=1",
                 "--mask_mode=raw_mask",
                 "--debug",
             ],
