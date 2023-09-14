@@ -404,8 +404,9 @@ class Region2DSampler():
                 )
         collision_status = (collision_map > 1).any()
         if collision_status:
-            cv2.imshow("collision_map", collision_map * 255)
-            cv2.waitKey(0)
+            # cv2.imshow("collision_map", collision_map * 255)
+            # cv2.waitKey(0)
+            pass
         return collision_status
 
     def sample(

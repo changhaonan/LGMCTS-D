@@ -177,9 +177,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 sample_data = SampleData(goal_pattern, goal_obj_id, goal["obj_ids"], {}, sample_info)
                 L.append(sample_data)
                 sampled_ids.append(goal_obj_id)
-        print(region_sampler.check_collision())
-        region_sampler.visualize()
-        region_sampler.visualize_3d()
         # Step 3. generate & exectue plan
         check_goal_idx = 0
         sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
@@ -216,7 +213,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
                 if debug:
                     region_sampler.visualize()
-        utils.plot_pcd_o3d(result_pcd_list, show_origin=True)
         if use_sformer_result:
             region_sampler.reset()
             region_sampler.load_from_pcds(result_pcd_list, name_ids=new_name_ids, mask_mode="convex_hull")
@@ -279,7 +275,7 @@ if __name__ == "__main__":
     parser.add_argument("--end", type=int, default=2, help="End index")
     args = parser.parse_args()
 
-    debug = True
+    debug = False
     args.method = "sformer"
     pattern = "line"
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
