@@ -40,19 +40,25 @@ class Pattern(ABC):
     name: str = ""
     _num_limit = [0, 100]  # [min, max]
 
-    @abstractclassmethod
-    def gen_prior(cls, size, rng, **kwargs):
+    @classmethod
+    def gen_prior(cls, img_size, rng, **kwargs):
         """Generate a pattern prior:
         Args: 
             rng: random generator
         """
-        raise NotImplementedError
+        height, width = img_size[0], img_size[1]
+        prior = np.ones([height, width], dtype=np.float32)
+        pattern_info = {}
+        pattern_info["type"] = "pattern:uniform"
+        pattern_info["angle"] = 0.0
+        pattern_info["disable_collision_check"] = False
+        return prior, pattern_info
 
-    @abstractclassmethod
+    @classmethod
     def check(cls, obj_poses: dict[int, np.ndarray], **kwargs):
         """Check if the object states meet the pattern requirement
         """
-        raise NotImplementedError
+        return True
 
 
 # Implementation of patterns
@@ -925,6 +931,14 @@ class CompositePattern:
     name = "composite"
 
     def gen_prior(cls, img_size, rng, **kwargs):
+        obj_poses_pix = kwargs.get("obj_poses_pix", {})
+        obj_id = kwargs.get("obj_id", -1)
+        obj_ids = kwargs.get("obj_ids", [])
+        sample_infos = kwargs.get("sample_infos", {"spatial_label": [0, 0, 0, 0]})
+        # extract relative obj & poses
+        rel_obj_ids = []
+        rel_obj_poses_pix = []
+
         semantic_mappings = {
             1: "fork",
             2: "plate",
@@ -966,6 +980,7 @@ class DataDrivenPattern:
 
 # PATTERN DICT
 PATTERN_DICT = {
+    "uniform": Pattern,
     "line": LinePattern,
     "circle": CirclePattern,
     "rectangle": RectanglePattern,

@@ -68,7 +68,9 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
 
     # goals = prompt_goals[0]
     goals = [
-        {"type": "pattern:circle", "obj_ids": [3, 4, 1, 2, 5]},
+        {"type": "pattern:uniform", "obj_ids": [1]},
+        {"type": "pattern:spatial", "obj_ids": [1, 2], "spatial_label": [1, 0, 0, 0]},
+        {"type": "pattern:spatial", "obj_ids": [1, 3], "spatial_label": [0, 1, 0, 0]},
         # {"type": "pattern:tower", "obj_ids": [4, 1, 2, 5]},
     ]
     sampled_ids = []
