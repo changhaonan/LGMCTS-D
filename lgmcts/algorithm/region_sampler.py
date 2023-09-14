@@ -402,7 +402,11 @@ class Region2DSampler():
                     value=1.0,
                     mode="add",
                 )
-        return (collision_map > 1).any()
+        collision_status = (collision_map > 1).any()
+        if collision_status:
+            cv2.imshow("collision_map", collision_map * 255)
+            cv2.waitKey(0)
+        return collision_status
 
     def sample(
         self, obj_id: int, n_samples: int, prior: np.array | None = None, allow_outside: bool = True,
