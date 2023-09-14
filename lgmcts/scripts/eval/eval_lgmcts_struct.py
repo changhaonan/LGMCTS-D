@@ -88,7 +88,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     end = len(h5_folders)
     mcts_success_result = dict()
     sformer_success_result = dict()
-    h5_folders = ['data00702857.h5']
+    # h5_folders = ['data00553435.h5']
     failures = []
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
@@ -267,6 +267,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_path", type=str, default=None, help="Path to the dataset")
     parser.add_argument("--res_path", type=str, default=None, help="Path to the prompt")
     parser.add_argument("--method", type=str, default="mcts", help="Method to use")
+    parser.add_argument("--pattern", type=str, default="line", help="Pattern")
     parser.add_argument("--n_samples", type=int, default=10, help="Number of samples")
     parser.add_argument("--n_epoches", type=int, default=10, help="Number of epoches")
     parser.add_argument("--mask_mode", type=str, default="convex_hull", help="Mask mode")
@@ -275,10 +276,10 @@ if __name__ == "__main__":
     parser.add_argument("--end", type=int, default=2, help="End index")
     args = parser.parse_args()
 
-    debug = False
+    debug = True
     args.method = "sformer"
     pattern = "line"
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    args.data_path = os.path.join(root_path, f"output/eval_single_pattern/{pattern}-pcd-objs")
-    args.res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{pattern}-pcd-objs")
+    args.data_path = os.path.join(root_path, f"output/eval_single_pattern/{args.pattern}-pcd-objs")
+    args.res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{args.pattern}-pcd-objs")
     eval(args.data_path, args.res_path, args.method, args.mask_mode, args.n_samples, debug, args.start, args.end)
