@@ -83,6 +83,7 @@ class SamplingPlanner:
         """
         seed = kwargs.get("seed", 0)  # update seed
         prior_dict = kwargs.get("prior_dict", {})
+        reward_mode = kwargs.get('reward_mode', 'same')
         sampled_obj_poses_pix = {}  # keep track of sampled object poses
         action_list = []
         cur_obj_poses = self.sampler.get_object_poses()
@@ -93,6 +94,7 @@ class SamplingPlanner:
             obj_support_tree=self.sampler.obj_support_tree,
             prior_dict=prior_dict,
             n_samples=self.n_samples,
+            reward_mode=reward_mode,
             verbose=True,
             seed=seed,
         )

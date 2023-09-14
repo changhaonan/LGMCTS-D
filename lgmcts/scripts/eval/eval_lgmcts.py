@@ -46,7 +46,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     checkpoint_list = list(filter(lambda f: f.endswith(".pkl"), os.listdir(dataset_path)))
     checkpoint_list.sort()
     n_epoches = min(n_epoches, len(checkpoint_list)) if n_epoches > 0 else len(checkpoint_list)
-    for i in range(n_epoches):
+    for i in range(10):
         print(f"==== Episode {i} ====")
         ## Step 1. init the env from dataset
         env.reset()
@@ -81,7 +81,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 L.append(sample_data)
         
         ## Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, reward_mode='prop', debug=debug)
         env.prepare()
         for step in action_list:
             # assemble action
