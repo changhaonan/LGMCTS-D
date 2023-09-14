@@ -169,9 +169,12 @@ class LinePattern(Pattern):
                 obj_poses_pattern.append(obj_poses[obj_id][:3])
             obj_poses_pattern = np.vstack(obj_poses_pattern)
 
-        # get the up most and low most points first
-        lo_idx = np.argmax(obj_poses_pattern[:, 1], axis=-1)
-        hi_idx = np.argmin(obj_poses_pattern[:, 1], axis=-1)
+        # get the two furthest points
+        dist_mat = np.linalg.norm(obj_poses_pattern[:, :2] - obj_poses_pattern[:, None, :2], axis=-1)
+        max_idx = np.argmax(dist_mat)
+        max_idx = np.unravel_index(max_idx, dist_mat.shape)
+        
+        lo_idx, hi_idx = max_idx[0], max_idx[1]
         lo_pose = obj_poses_pattern[lo_idx, :2]
         hi_pose = obj_poses_pattern[hi_idx, :2]
         k = (hi_pose - lo_pose) / np.linalg.norm(hi_pose - lo_pose)
