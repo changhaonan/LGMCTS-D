@@ -90,6 +90,7 @@ class LinePattern(Pattern):
         scale_min = PATTERN_CONSTANTS["line"]["line_len"]["M"][1]
         scale = rng.random() * (scale_max - scale_min) + scale_min
 
+        block_vis = False
         if len(rel_obj_ids) == 0:
             if len(obj_ids) == 0:
                 # pure pattern
@@ -109,6 +110,7 @@ class LinePattern(Pattern):
                 # no points are provided
                 prior[:, :] = 1.0
                 angle = rng.integers(0, 1) * np.pi / 2.0  # randomly select a horizontal or vertical line
+                block_vis = True
         elif len(rel_obj_ids) == 1:
             # given one pix
             x0 = rel_obj_poses_pix[0][1]
@@ -132,8 +134,15 @@ class LinePattern(Pattern):
             cls.draw_line(prior, x0, y0, x1, y1, thickness)
 
         # Debug
-        # cv2.imshow("prior", prior)
-        # cv2.waitKey(1)
+        if not block_vis:
+            vis_prior = prior.copy()
+            for id, rel_pix in zip(rel_obj_ids, rel_obj_poses_pix):
+                cv2.circle(vis_prior, (rel_pix[1], rel_pix[0]), 5, 1.0, 1)
+                cv2.putText(vis_prior, f"{id}", (rel_pix[1] - 30, rel_pix[0]), cv2.FONT_HERSHEY_SIMPLEX, 1, 0.8, 1)
+            # put text
+            cv2.putText(vis_prior, f"angle: {angle}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 0.8, 1)
+            cv2.imshow("prior", vis_prior)
+            cv2.waitKey(1)
         # Pattern info
         pattern_info = {}
         pattern_info["type"] = "pattern:line"
@@ -147,32 +156,31 @@ class LinePattern(Pattern):
         return prior, pattern_info
 
     @classmethod
-    def check(cls, obj_poses: dict[int, np.ndarray], **kwargs):
+    def check(cls, obj_poses: dict[int, np.ndarray] | None = None, obj_poses_pattern: np.ndarray | None = None, **kwargs):
         """Check if obj poses meets a line pattern"""
-        assert "pattern_info" in kwargs, "Pattern info must be provided!"
         pattern_info = kwargs["pattern_info"]
         # check if p2l distance exceeds threshold
         threshold = pattern_info.get("threshold", 0.1)
-        if len(pattern_info["obj_ids"]) == 0:
-            warnings.warn("No object in the pattern!")
-            return False
         # assemble obj_poses
-        obj_poses_pattern = []
-        for obj_id in pattern_info["obj_ids"]:
-            obj_poses_pattern.append(obj_poses[obj_id][:3])
-        obj_poses_pattern = np.vstack(obj_poses_pattern)
-        # get the up most and low most points first"""
-        lo_idx = np.argmax(obj_poses_pattern[:, 1], axis=-1)
-        hi_idx = np.argmin(obj_poses_pattern[:, 1], axis=-1)
-        lo_pose = obj_poses_pattern[lo_idx, :2]
-        hi_pose = obj_poses_pattern[hi_idx, :2]
-        k = (hi_pose - lo_pose) / np.linalg.norm(hi_pose - lo_pose)
-        o = hi_pose
-        #
-        dists = cls.dist_p2l(obj_poses_pattern[:, :2], o[None, :], k[None, :])
+        if obj_poses_pattern is None:
+            obj_poses_pattern = []
+            for obj_id in pattern_info["obj_ids"]:
+                obj_poses_pattern.append(obj_poses[obj_id][:3])
+            obj_poses_pattern = np.vstack(obj_poses_pattern)
+        # difference from line
+        # approximate the line using least square
+        x = obj_poses_pattern[:, 0]
+        if np.max(x) - np.min(x) < threshold:
+            # vertical line
+            return True
+        y = obj_poses_pattern[:, 1]
+        A = np.vstack([x, np.ones(len(x))]).T
+        k, c = np.linalg.lstsq(A, y, rcond=None)[0]
+        # calculate the distance
+        dists = cls.dist_p2l(obj_poses_pattern[:, :2], np.array([0.0, c]), np.array([1.0, k]))
         status = not (np.max(dists) > threshold)
         if not status:
-            print("Line pattern check failed!")
+            print(f"Line pattern check failed!, dist: {dists}")
         return status
 
     @classmethod
