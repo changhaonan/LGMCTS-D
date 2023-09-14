@@ -14,6 +14,7 @@ import tqdm
 from natsort import natsorted
 from scipy.spatial.transform import Rotation as R
 from lgmcts.components.patterns import PATTERN_DICT
+from lgmcts.components.semantic_patterns import SEMANTIC_PATTERN_DICT
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
 import lgmcts.utils.misc_utils as utils
@@ -125,11 +126,11 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             with open(f"{data_path}/{h5_folder}/goal_pose.pkl", "rb") as f:
                 goal_pose_sformer = pickle.load(f)
                 assert len(goal_pose_sformer) == 8
-                goal_pose_sformer = goal_pose_sformer[1:] # First pose is the pose of the structure frame
+                goal_pose_sformer = goal_pose_sformer[1:]  # First pose is the pose of the structure frame
         else:
             with open(f"{data_path}/{h5_folder}/goal_pose_0.pkl", "rb") as f:
                 goal_pose_sformer = pickle.load(f)
-            
+
         if use_sformer_result:
             with open(f"{data_path}/{h5_folder}/goal_pose_0.pkl", "rb") as f:
                 goal_pose_sformer = pickle.load(f)
@@ -137,9 +138,19 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 curr_pose_sformer = pickle.load(f)
             for index, id in enumerate(goals[0]["obj_ids"]):
                 sformer_action_list.append({"obj_id": id, "new_pose": goal_pose_sformer[index]})
-
+        else:
+            # check semantic pattern
+            new_goals = []
+            for goal in goals:
+                pattern = goal["type"].split(":")[-1]
+                if pattern in SEMANTIC_PATTERN_DICT:
+                    new_goal = SEMANTIC_PATTERN_DICT[pattern].parse_goal(name_ids)
+                    new_goals += new_goal
+                else:
+                    new_goals.append(goal)
+            goals = new_goals
         # init region_sampler
-        resolution = 0.01
+        resolution = 0.002 if use_sformer_result else 0.01
         pix_padding = 1  # padding for clearance
         bounds = np.array([[-1.0, 1.0], [-1.0, 1.0], [-0.5, 1.0]])  # (height, width, depth)
         region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
@@ -188,23 +199,31 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             region_sampler.visualize()
 
         result_pcd_list = []
-        name_ids = []
+        new_name_ids = []
         for step in action_list:
             if use_sformer_result:
                 pcd = region_sampler.get_object_pcd(step["obj_id"])
                 pcd = copy.deepcopy(pcd)
-                pcd.transform(step["new_pose"])
+                R = step["new_pose"][:3, :3]
+                t = step["new_pose"][:3, 3]
+                pcd.rotate(R, center=pcd.get_center())
+                pcd.translate(t)
                 result_pcd_list.append(pcd)
-                name_ids.append([f"obj_{step['obj_id']}", step["obj_id"]])
+                for name_id in name_ids:
+                    if name_id[1] == step["obj_id"]:
+                        new_name_ids.append([name_id[0], step["obj_id"]])
+                        break
             else:
                 region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
                 if debug:
                     region_sampler.visualize()
+        utils.plot_pcd_o3d(result_pcd_list, show_origin=True)
         if use_sformer_result:
             region_sampler.reset()
-            region_sampler.load_from_pcds(result_pcd_list, name_ids=name_ids, mask_mode="convex_hull")
+            region_sampler.load_from_pcds(result_pcd_list, name_ids=new_name_ids, mask_mode="convex_hull")
             if debug:
                 region_sampler.visualize()
+                region_sampler.visualize_3d()
 
         # Step 4. Calculate Success Rate
         obj_poses_pattern = np.vstack(obj_poses_pattern)

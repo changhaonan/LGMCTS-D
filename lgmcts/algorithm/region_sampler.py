@@ -402,7 +402,11 @@ class Region2DSampler():
                     value=1.0,
                     mode="add",
                 )
-        return (collision_map > 1).any()
+        collision_status = (collision_map > 1).any()
+        if collision_status:
+            cv2.imshow("collision_map", collision_map * 255)
+            cv2.waitKey(0)
+        return collision_status
 
     def sample(
         self, obj_id: int, n_samples: int, prior: np.array | None = None, allow_outside: bool = True,
@@ -462,7 +466,8 @@ class Region2DSampler():
         color[:, [0, 1, 2]] = color[:, [2, 1, 0]]  # convert to BGR
         # convert to image
         img = np.zeros((self.grid_size[0], self.grid_size[1], 3), dtype=np.uint8)
-        img[pcd_np[:, 0], pcd_np[:, 1], :] = color
+        if color.shape[0] != 0:
+            img[pcd_np[:, 0], pcd_np[:, 1], :] = color
         return img
 
     def visualize(self, **kwargs):

@@ -220,7 +220,6 @@ class Node(object):
             pattern_obj for pattern_obj in pattern_objs
             if (pattern_obj != obj_id) and (pattern_obj not in objs_away_from_goal)
         ]  # pattern objects at goal
-        # FIXME: this could be a problem here, because there is an offset
         sampled_obj_poses_pix = {
             obj: region._world2pix(object_states[obj][:3] + region.objects[obj].pos_offset)
             for obj in objs_at_goal}
@@ -238,7 +237,13 @@ class Node(object):
             # cv2.waitKey(0)
             # the prior object is too close to the boundary so that no sampling is possible
             if np.sum(prior) <= 0:
-                obs = self.rng.choice([obj for obj in sample_data.obj_ids if obj != obj_id])
+                leaf_nodes = self.obj_support_tree.leaves
+                leaf_objs = set([n.name for n in leaf_nodes])
+                sampled_objs = set(list(sampled_obj_poses_pix.keys()))
+                graspable_sampled_objs = sampled_objs.intersection(leaf_objs)
+                if len(graspable_sampled_objs) == 0:
+                    graspable_sampled_objs = leaf_objs
+                obs = self.rng.choice(list(graspable_sampled_objs))
                 return False, obs, (obj_id, None), 0
             if self.is_virtual:
                 # scene is virtual, so don't need to consider other objects
@@ -280,7 +285,6 @@ class Node(object):
         else:
             obs_id = None
         action = (obj_id, valid_pose)
-
         return success, obs_id, action, sample_quality
 
     def semantic_segmentation(self, region: Region2DSampler):
