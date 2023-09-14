@@ -290,6 +290,7 @@ class CirclePattern(Pattern):
         segments = len(obj_ids) if len(obj_ids) % 2 == 0 else len(obj_ids) + 1
 
         block_vis = False
+        enable_vis = False
         if len(rel_obj_ids) == 0:
             if len(obj_ids) == 0:
                 # FIXME: Currently, this doesn't support generate proper angle
@@ -337,7 +338,7 @@ class CirclePattern(Pattern):
             angle = - np.pi / 2.0 + angle_circle
             center_xs = [center_x]
             center_ys = [center_y]
-        if not block_vis:
+        if not block_vis and enable_vis:
             vis_prior = prior.copy()
             for (center_x, center_y) in zip(center_xs, center_ys):
                 cv2.circle(vis_prior, (int(center_x), int(center_y)), int(radius), 1.0, 1)

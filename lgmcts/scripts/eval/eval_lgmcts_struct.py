@@ -87,7 +87,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     end = len(h5_folders)
     mcts_success_result = dict()
     sformer_success_result = dict()
-    h5_folders = ['data00502894.h5']
+    h5_folders = ['data00553435.h5']
     failures = []
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
@@ -106,7 +106,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 obj_pcd = o3d.geometry.PointCloud()
                 obj_pcd.points = o3d.utility.Vector3dVector(xyz-obj_pc_center)
                 obj_pcd.colors = o3d.utility.Vector3dVector(color)
-                # obj_pc_centers.append(torch.mean(xyz, dim=0).numpy())
                 pcd_list.append(obj_pcd)
         name_ids = None
         goals = []
@@ -122,12 +121,11 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             texture_mapping = pickle.load(f)
         with open(f"{data_path}/{h5_folder}/goal.pkl", "rb") as f:
             goals.append(pickle.load(f))
-        with open(f"{data_path}/{h5_folder}/goal_pose_0.pkl", "rb") as f:
-            goal_pose_sformer = pickle.load(f)
-        with open(f"{data_path}/{h5_folder}/current_pose_0.pkl", "rb") as f:
-            curr_pose_sformer = pickle.load(f)
-
         if use_sformer_result:
+            with open(f"{data_path}/{h5_folder}/goal_pose_0.pkl", "rb") as f:
+                goal_pose_sformer = pickle.load(f)
+            with open(f"{data_path}/{h5_folder}/current_pose_0.pkl", "rb") as f:
+                curr_pose_sformer = pickle.load(f)
             for index, id in enumerate(goals[0]["obj_ids"]):
                 sformer_action_list.append({"obj_id": id, "old_pose": curr_pose_sformer[index], "new_pose": goal_pose_sformer[index]})
 
@@ -140,9 +138,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         if debug:
             region_sampler.visualize()
         init_objects_poses = region_sampler.get_object_poses()
-        obj_id_reverse_mapping = {}
-        for name_id in name_ids:
-            obj_id_reverse_mapping[name_id[1]] = {"obj_name": name_id[0], "texture_name": texture_mapping[name_id[0]]}
         sampled_ids = []
         L = []
         for goal in goals:
@@ -162,12 +157,14 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 sample_data = SampleData(goal_pattern, goal_obj_id, goal["obj_ids"], {}, sample_info)
                 L.append(sample_data)
                 sampled_ids.append(goal_obj_id)
-
+        print(region_sampler.check_collision())
+        region_sampler.visualize()
+        region_sampler.visualize_3d()
         # Step 3. generate & exectue plan
         check_goal_idx = 0
         sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
         if not use_sformer_result:
-            action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=1, is_virtual=True)
+            action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=1, is_virtual=False)
         else:
             action_list = sformer_action_list  # Checking SFORMER action list
         for entry in action_list:
@@ -255,8 +252,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     debug = False
-    args.method = "sformer"
+    args.method = "mcts"
+    pattern = "circle"
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    args.data_path = os.path.join(root_path, "output/eval_single_pattern/circle-pcd-objs")
-    args.res_path = os.path.join(root_path, "output/eval_single_pattern/res-circle-pcd-objs")
+    args.data_path = os.path.join(root_path, f"output/eval_single_pattern/{pattern}-pcd-objs")
+    args.res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{pattern}-pcd-objs")
     eval(args.data_path, args.res_path, args.method, args.mask_mode, args.n_samples, debug, args.start, args.end)
