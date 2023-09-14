@@ -89,7 +89,7 @@ class LinePattern(Pattern):
         scale_max = PATTERN_CONSTANTS["line"]["line_len"]["M"][0]
         scale_min = PATTERN_CONSTANTS["line"]["line_len"]["M"][1]
         scale = rng.random() * (scale_max - scale_min) + scale_min
-        enable_vis = False
+        enable_vis = True
         block_vis = False
 
         if len(rel_obj_ids) == 0:
@@ -126,11 +126,16 @@ class LinePattern(Pattern):
                 cv2.line(prior, (x0, 0), (x0, height), 1.0, thickness)
                 angle = np.pi / 2.0
         else:
+            rel_obj_poses_pix = np.vstack(rel_obj_poses_pix)
             # if more than one object is sampled, we generate a line based on the objects
-            x0 = rel_obj_poses_pix[0][1]
-            y0 = rel_obj_poses_pix[0][0]
-            x1 = rel_obj_poses_pix[1][1]
-            y1 = rel_obj_poses_pix[1][0]
+            dist_mat = np.linalg.norm(rel_obj_poses_pix[:, :2] - rel_obj_poses_pix[:, None, :2], axis=-1)
+            max_idx = np.argmax(dist_mat)
+            max_idx = np.unravel_index(max_idx, dist_mat.shape)
+            lo_idx, hi_idx = max_idx[0], max_idx[1]  # the two furthest points
+            x0 = rel_obj_poses_pix[lo_idx][1]
+            y0 = rel_obj_poses_pix[lo_idx][0]
+            x1 = rel_obj_poses_pix[hi_idx][1]
+            y1 = rel_obj_poses_pix[hi_idx][0]
             angle = math.atan2(y1 - y0, x1 - x0)
             cls.draw_line(prior, x0, y0, x1, y1, thickness)
 

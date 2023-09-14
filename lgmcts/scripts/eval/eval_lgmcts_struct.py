@@ -59,7 +59,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     use_sformer_result = False
     mcts_success_result = dict()
     sformer_success_result = dict()
-    h5_folders = ['data00753135.h5']
+    h5_folders = ['data00702857.h5']
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
         print("h5 file:", h5_folder)
@@ -87,8 +87,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         sformer_action_list = []
         obj_poses_pattern = []
 
-        # data00717669
-        # data00700001.h5
         with open(f"{data_path}/{h5_folder}/name_ids.pkl", "rb") as f:
             name_ids = pickle.load(f)
         texture_mapping = None
