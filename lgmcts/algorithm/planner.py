@@ -10,6 +10,7 @@ from lgmcts.algorithm.mcts import MCTS
 
 class SamplingPlanner:
     """Sequential sampling, we provide a set of goals, and sample them one by one"""
+
     def __init__(self, sampler: Region2DSampler, **kwargs):
         self.sampler = sampler
         self.n_samples = kwargs.get("n_samples", 5)
@@ -46,8 +47,8 @@ class SamplingPlanner:
             # the prior is where the joint sampling happens
             if sample_data.pattern in prior_dict:
                 prior, pattern_info = prior_dict[sample_data.pattern].gen_prior(
-                    self.sampler.grid_size, self.sampler.rng, 
-                    obj_id=sample_data.obj_id, 
+                    self.sampler.grid_size, self.sampler.rng,
+                    obj_id=sample_data.obj_id,
                     obj_ids=sample_data.obj_ids,
                     obj_poses_pix=sampled_obj_poses_pix,
                     sample_info=sample_data.sample_info,)
@@ -82,6 +83,7 @@ class SamplingPlanner:
         seed = kwargs.get("seed", 0)  # update seed
         prior_dict = kwargs.get("prior_dict", {})
         max_iter = kwargs.get("max_iter", 10000)
+        is_virtual = kwargs.get("is_virtual", False)
         sampled_obj_poses_pix = {}  # keep track of sampled object poses
         action_list = []
         cur_obj_poses = self.sampler.get_object_poses()
@@ -92,6 +94,7 @@ class SamplingPlanner:
             obj_support_tree=self.sampler.obj_support_tree,
             prior_dict=prior_dict,
             n_samples=self.n_samples,
+            is_virtual=is_virtual,
             verbose=True,
             seed=seed,
         )

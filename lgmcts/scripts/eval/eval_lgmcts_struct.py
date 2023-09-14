@@ -59,7 +59,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     use_sformer_result = False
     mcts_success_result = dict()
     sformer_success_result = dict()
-    h5_folders = ['data00702857.h5']
+    h5_folders = ['data00722266.h5']
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
         print("h5 file:", h5_folder)
@@ -106,12 +106,12 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         # init region_sampler
         resolution = 0.01
         pix_padding = 1  # padding for clearance
-        bounds = np.array([[-0.8, 0.8], [-1.0, 1.0], [-0.5, 1.0]])  # (height, width, depth)
+        bounds = np.array([[-1.0, 1.0], [-1.0, 1.0], [-0.5, 1.0]])  # (height, width, depth)
         region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
         region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="convex_hull")
         if debug:
             region_sampler.visualize()
-            region_sampler.visualize_3d(show_origin=True, obj_center=obj_pc_center)
+            # region_sampler.visualize_3d(show_origin=True, obj_center=obj_pc_center)
         init_objects_poses = region_sampler.get_object_poses()
         obj_id_reverse_mapping = {}
         for name_id in name_ids:
@@ -140,7 +140,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         check_goal_idx = 0
         sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
         if not use_sformer_result:
-            action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=20000, seed=0)
+            action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=1, is_virtual=True)
         else:
             action_list = sformer_action_list  # Checking SFORMER action list
         for entry in action_list:
@@ -164,12 +164,16 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                     region_sampler.visualize()
         # region_sampler.visualize_3d(show_origin=True)
         # Step 4. Calculate Success Rate
-        obj_poses_pattern = np.vstack(obj_poses_pattern)
-        pattern_info = {"threshold": 0.05}
-        pattern_status = PATTERN_DICT[goals[check_goal_idx]["type"].split(
-            ":")[-1]].check(obj_poses_pattern=obj_poses_pattern, pattern_info=pattern_info)
-        not_collision = not region_sampler.check_collision(goals[check_goal_idx]["obj_ids"])
-        status = pattern_status and not_collision
+        if len(obj_poses_pattern) == 0:
+            status = False
+            print("No solution found!")
+        else:
+            obj_poses_pattern = np.vstack(obj_poses_pattern)
+            pattern_info = {"threshold": 0.05}
+            pattern_status = PATTERN_DICT[goals[check_goal_idx]["type"].split(
+                ":")[-1]].check(obj_poses_pattern=obj_poses_pattern, pattern_info=pattern_info)
+            not_collision = not region_sampler.check_collision(goals[check_goal_idx]["obj_ids"])
+            status = pattern_status and not_collision
         if status:
             if use_sformer_result:
                 sformer_success_result[h5_folder] = 1
@@ -213,7 +217,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     debug = True
+    pattern = "line"
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    data_path = os.path.join(root_path, "output/eval_single_pattern/line-pcd-objs")
-    res_path = os.path.join(root_path, "output/eval_single_pattern/res-line-pcd-objs")
+    data_path = os.path.join(root_path, f"output/eval_single_pattern/{pattern}-pcd-objs")
+    res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{pattern}-pcd-objs")
     eval(data_path, res_path, args.method, args.mask_mode, args.n_samples, debug, args.start, args.end)
