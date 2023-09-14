@@ -121,13 +121,22 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             texture_mapping = pickle.load(f)
         with open(f"{data_path}/{h5_folder}/goal.pkl", "rb") as f:
             goals.append(pickle.load(f))
+        if "-diffusion" in data_path:
+            with open(f"{data_path}/{h5_folder}/goal_pose.pkl", "rb") as f:
+                goal_pose_sformer = pickle.load(f)
+                assert len(goal_pose_sformer) == 8
+                goal_pose_sformer = goal_pose_sformer[1:] # First pose is the pose of the structure frame
+        else:
+            with open(f"{data_path}/{h5_folder}/goal_pose_0.pkl", "rb") as f:
+                goal_pose_sformer = pickle.load(f)
+            
         if use_sformer_result:
             with open(f"{data_path}/{h5_folder}/goal_pose_0.pkl", "rb") as f:
                 goal_pose_sformer = pickle.load(f)
             with open(f"{data_path}/{h5_folder}/current_pose_0.pkl", "rb") as f:
                 curr_pose_sformer = pickle.load(f)
             for index, id in enumerate(goals[0]["obj_ids"]):
-                sformer_action_list.append({"obj_id": id, "old_pose": curr_pose_sformer[index], "new_pose": goal_pose_sformer[index]})
+                sformer_action_list.append({"obj_id": id, "new_pose": goal_pose_sformer[index]})
 
         # init region_sampler
         resolution = 0.01
