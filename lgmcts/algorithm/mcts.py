@@ -187,8 +187,6 @@ class Node(object):
                     buffer_sampler
                 )
                 solved_sampler_obj_id = float('inf')
-        if (action == (11, 0)) and (moved_obj == 13):
-            print('here')
         return action, moved_obj, new_position, solved_sampler_obj_id, solution_quality
 
     def sampling_function(
