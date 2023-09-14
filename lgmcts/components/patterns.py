@@ -89,8 +89,9 @@ class LinePattern(Pattern):
         scale_max = PATTERN_CONSTANTS["line"]["line_len"]["M"][0]
         scale_min = PATTERN_CONSTANTS["line"]["line_len"]["M"][1]
         scale = rng.random() * (scale_max - scale_min) + scale_min
-
+        enable_vis = False
         block_vis = False
+
         if len(rel_obj_ids) == 0:
             if len(obj_ids) == 0:
                 # pure pattern
@@ -134,7 +135,7 @@ class LinePattern(Pattern):
             cls.draw_line(prior, x0, y0, x1, y1, thickness)
 
         # Debug
-        if not block_vis:
+        if enable_vis and not block_vis:
             vis_prior = prior.copy()
             for id, rel_pix in zip(rel_obj_ids, rel_obj_poses_pix):
                 cv2.circle(vis_prior, (rel_pix[1], rel_pix[0]), 5, 1.0, 1)
