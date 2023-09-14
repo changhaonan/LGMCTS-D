@@ -59,7 +59,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     use_sformer_result = False
     mcts_success_result = dict()
     sformer_success_result = dict()
-    h5_folders = ['data00751124.h5', 'data00742126.h5']
+    h5_folders = ['data00758655.h5']
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
         print("h5 file:", h5_folder)
@@ -110,7 +110,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         pix_padding = 1  # padding for clearance
         bounds = np.array([[-0.8, 0.8], [-1.0, 1.0], [-0.5, 1.0]])  # (height, width, depth)
         region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
-        region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="raw_mask")
+        region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="convex_hull")
         if debug:
             region_sampler.visualize()
             region_sampler.visualize_3d(show_origin=True, obj_center=obj_pc_center)

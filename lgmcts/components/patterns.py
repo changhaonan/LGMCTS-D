@@ -334,17 +334,18 @@ class CirclePattern(Pattern):
         return prior, pattern_info
 
     @classmethod
-    def check(cls, obj_poses: dict[int, np.ndarray], **kwargs):
+    def check(cls, obj_poses: dict[int, np.ndarray] | None = None, obj_poses_pattern: np.ndarray | None = None, **kwargs):
         """Check if obj poses meet a circle pattern"""
-        assert "pattern_info" in kwargs, "Pattern info must be provided!"
         pattern_info = kwargs["pattern_info"]
 
         # Check if p2c distance exceeds threshold
         threshold = pattern_info.get("threshold", 0.1)
         # assemble obj_poses
-        obj_poses_pattern = []
-        for obj_id in pattern_info["obj_ids"]:
-            obj_poses_pattern.append(obj_poses[obj_id][:3])
+        if obj_poses_pattern is None:
+            obj_poses_pattern = []
+            for obj_id in pattern_info["obj_ids"]:
+                obj_poses_pattern.append(obj_poses[obj_id][:3])
+            obj_poses_pattern = np.vstack(obj_poses_pattern)
 
         if len(obj_poses_pattern) < 4:
             return True

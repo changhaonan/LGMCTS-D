@@ -157,11 +157,11 @@ class Region2DSampler():
         pos_ref: Union[None, np.ndarray] = None,
         name: str | None = None,
         color=(127, 127, 127),
-        mask_mode: str = "sphere"
+        mask_mode: str = "convex_hull"
     ):
         """Add object to scene, create mask from points
         Args:
-            mask_mode: "raw_mask", "convex_hull". "sphere" is to provide clearance.
+            mask_mode: "raw_mask", "convex_hull". "convex_hull" is to provide clearance.
         """
         assert points is not None, "points should not be None"
         if pos_ref is None:
@@ -189,6 +189,9 @@ class Region2DSampler():
             cv2.fillConvexPoly(mask, pixels, 1,)
         elif mask_mode == "raw_mask":
             mask[pixels[:, 0], pixels[:, 1]] = 1
+        # visualize
+        # cv2.imshow("mask", mask * 255)
+        # cv2.waitKey(0)
         height = points_pix[:, 2].max() - points_pix[:, 2].min()
         mask_center = self._world2pix(pos_ref)  # use center of pcd as mask center
         pos_offset = np.zeros(3, np.float32)
@@ -346,7 +349,11 @@ class Region2DSampler():
         else:
             raise ValueError(f"Unknown mode {mode}")
         free_space = cv2.erode(occupancy_map, kernel, iterations=1)
-
+        if free_space.max() >= 1:
+            free_space[free_space > 0] = 1  # clip to 1
+            # cv2.imshow("free_space", free_space * 255)
+            # cv2.waitKey(0)
+    
         # ## DEBUG
         # scene_image = self.project_pcd(self.scene_pcd)
         # cv2.imshow("scene_image", scene_image)
@@ -511,7 +518,7 @@ class Region2DSampler():
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def visualize_3d(self, show_origin: bool = False, obj_center = None):
+    def visualize_3d(self, show_origin: bool = False, obj_center=None):
         """Visualize the region and obj bbox in 3D"""
         vis_list = []
         if self.scene_pcd is not None:
