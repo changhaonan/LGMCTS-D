@@ -82,6 +82,7 @@ class SamplingPlanner:
         """
         seed = kwargs.get("seed", 0)  # update seed
         prior_dict = kwargs.get("prior_dict", {})
+        reward_mode = kwargs.get('reward_mode', 'same')
         max_iter = kwargs.get("max_iter", 10000)
         is_virtual = kwargs.get("is_virtual", False)
         sampled_obj_poses_pix = {}  # keep track of sampled object poses
@@ -94,6 +95,7 @@ class SamplingPlanner:
             obj_support_tree=self.sampler.obj_support_tree,
             prior_dict=prior_dict,
             n_samples=self.n_samples,
+            reward_mode=reward_mode,
             is_virtual=is_virtual,
             verbose=True,
             seed=seed,

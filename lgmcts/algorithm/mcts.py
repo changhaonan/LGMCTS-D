@@ -44,6 +44,8 @@ class Node(object):
         num_sampling=1,
         obj_support_tree: anytree.Node = None,
         prior_dict={},
+        reward_mode='same',
+        reward_dict={},
         is_virtual=False,
         verbose=False,
         rng=None
@@ -66,6 +68,8 @@ class Node(object):
         self.num_sampling = num_sampling
         self.obj_support_tree = obj_support_tree
         self.prior_dict = prior_dict
+        self.reward_mode = reward_mode
+        self.reward_dict = reward_dict
         self.is_virtual = is_virtual
         self.verbose = verbose
         self.rng = rng
@@ -132,7 +136,9 @@ class Node(object):
             moved_obj: moved obj (obj to goal or obstacle), or None
             new_position: pose, 
             solved_sampler_obj_id: sampler_id or float('inf')
+            solution_quality: float, the quality of solution, 0 if no solution
         """
+        solution_quality = 0
         # check graspability
         found_node = anytree.search.find(
             self.obj_support_tree, lambda node: node.name == action[0]
@@ -144,20 +150,20 @@ class Node(object):
             moved_obj = self.rng.choice(leaf_nodes).name
             # add a sampler to move the obstacle away
             buffer_sampler = SampleData(
-                pattern="line",
-                obj_id=moved_obj,
-                obj_ids=[moved_obj],
-                obj_poses_pix={})
-            success, _, (moved_obj, new_position) = self.sampling_function(
+                pattern="line", 
+                obj_id = moved_obj, 
+                obj_ids = [moved_obj], 
+                obj_poses_pix = {})
+            success, _, (moved_obj, new_position),_ = self.sampling_function(
                 self.region_sampler,
                 self.object_states,
                 buffer_sampler
             )
             solved_sampler_obj_id = float('inf')
-            return action, moved_obj, new_position, solved_sampler_obj_id
-
+            return action, moved_obj, new_position, solved_sampler_obj_id, solution_quality
+            
         sampler = self.sampler_dict[action[0]]
-        success, obs, (moved_obj, new_position) = self.sampling_function(
+        success, obs, (moved_obj, new_position),solution_quality = self.sampling_function(
             self.region_sampler,
             self.object_states,
             sampler,
@@ -171,17 +177,17 @@ class Node(object):
             else:
                 # add a sampler to move the obstacle away
                 buffer_sampler = SampleData(
-                    pattern="line",
-                    obj_id=obs,
-                    obj_ids=[obs],
-                    obj_poses_pix={})
-                success, _, (moved_obj, new_position) = self.sampling_function(
+                    pattern="line", 
+                    obj_id = obs, 
+                    obj_ids = [obs], 
+                    obj_poses_pix = {})
+                success, _, (moved_obj, new_position),_ = self.sampling_function(
                     self.region_sampler,
                     self.object_states,
                     buffer_sampler
                 )
                 solved_sampler_obj_id = float('inf')
-        return action, moved_obj, new_position, solved_sampler_obj_id
+        return action, moved_obj, new_position, solved_sampler_obj_id, solution_quality
 
     def sampling_function(
         self,
@@ -197,8 +203,11 @@ class Node(object):
         Params:
             RegionSampler, obj_name, origin_name, direction
         Returns: 
-            success, obs_name, action:(obj_name, new_pos)
+            success, obs_name, action:(obj_name, new_pos), solution_quality
         """
+        # measure the sampling quality, and add it to the reward
+        sample_quality = 0
+
         obj_id = sample_data.obj_id
 
         # update region
@@ -230,19 +239,22 @@ class Node(object):
             # the prior object is too close to the boundary so that no sampling is possible
             if np.sum(prior) <= 0:
                 obs = self.rng.choice([obj for obj in sample_data.obj_ids if obj != obj_id])
-                return False, obs, (obj_id, None)
+                return False, obs, (obj_id, None), 0
             if self.is_virtual:
                 # scene is virtual, so don't need to consider other objects
                 region.set_objects_as_virtual(objs_away_from_goal)
             # DEBUG
             # region.visualize(block=False)
             # sample
-            valid_pose, _, samples_status, _ = region.sample(sample_data.obj_id, 1, prior, allow_outside=False, pattern_info=pattern_info)
+            valid_pose, _, samples_status, sample_info = region.sample(sample_data.obj_id, 1, prior, allow_outside=False, pattern_info=pattern_info)
             if self.is_virtual:
                 # reset to real objects
                 region.set_objects_as_real(objs_away_from_goal)
             if valid_pose.shape[0] > 0:
                 valid_pose = valid_pose.reshape(-1)
+                
+                if 'sample_probs' in sample_info:
+                    sample_quality = sample_info['sample_probs']*sample_info['free_volume']/np.max(prior)
         else:
             raise NotImplementedError
 
@@ -269,7 +281,7 @@ class Node(object):
             obs_id = None
         action = (obj_id, valid_pose)
 
-        return success, obs_id, action
+        return success, obs_id, action, sample_quality
 
     def semantic_segmentation(self, region: Region2DSampler):
         # TODO: Merge this part into sampler
@@ -305,6 +317,7 @@ class MCTS(object):
         UCB_scalar=1.0,
         obj_support_tree: anytree.Node = None,
         prior_dict={},
+        reward_mode = 'same', # 'same' or 'prop'
         n_samples=1,
         is_virtual=False,
         verbose: bool = False,
@@ -315,7 +328,8 @@ class MCTS(object):
             "UCB_scalar": UCB_scalar,
             "prior_dict": prior_dict,
             "rng": self.rng,
-            "num_sampling": n_samples
+            "num_sampling" : n_samples,
+            'reward_mode': reward_mode
         }
         self.region_sampler = region_sampler
         self.sampler_dict = {s.obj_id: s for s in L}
@@ -332,6 +346,7 @@ class MCTS(object):
             action_from_parent=None,
             updated_obj_id=None,
             obj_support_tree=self.obj_support_tree,
+            reward_dict={},
             is_virtual=is_virtual,
             verbose=verbose,
             **self.settings,
@@ -356,6 +371,7 @@ class MCTS(object):
             action_from_parent=None,
             updated_obj_id=None,
             obj_support_tree=self.obj_support_tree,
+            reward_dict={},
             is_virtual=self.is_virtual,
             verbose=self.verbose,
             **self.settings,
@@ -375,15 +391,16 @@ class MCTS(object):
             current_node = self.selection()
             # an action in MCTS is represented by (sampler_id, trail_id),
             # the index is according to L and the num_sample children list
-            # TODO: do K sampling at the same time @KAI
-            action, moved_obj, new_position, solved_sampler_obj_id = current_node.expansion()
-            if (new_position.shape[0] > 0):  # go to a new state
+            #TODO: do K sampling at the same time @KAI
+            action, moved_obj, new_position, solved_sampler_obj_id, solution_quality = current_node.expansion()
+            if (new_position.shape[0] > 0): # go to a new state
                 new_node = self.move(
                     num_iter,
                     action,
                     moved_obj,
                     new_position,
                     solved_sampler_obj_id,
+                    solution_quality,
                     current_node,
                 )
             else:  # stay in the same state
@@ -396,6 +413,7 @@ class MCTS(object):
                     action_from_parent=action,
                     updated_obj_id=moved_obj,
                     obj_support_tree=copy_tree(current_node.obj_support_tree),
+                    reward_dict={k:v for k,v in current_node.reward_dict.items()},
                     is_virtual=self.is_virtual,
                     verbose=self.verbose,
                     **self.settings,
@@ -434,6 +452,7 @@ class MCTS(object):
         obj,
         target,
         solved_sampler_obj_id: Union[int, None],
+        solution_quality,
         current_node: Node
     ):
         """move the object to the a position and generate new node"""
@@ -442,15 +461,22 @@ class MCTS(object):
         }
         # print(f"id: {node_id}, obj_states: {new_object_states}, target: {target}")
 
-        new_sampler_dict = {obj_id: sampler for obj_id, sampler in current_node.sampler_dict.items() if obj_id != solved_sampler_obj_id}
+        new_sampler_dict = {obj_id:sampler for obj_id, sampler in current_node.sampler_dict.items() if obj_id != solved_sampler_obj_id}
+        
+        # update reward dict
+        new_reward_dict = {obj_id:reward for obj_id, reward in current_node.reward_dict.items()}
+        if solved_sampler_obj_id != float("inf"):
+            new_reward_dict[solved_sampler_obj_id] = solution_quality
 
-        # If we are moving an obstacle, the moved object may be an object moved to goal,
+        # If we are moving an obstacle, the moved object may be an object moved to goal, 
         # we need to retrive the sampler to indicate that this sampler needs to be solved again
         if solved_sampler_obj_id == float("inf"):
             backtracked_node = current_node
             while backtracked_node is not None:
                 if obj in backtracked_node.sampler_dict.keys():
                     new_sampler_dict[obj] = backtracked_node.sampler_dict[obj]
+                    if obj in new_reward_dict:
+                        del new_reward_dict[obj]
                     break
                 backtracked_node = backtracked_node.parent
 
@@ -473,6 +499,7 @@ class MCTS(object):
             action_from_parent=action,
             updated_obj_id=obj,
             obj_support_tree=new_tree,
+            reward_dict=new_reward_dict,
             is_virtual=self.is_virtual,
             verbose=self.verbose,
             **self.settings,
@@ -481,7 +508,10 @@ class MCTS(object):
 
     def reward_detection(self, node: Node):
         """reward detection"""
-        return len(self.sampler_dict) - len(node.sampler_dict)
+        if self.settings['reward_mode'] == 'same':
+            return len(self.sampler_dict) - len(node.sampler_dict)
+        elif self.settings['reward_mode'] == 'prop':
+            return sum(list(0.5+0.5*node.reward_dict.values()))
 
     def back_propagation(self, node: Node, reward):
         """back propagation in MCTS"""

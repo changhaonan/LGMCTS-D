@@ -213,6 +213,10 @@ class Region2DSampler():
         x_axis = eig_vec[:, np.argmax(eig_val)]
         return x_axis
 
+    def get_object_pcd(self, obj_id: int) -> o3d.geometry.PointCloud:
+        """Get object point cloud"""
+        return o3d.geometry.PointCloud(o3d.utility.Vector3dVector(self.objects[obj_id].points))
+
     def get_object_pose(self, obj_id: int) -> np.ndarray:
         """Get object position"""
         if obj_id in self.objects:
@@ -610,7 +614,7 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         self.load_from_pcds(obj_pcd_list, name_ids, mask_mode, **kwargs)
         self.obj_support_tree = env.obj_support_tree
 
-    def load_from_pcds(self, pcd_list: list, name_ids: list, mask_mode: str, **kwargs):
+    def load_from_pcds(self, pcd_list: list, name_ids: list = [], mask_mode: str = "convex_hull", **kwargs):
         """Load from pcd (in open3d representation) list"""
         # get scene_pcd
         self.scene_pcd = o3d.geometry.PointCloud()
@@ -632,6 +636,8 @@ class Region2DSamplerLGMCTS(Region2DSampler):
             pcd_np_list = [np.asarray(pcd.points) for pcd in pcd_list]
             color_list = [np.asarray(pcd.colors) for pcd in pcd_list]
 
+        if name_ids == []:
+            name_ids = [(f"obj_{i}", i) for i in range(len(pcd_np_list))]
         for i, (obj_pcd, obj_color, name_id) in enumerate(zip(pcd_np_list, color_list, name_ids)):
             name, id = name_id
             obj_pose_max = obj_pcd.max(axis=0)

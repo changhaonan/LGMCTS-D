@@ -96,10 +96,9 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                         sample_info = {"spatial_label": goal["spatial_label"], "ordered": True}
                 sample_data = SampleData(goal_pattern, goal_obj_id, goal["obj_ids"], {}, sample_info)
                 L.append(sample_data)
-
-        # Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
-
+        
+        ## Step 3. generate & exectue plan
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, reward_mode='prop', debug=debug)
         env.prepare()
         for step in action_list:
             # assemble action
