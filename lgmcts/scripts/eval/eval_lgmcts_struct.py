@@ -56,7 +56,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     natsorted(h5_folders)
     sformer_success_rate = []
     mcts_success_rate = []
-    use_sformer_result = False
+    use_sformer_result = True
     mcts_success_result = dict()
     sformer_success_result = dict()
     h5_folders = ['data00722266.h5']
