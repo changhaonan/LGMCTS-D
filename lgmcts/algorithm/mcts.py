@@ -239,7 +239,7 @@ class Node(object):
             # the prior object is too close to the boundary so that no sampling is possible
             if np.sum(prior) <= 0:
                 obs = self.rng.choice([obj for obj in sample_data.obj_ids if obj != obj_id])
-                return False, obs, (obj_id, None)
+                return False, obs, (obj_id, None), 0
             if self.is_virtual:
                 # scene is virtual, so don't need to consider other objects
                 region.set_objects_as_virtual(objs_away_from_goal)
