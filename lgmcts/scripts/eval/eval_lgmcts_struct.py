@@ -59,7 +59,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     use_sformer_result = False
     mcts_success_result = dict()
     sformer_success_result = dict()
-    h5_folders = ['data00758655.h5']
+    h5_folders = ['data00753135.h5']
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
         print("h5 file:", h5_folder)
@@ -139,6 +139,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 sampled_ids.append(goal_obj_id)
 
         # Step 3. generate & exectue plan
+        check_goal_idx = 0
         sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
         if not use_sformer_result:
             action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=20000, seed=0)
@@ -148,7 +149,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             if use_sformer_result:
                 obj_poses_pattern.append(matrix_to_xyz_quaternion(entry["new_pose"]))
             else:
-                if entry["obj_id"] in goals[0]["obj_ids"]:
+                if entry["obj_id"] in goals[check_goal_idx]["obj_ids"]:
                     obj_poses_pattern.append(entry["new_pose"])
         # print("Plan finished!")
         region_sampler.set_object_poses(init_objects_poses)
@@ -167,8 +168,9 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         # Step 4. Calculate Success Rate
         obj_poses_pattern = np.vstack(obj_poses_pattern)
         pattern_info = {"threshold": 0.05}
-        pattern_status = PATTERN_DICT[goals[0]["type"].split(":")[-1]].check(obj_poses_pattern=obj_poses_pattern, pattern_info=pattern_info)
-        not_collision = not region_sampler.check_collision()
+        pattern_status = PATTERN_DICT[goals[check_goal_idx]["type"].split(
+            ":")[-1]].check(obj_poses_pattern=obj_poses_pattern, pattern_info=pattern_info)
+        not_collision = not region_sampler.check_collision(goals[check_goal_idx]["obj_ids"])
         status = pattern_status and not_collision
         if status:
             if use_sformer_result:

@@ -168,17 +168,16 @@ class LinePattern(Pattern):
             for obj_id in pattern_info["obj_ids"]:
                 obj_poses_pattern.append(obj_poses[obj_id][:3])
             obj_poses_pattern = np.vstack(obj_poses_pattern)
-        # difference from line
-        # approximate the line using least square
-        x = obj_poses_pattern[:, 0]
-        if np.max(x) - np.min(x) < threshold:
-            # vertical line
-            return True
-        y = obj_poses_pattern[:, 1]
-        A = np.vstack([x, np.ones(len(x))]).T
-        k, c = np.linalg.lstsq(A, y, rcond=None)[0]
-        # calculate the distance
-        dists = cls.dist_p2l(obj_poses_pattern[:, :2], np.array([0.0, c]), np.array([1.0, k]))
+
+        # get the up most and low most points first
+        lo_idx = np.argmax(obj_poses_pattern[:, 1], axis=-1)
+        hi_idx = np.argmin(obj_poses_pattern[:, 1], axis=-1)
+        lo_pose = obj_poses_pattern[lo_idx, :2]
+        hi_pose = obj_poses_pattern[hi_idx, :2]
+        k = (hi_pose - lo_pose) / np.linalg.norm(hi_pose - lo_pose)
+        o = hi_pose
+        #
+        dists = cls.dist_p2l(obj_poses_pattern[:, :2], o[None, :], k[None, :])
         status = not (np.max(dists) > threshold)
         if not status:
             print(f"Line pattern check failed!, dist: {dists}")
@@ -347,7 +346,7 @@ class CirclePattern(Pattern):
                 obj_poses_pattern.append(obj_poses[obj_id][:3])
             obj_poses_pattern = np.vstack(obj_poses_pattern)
 
-        if len(obj_poses_pattern) < 4:
+        if len(obj_poses_pattern) <= 3:
             return True
         else:
             # Calculate distances from object poses to the circle's center
@@ -454,17 +453,19 @@ class TowerPattern(Pattern):
         return prior, pattern_info
 
     @classmethod
-    def check(cls, obj_poses: dict[int, np.ndarray], **kwargs):
-        assert "pattern_info" in kwargs, "Pattern info must be provided!"
+    def check(cls, obj_poses: dict[int, np.ndarray] | None = None, obj_poses_pattern: np.ndarray | None = None, **kwargs):
+        """Check if obj poses meet a circle pattern"""
         pattern_info = kwargs["pattern_info"]
-        # Check if distance exceeds threshold
+
+        # Check if p2c distance exceeds threshold
         threshold = pattern_info.get("threshold", 0.1)
         # assemble obj_poses
-        obj_poses_pattern = []
-        for obj_id in pattern_info["obj_ids"]:
-            obj_poses_pattern.append(obj_poses[obj_id][:3])
+        if obj_poses_pattern is None:
+            obj_poses_pattern = []
+            for obj_id in pattern_info["obj_ids"]:
+                obj_poses_pattern.append(obj_poses[obj_id][:3])
+            obj_poses_pattern = np.vstack(obj_poses_pattern)
 
-        obj_poses_pattern = np.vstack(obj_poses_pattern)
         dist = np.linalg.norm(obj_poses_pattern[:, :2] - obj_poses_pattern[0, :2]) / obj_poses_pattern.shape[0]
         return not (dist > threshold)
 

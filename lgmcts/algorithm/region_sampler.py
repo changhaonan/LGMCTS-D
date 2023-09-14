@@ -353,7 +353,7 @@ class Region2DSampler():
             free_space[free_space > 0] = 1  # clip to 1
             # cv2.imshow("free_space", free_space * 255)
             # cv2.waitKey(0)
-    
+
         # ## DEBUG
         # scene_image = self.project_pcd(self.scene_pcd)
         # cv2.imshow("scene_image", scene_image)
@@ -371,11 +371,12 @@ class Region2DSampler():
         # cv2.waitKey(0)
         return free_space
 
-    def check_collision(self):
+    def check_collision(self, obj_list: list[int] | None = None) -> bool:
         """Check collision"""
         collision_map = np.zeros((self.grid_size[0], self.grid_size[1], 1), dtype=np.float32)
         # objects
-        obj_list = list(self.objects.keys())
+        if obj_list is None:
+            obj_list = list(self.objects.keys())
         for obj_id, obj_data in self.objects.items():
             if obj_id in obj_list:
                 self._put_mask(
