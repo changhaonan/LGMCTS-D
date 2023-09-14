@@ -34,27 +34,29 @@ def matrix_to_xyz_quaternion(matrix):
 
     return np.array([x, y, z, q_x, q_y, q_z, q_w])
 
+
 def extract_euler_angles(M):
 
     # Assuming M is a 4x4 transformation matrix
     x, y, z = M[0:3, 3]
     # Extract the 3x3 rotation matrix
     R = M[:3, :3]
-    
+
     # Extract individual elements of the rotation matrix
     r11, r12, r13 = R[0, 0], R[0, 1], R[0, 2]
     r21, r22, r23 = R[1, 0], R[1, 1], R[1, 2]
     r31, r32, r33 = R[2, 0], R[2, 1], R[2, 2]
-    
+
     # Calculate yaw, pitch, and roll
     yaw = np.arctan2(r21, r11)
     pitch = np.arctan2(-r31, np.sqrt(r32 ** 2 + r33 ** 2))
     roll = np.arctan2(r32, r33)
-    
+
     # Convert from radians to degrees
     yaw, pitch, roll = np.degrees([yaw, pitch, roll])
-    
+
     return np.array([x, y, z, yaw, pitch, roll])
+
 
 def dist_p2l(p, o, k):
     """(Vectorized meethod) disance, point to line"""
@@ -78,14 +80,14 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     sformer_success_rate = []
     mcts_success_rate = []
     if method == "sformer":
-        use_sformer_result = True 
+        use_sformer_result = True
     else:
         use_sformer_result = False
     start = 0
     end = len(h5_folders)
     mcts_success_result = dict()
     sformer_success_result = dict()
-    # h5_folders = ['data00703777.h5']
+    h5_folders = ['data00502894.h5']
     failures = []
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
@@ -106,7 +108,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 obj_pcd.colors = o3d.utility.Vector3dVector(color)
                 # obj_pc_centers.append(torch.mean(xyz, dim=0).numpy())
                 pcd_list.append(obj_pcd)
-
         name_ids = None
         goals = []
         goal_pose_sformer = None
@@ -138,7 +139,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="convex_hull")
         if debug:
             region_sampler.visualize()
-            # region_sampler.visualize_3d(show_origin=True, obj_center=obj_pc_center)
         init_objects_poses = region_sampler.get_object_poses()
         obj_id_reverse_mapping = {}
         for name_id in name_ids:
@@ -176,20 +176,29 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             else:
                 if entry["obj_id"] in goals[check_goal_idx]["obj_ids"]:
                     obj_poses_pattern.append(entry["new_pose"])
-        # print("Plan finished!")
         region_sampler.set_object_poses(init_objects_poses)
         if debug:
             region_sampler.visualize()
+
+        result_pcd_list = []
+        name_ids = []
         for step in action_list:
             if use_sformer_result:
-                region_sampler.set_object_pose(step["obj_id"], extract_euler_angles(step["new_pose"]))
-                if debug:
-                    region_sampler.visualize()
+                pcd = region_sampler.get_object_pcd(step["obj_id"])
+                pcd = copy.deepcopy(pcd)
+                pcd.transform(step["new_pose"])
+                result_pcd_list.append(pcd)
+                name_ids.append([f"obj_{step['obj_id']}", step["obj_id"]])
             else:
                 region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
                 if debug:
                     region_sampler.visualize()
-        # region_sampler.visualize_3d(show_origin=True)
+        if use_sformer_result:
+            region_sampler.reset()
+            region_sampler.load_from_pcds(result_pcd_list, name_ids=name_ids, mask_mode="convex_hull")
+            if debug:
+                region_sampler.visualize()
+
         # Step 4. Calculate Success Rate
         obj_poses_pattern = np.vstack(obj_poses_pattern)
         pattern_info = {"threshold": 0.05}
@@ -246,7 +255,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     debug = False
+    args.method = "sformer"
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    # args.data_path = os.path.join(root_path, "output/eval_single_pattern/circle-pcd-objs")
-    # args.res_path = os.path.join(root_path, "output/eval_single_pattern/res-circle-pcd-objs")
+    args.data_path = os.path.join(root_path, "output/eval_single_pattern/circle-pcd-objs")
+    args.res_path = os.path.join(root_path, "output/eval_single_pattern/res-circle-pcd-objs")
     eval(args.data_path, args.res_path, args.method, args.mask_mode, args.n_samples, debug, args.start, args.end)

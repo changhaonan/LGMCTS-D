@@ -1,5 +1,6 @@
 """Miscellaneous utilities."""
 import cv2
+import copy
 import warnings
 import kornia
 import matplotlib
@@ -798,6 +799,26 @@ def plot_3d(title: str, points, color, block: bool = True):
     ax.set_zlabel("Z")
     plt.title(title)
     plt.show(block=block)
+
+
+def plot_pcd_o3d(pcd_list, transform_list=None, show_origin: bool = True):
+    """Plot point cloud with open3d."""
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    if show_origin:
+        vis.add_geometry(o3d.geometry.TriangleMesh.create_coordinate_frame())
+    for i, pcd in enumerate(pcd_list):
+        if isinstance(pcd, np.ndarray):
+            pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(pcd))
+        elif isinstance(pcd, o3d.geometry.PointCloud):
+            pcd = copy.deepcopy(pcd)
+        else:
+            raise TypeError("pcd must be numpy array or open3d point cloud")
+        if transform_list is not None:
+            pcd.transform(transform_list[i])
+        vis.add_geometry(pcd)
+    vis.run()
+    vis.destroy_window()
 
 
 # -----------------------------------------------------------------------------
