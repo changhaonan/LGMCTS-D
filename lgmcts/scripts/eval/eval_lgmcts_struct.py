@@ -133,12 +133,12 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         # init region_sampler
         resolution = 0.01
         pix_padding = 1  # padding for clearance
-        bounds = np.array([[-0.8, 0.8], [-1.0, 1.0], [-0.5, 1.0]])  # (height, width, depth)
+        bounds = np.array([[-1.0, 1.0], [-1.0, 1.0], [-0.5, 1.0]])  # (height, width, depth)
         region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
         region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="convex_hull")
         if debug:
             region_sampler.visualize()
-            region_sampler.visualize_3d(show_origin=True, obj_center=obj_pc_center)
+            # region_sampler.visualize_3d(show_origin=True, obj_center=obj_pc_center)
         init_objects_poses = region_sampler.get_object_poses()
         obj_id_reverse_mapping = {}
         for name_id in name_ids:
@@ -167,7 +167,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         check_goal_idx = 0
         sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
         if not use_sformer_result:
-            action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=20000, seed=0)
+            action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=1, is_virtual=True)
         else:
             action_list = sformer_action_list  # Checking SFORMER action list
         for entry in action_list:

@@ -76,6 +76,7 @@ class ObjectData:
     rot: np.ndarray = np.array([0.0, 0.0, 0.0], dtype=np.float32)  # rx, ry, rz
     collision_mask: np.ndarray = None  # TODO: currently, collision mask is not implemented
     x_axis: np.ndarray = np.array([1.0, 0.0])  # xy-axis
+    virtual: bool = False  # whether this object is set as virtual
 
 
 @dataclass
@@ -255,6 +256,16 @@ class Region2DSampler():
         for obj_id, obj_pose in obj_states.items():
             self.set_object_pose(obj_id, obj_pose, enable_vis)
 
+    def set_objects_as_virtual(self, obj_ids: list[int]) -> None:
+        """Set objects as virtual"""
+        for obj_id in obj_ids:
+            self.objects[obj_id].virtual = True
+
+    def set_objects_as_real(self, obj_ids: list[int]) -> None:
+        """Set objects as real"""
+        for obj_id in obj_ids:
+            self.objects[obj_id].virtual = False
+
     def _rotate_mask(self, mask: np.ndarray, angle: float) -> np.ndarray:
         """Rotate mask by angle w.r.t to center"""
         angle_degree = angle * 180 / math.pi
@@ -318,7 +329,7 @@ class Region2DSampler():
         if obj_list is None:
             obj_list = list(self.objects.keys())
         for obj_id, obj_data in self.objects.items():
-            if obj_id in obj_list:
+            if obj_id in obj_list and not obj_data.virtual:
                 self._put_mask(
                     mask=obj_data.mask,
                     pos=obj_data.pos,
@@ -409,7 +420,7 @@ class Region2DSampler():
         # angle here is the angle disired angle for x-axis
         raw_x_axis = self.objects[obj_id].x_axis
         raw_x_axis_angle = math.atan2(raw_x_axis[1], raw_x_axis[0])
-        angle_rot = angle_desire - raw_x_axis_angle
+        angle_rot = - raw_x_axis_angle - angle_desire
         disable_collision_check = pattern_info.get("disable_collision_check", False)
         if not disable_collision_check:
             free_space = self.get_free_space(obj_id, angle_rot, allow_outside, mode=collision_mode).astype(np.float32)  # free is 1, occupied is 0
@@ -457,6 +468,8 @@ class Region2DSampler():
 
         # draw the objects
         for obj_id, obj_data in self.objects.items():
+            if obj_data.virtual:
+                continue
             obj_color_np = np.array(obj_data.color)
             try:
                 self._put_mask(
@@ -516,8 +529,12 @@ class Region2DSampler():
 
         title = kwargs.get("title", "occpuancy-scene-overlay")
         cv2.imshow(title, img_resized)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        block = kwargs.get("block", True)
+        if block:
+            cv2.waitKey(0)
+        else:
+            cv2.waitKey(1)
+        # cv2.destroyAllWindows()
 
     def visualize_3d(self, show_origin: bool = False, obj_center=None):
         """Visualize the region and obj bbox in 3D"""

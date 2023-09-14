@@ -44,6 +44,7 @@ class Node(object):
         num_sampling=1,
         obj_support_tree: anytree.Node = None,
         prior_dict={},
+        is_virtual=False,
         verbose=False,
         rng=None
     ) -> None:
@@ -65,6 +66,7 @@ class Node(object):
         self.num_sampling = num_sampling
         self.obj_support_tree = obj_support_tree
         self.prior_dict = prior_dict
+        self.is_virtual = is_virtual
         self.verbose = verbose
         self.rng = rng
 
@@ -201,7 +203,6 @@ class Node(object):
 
         # update region
         region.set_object_poses(obj_states=object_states)
-        # region.visualize()
         # keep track of sampled object poses
         sampled_obj_poses_pix = {}
         pattern_objs = sample_data.obj_ids  # objects involved in the sampling pattern
@@ -230,8 +231,16 @@ class Node(object):
             if np.sum(prior) <= 0:
                 obs = self.rng.choice([obj for obj in sample_data.obj_ids if obj != obj_id])
                 return False, obs, (obj_id, None)
+            if self.is_virtual:
+                # scene is virtual, so don't need to consider other objects
+                region.set_objects_as_virtual(objs_away_from_goal)
+            # DEBUG
+            # region.visualize(block=False)
             # sample
             valid_pose, _, samples_status, _ = region.sample(sample_data.obj_id, 1, prior, allow_outside=False, pattern_info=pattern_info)
+            if self.is_virtual:
+                # reset to real objects
+                region.set_objects_as_real(objs_away_from_goal)
             if valid_pose.shape[0] > 0:
                 valid_pose = valid_pose.reshape(-1)
         else:
@@ -297,6 +306,7 @@ class MCTS(object):
         obj_support_tree: anytree.Node = None,
         prior_dict={},
         n_samples=1,
+        is_virtual=False,
         verbose: bool = False,
         seed=0
     ) -> None:
@@ -322,6 +332,7 @@ class MCTS(object):
             action_from_parent=None,
             updated_obj_id=None,
             obj_support_tree=self.obj_support_tree,
+            is_virtual=is_virtual,
             verbose=verbose,
             **self.settings,
         )
@@ -331,6 +342,7 @@ class MCTS(object):
         self.isfeasible = False
         self.num_iter = 0
         # config
+        self.is_virtual = is_virtual
         self.verbose = verbose
 
     def reset(self):
@@ -344,6 +356,7 @@ class MCTS(object):
             action_from_parent=None,
             updated_obj_id=None,
             obj_support_tree=self.obj_support_tree,
+            is_virtual=self.is_virtual,
             verbose=self.verbose,
             **self.settings,
         )
@@ -383,6 +396,7 @@ class MCTS(object):
                     action_from_parent=action,
                     updated_obj_id=moved_obj,
                     obj_support_tree=copy_tree(current_node.obj_support_tree),
+                    is_virtual=self.is_virtual,
                     verbose=self.verbose,
                     **self.settings,
                 )
@@ -400,7 +414,8 @@ class MCTS(object):
                 self.isfeasible = True
                 self.construct_plan(new_node)
                 return True
-
+        # if not found, construct the best plan we can get
+        self.construct_best_plan()
         # recording
         self.num_iter = num_iter
         return False
@@ -458,6 +473,7 @@ class MCTS(object):
             action_from_parent=action,
             updated_obj_id=obj,
             obj_support_tree=new_tree,
+            is_virtual=self.is_virtual,
             verbose=self.verbose,
             **self.settings,
         )
@@ -497,6 +513,22 @@ class MCTS(object):
                 )
             current_node = parent_node
         self.action_list.reverse()
+
+    def construct_best_plan(self):
+        """get the best plan"""
+        # search the node which has leaset left samplers
+        best_node = self.root
+        # traverse the tree
+        queue = [self.root]
+        while len(queue) > 0:
+            node = queue.pop(0)
+            if len(node.sampler_dict) < len(best_node.sampler_dict):
+                best_node = node
+            children_list = list(node.children.values())
+            flattened_list = [item for sublist in children_list for item in sublist]
+            queue.extend(flattened_list)
+        # construct the plan
+        self.construct_plan(best_node)
 
 
 # copy anytree

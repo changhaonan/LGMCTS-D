@@ -40,19 +40,25 @@ class Pattern(ABC):
     name: str = ""
     _num_limit = [0, 100]  # [min, max]
 
-    @abstractclassmethod
-    def gen_prior(cls, size, rng, **kwargs):
+    @classmethod
+    def gen_prior(cls, img_size, rng, **kwargs):
         """Generate a pattern prior:
         Args: 
             rng: random generator
         """
-        raise NotImplementedError
+        height, width = img_size[0], img_size[1]
+        prior = np.ones([height, width], dtype=np.float32)
+        pattern_info = {}
+        pattern_info["type"] = "pattern:uniform"
+        pattern_info["angle"] = 0.0
+        pattern_info["disable_collision_check"] = False
+        return prior, pattern_info
 
-    @abstractclassmethod
+    @classmethod
     def check(cls, obj_poses: dict[int, np.ndarray], **kwargs):
         """Check if the object states meet the pattern requirement
         """
-        raise NotImplementedError
+        return True
 
 
 # Implementation of patterns
@@ -119,12 +125,24 @@ class LinePattern(Pattern):
             # random pixel
             if rng.random() > 0.5:
                 # horizontal line
-                cv2.line(prior, (0, y0), (width, y0), 1.0, thickness)
-                angle = 0.0
+                x1, y1 = width, y0
             else:
                 # vertical line
-                cv2.line(prior, (x0, 0), (x0, height), 1.0, thickness)
-                angle = np.pi / 2.0
+                x1, y1 = x0, height
+            # HACK: create a line that is longest in the region
+            # dist2corner = np.linalg.norm(np.array([x0, y0]) - np.array([[0, 0], [width, 0], [0, height], [width, height]]), axis=-1)
+            # max_idx = np.argmax(dist2corner)
+            # if max_idx == 0:
+            #     x1, y1 = 0, 0
+            # elif max_idx == 1:
+            #     x1, y1 = width, 0
+            # elif max_idx == 2:
+            #     x1, y1 = 0, height
+            # else:
+            #     x1, y1 = width, height
+            cls.draw_line(prior, x0, y0, x1, y1, thickness)
+            # angle = math.atan2(y1 - y0, x1 - x0) + np.pi / 2.0
+            angle = math.atan2(y1 - y0, x1 - x0)
         else:
             rel_obj_poses_pix = np.vstack(rel_obj_poses_pix)
             # if more than one object is sampled, we generate a line based on the objects
@@ -178,7 +196,7 @@ class LinePattern(Pattern):
         dist_mat = np.linalg.norm(obj_poses_pattern[:, :2] - obj_poses_pattern[:, None, :2], axis=-1)
         max_idx = np.argmax(dist_mat)
         max_idx = np.unravel_index(max_idx, dist_mat.shape)
-        
+
         lo_idx, hi_idx = max_idx[0], max_idx[1]
         lo_pose = obj_poses_pattern[lo_idx, :2]
         hi_pose = obj_poses_pattern[hi_idx, :2]
@@ -283,12 +301,12 @@ class CirclePattern(Pattern):
             else:
                 # no points are provided
                 prior[radius:height - radius, radius:width - radius] = 1.0
-                angle = np.pi / 2.0
+                angle = -np.pi / 2.0
                 block_vis = True
         elif len(rel_obj_ids) == 1:
             # given an pix, the next point is on the other side of circle
             # HACK: make sure the circle is within the region
-            angle = -np.pi / 2.0
+            angle = np.pi / 2.0
             x0, y0 = rel_obj_poses_pix[0][1], rel_obj_poses_pix[0][0]
             if cls.check_circle_in_region((x0 - radius, y0), radius, height, width):
                 cv2.circle(prior, (x0 - 2 * radius, y0), 1, 1.0, thickness)
@@ -316,7 +334,7 @@ class CirclePattern(Pattern):
                        int(center_y + radius * math.sin(angle_circle))), thickness, 1.0, -1)
             cv2.circle(prior, (int(center_x - radius * math.cos(angle_circle)),
                        int(center_y - radius * math.sin(angle_circle))), thickness, 1.0, -1)
-            angle = np.pi / 2.0 - angle_circle
+            angle = - np.pi / 2.0 + angle_circle
             center_xs = [center_x]
             center_ys = [center_y]
         if not block_vis:
@@ -913,6 +931,14 @@ class CompositePattern:
     name = "composite"
 
     def gen_prior(cls, img_size, rng, **kwargs):
+        obj_poses_pix = kwargs.get("obj_poses_pix", {})
+        obj_id = kwargs.get("obj_id", -1)
+        obj_ids = kwargs.get("obj_ids", [])
+        sample_infos = kwargs.get("sample_infos", {"spatial_label": [0, 0, 0, 0]})
+        # extract relative obj & poses
+        rel_obj_ids = []
+        rel_obj_poses_pix = []
+
         semantic_mappings = {
             1: "fork",
             2: "plate",
@@ -954,6 +980,7 @@ class DataDrivenPattern:
 
 # PATTERN DICT
 PATTERN_DICT = {
+    "uniform": Pattern,
     "line": LinePattern,
     "circle": CirclePattern,
     "rectangle": RectanglePattern,
