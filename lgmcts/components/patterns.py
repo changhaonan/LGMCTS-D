@@ -89,7 +89,7 @@ class LinePattern(Pattern):
         scale_max = PATTERN_CONSTANTS["line"]["line_len"]["M"][0]
         scale_min = PATTERN_CONSTANTS["line"]["line_len"]["M"][1]
         scale = rng.random() * (scale_max - scale_min) + scale_min
-        enable_vis = True
+        enable_vis = False
         block_vis = False
 
         if len(rel_obj_ids) == 0:

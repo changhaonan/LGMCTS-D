@@ -34,6 +34,27 @@ def matrix_to_xyz_quaternion(matrix):
 
     return np.array([x, y, z, q_x, q_y, q_z, q_w])
 
+def extract_euler_angles(M):
+
+    # Assuming M is a 4x4 transformation matrix
+    x, y, z = M[0:3, 3]
+    # Extract the 3x3 rotation matrix
+    R = M[:3, :3]
+    
+    # Extract individual elements of the rotation matrix
+    r11, r12, r13 = R[0, 0], R[0, 1], R[0, 2]
+    r21, r22, r23 = R[1, 0], R[1, 1], R[1, 2]
+    r31, r32, r33 = R[2, 0], R[2, 1], R[2, 2]
+    
+    # Calculate yaw, pitch, and roll
+    yaw = np.arctan2(r21, r11)
+    pitch = np.arctan2(-r31, np.sqrt(r32 ** 2 + r33 ** 2))
+    roll = np.arctan2(r32, r33)
+    
+    # Convert from radians to degrees
+    yaw, pitch, roll = np.degrees([yaw, pitch, roll])
+    
+    return np.array([x, y, z, yaw, pitch, roll])
 
 def dist_p2l(p, o, k):
     """(Vectorized meethod) disance, point to line"""
@@ -56,10 +77,16 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     natsorted(h5_folders)
     sformer_success_rate = []
     mcts_success_rate = []
-    use_sformer_result = False
+    if method == "sformer":
+        use_sformer_result = True 
+    else:
+        use_sformer_result = False
+    start = 0
+    end = len(h5_folders)
     mcts_success_result = dict()
     sformer_success_result = dict()
-    h5_folders = ['data00702857.h5']
+    # h5_folders = ['data00703777.h5']
+    failures = []
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
         print("h5 file:", h5_folder)
@@ -145,7 +172,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             action_list = sformer_action_list  # Checking SFORMER action list
         for entry in action_list:
             if use_sformer_result:
-                obj_poses_pattern.append(matrix_to_xyz_quaternion(entry["new_pose"]))
+                obj_poses_pattern.append(extract_euler_angles(entry["new_pose"]))
             else:
                 if entry["obj_id"] in goals[check_goal_idx]["obj_ids"]:
                     obj_poses_pattern.append(entry["new_pose"])
@@ -155,7 +182,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             region_sampler.visualize()
         for step in action_list:
             if use_sformer_result:
-                region_sampler.set_object_pose(step["obj_id"], matrix_to_xyz_quaternion(step["new_pose"]))
+                region_sampler.set_object_pose(step["obj_id"], extract_euler_angles(step["new_pose"]))
                 if debug:
                     region_sampler.visualize()
             else:
@@ -169,22 +196,28 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         pattern_status = PATTERN_DICT[goals[check_goal_idx]["type"].split(
             ":")[-1]].check(obj_poses_pattern=obj_poses_pattern, pattern_info=pattern_info)
         not_collision = not region_sampler.check_collision(goals[check_goal_idx]["obj_ids"])
+        if goals[0]["type"] == "pattern:tower":
+            not_collision = True
         status = pattern_status and not_collision
         if status:
             if use_sformer_result:
-                sformer_success_result[h5_folder] = 1
+                sformer_success_result[h5_folder] = {"success_rate": 1, "pattern_status": pattern_status, "not_collision": not_collision}
                 sformer_success_rate.append(1)
             else:
-                mcts_success_result[h5_folder] = 1
+                mcts_success_result[h5_folder] = {"success_rate": 1, "pattern_status": pattern_status, "not_collision": not_collision}
                 mcts_success_rate.append(1)
         else:
             if use_sformer_result:
-                sformer_success_result[h5_folder] = 0
+                sformer_success_result[h5_folder] = {"success_rate": 0, "pattern_status": pattern_status, "not_collision": not_collision}
                 sformer_success_rate.append(0)
+                failures.append({"File": h5_folder, "Pattern Status": pattern_status, "Collision Status": not not_collision})
             else:
-                mcts_success_result[h5_folder] = 0
+                mcts_success_result[h5_folder] = {"success_rate": 0, "pattern_status": pattern_status, "not_collision": not_collision}
                 mcts_success_rate.append(0)
+                failures.append({"File": h5_folder, "Pattern Status": pattern_status, "Collision Status": not not_collision})
 
+    for fail_case in failures:
+        print(fail_case)
     if not use_sformer_result:
         mcts_success_rate = np.array(mcts_success_rate)
         mcts_success_result["success_rate"] = np.mean(mcts_success_rate)*100
@@ -201,8 +234,8 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset_path", type=str, default=None, help="Path to the dataset")
-    parser.add_argument("--prompt_path", type=str, default=None, help="Path to the prompt")
+    parser.add_argument("--data_path", type=str, default=None, help="Path to the dataset")
+    parser.add_argument("--res_path", type=str, default=None, help="Path to the prompt")
     parser.add_argument("--method", type=str, default="mcts", help="Method to use")
     parser.add_argument("--n_samples", type=int, default=10, help="Number of samples")
     parser.add_argument("--n_epoches", type=int, default=10, help="Number of epoches")
@@ -212,8 +245,8 @@ if __name__ == "__main__":
     parser.add_argument("--end", type=int, default=2, help="End index")
     args = parser.parse_args()
 
-    debug = True
+    debug = False
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    data_path = os.path.join(root_path, "output/eval_single_pattern/line-pcd-objs")
-    res_path = os.path.join(root_path, "output/eval_single_pattern/res-line-pcd-objs")
-    eval(data_path, res_path, args.method, args.mask_mode, args.n_samples, debug, args.start, args.end)
+    # args.data_path = os.path.join(root_path, "output/eval_single_pattern/circle-pcd-objs")
+    # args.res_path = os.path.join(root_path, "output/eval_single_pattern/res-circle-pcd-objs")
+    eval(args.data_path, args.res_path, args.method, args.mask_mode, args.n_samples, debug, args.start, args.end)
