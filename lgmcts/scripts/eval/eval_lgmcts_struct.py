@@ -87,7 +87,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     end = len(h5_folders)
     mcts_success_result = dict()
     sformer_success_result = dict()
-    h5_folders = ['data00553435.h5']
+    # h5_folders = ['data00553435.h5']
     failures = []
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
@@ -178,23 +178,27 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             region_sampler.visualize()
 
         result_pcd_list = []
-        name_ids = []
+        new_name_ids = []
         for step in action_list:
             if use_sformer_result:
                 pcd = region_sampler.get_object_pcd(step["obj_id"])
                 pcd = copy.deepcopy(pcd)
                 pcd.transform(step["new_pose"])
                 result_pcd_list.append(pcd)
-                name_ids.append([f"obj_{step['obj_id']}", step["obj_id"]])
+                for name_id in name_ids:
+                    if name_id[1] == step["obj_id"]:
+                        new_name_ids.append([name_id[0], step["obj_id"]])
+                        break
             else:
                 region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
                 if debug:
                     region_sampler.visualize()
         if use_sformer_result:
             region_sampler.reset()
-            region_sampler.load_from_pcds(result_pcd_list, name_ids=name_ids, mask_mode="convex_hull")
+            region_sampler.load_from_pcds(result_pcd_list, name_ids=new_name_ids, mask_mode="convex_hull")
             if debug:
                 region_sampler.visualize()
+                region_sampler.visualize_3d()
 
         # Step 4. Calculate Success Rate
         obj_poses_pattern = np.vstack(obj_poses_pattern)
@@ -251,9 +255,9 @@ if __name__ == "__main__":
     parser.add_argument("--end", type=int, default=2, help="End index")
     args = parser.parse_args()
 
-    debug = False
-    args.method = "mcts"
-    pattern = "circle"
+    debug = True
+    args.method = "sformer"
+    pattern = "dinner"
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
     args.data_path = os.path.join(root_path, f"output/eval_single_pattern/{pattern}-pcd-objs")
     args.res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{pattern}-pcd-objs")

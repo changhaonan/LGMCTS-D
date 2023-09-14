@@ -462,7 +462,8 @@ class Region2DSampler():
         color[:, [0, 1, 2]] = color[:, [2, 1, 0]]  # convert to BGR
         # convert to image
         img = np.zeros((self.grid_size[0], self.grid_size[1], 3), dtype=np.uint8)
-        img[pcd_np[:, 0], pcd_np[:, 1], :] = color
+        if color.shape[0] != 0:
+            img[pcd_np[:, 0], pcd_np[:, 1], :] = color
         return img
 
     def visualize(self, **kwargs):
