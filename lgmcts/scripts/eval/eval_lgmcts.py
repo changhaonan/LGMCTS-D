@@ -30,11 +30,11 @@ from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
 def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
-    resolution = 0.002
+    resolution = 0.01
     pix_padding = 1  # padding for clearance
     n_samples = 5
     num_save_digits = 6
-    use_gt_pose = True  # if directly use the pose from dataset
+    use_gt_pose = False  # if directly use the pose from dataset
     env = lgmcts.make(
         task_name=task_name,
         task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name],
@@ -51,6 +51,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
     sucess_count = 0
+    action_step_count = 0
     # LLM parsing
     checkpoint_list = list(filter(lambda f: f.endswith(".pkl"), os.listdir(dataset_path)))
     checkpoint_list.sort()
@@ -78,7 +79,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         init_pose = region_sampler.get_object_poses()
         # DEBUG
         if debug:
-            region_sampler.visualize()
+            # region_sampler.visualize()
             prompt_generator.render()
             ##
             print(env.obj_ids)
@@ -99,13 +100,14 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
             print(f"Goal: {goal_pattern}; {goal_obj_ids}")
 
             for _i, goal_obj_id in enumerate(goal_obj_ids):
-                sample_info = {}
+                sample_info = goal.get("sample_info", {})
                 if goal_pattern == "spatial":
                     # spatial only sample the second obj
                     if _i == 0:
                         continue
                     else:
-                        sample_info = {"spatial_label": goal["spatial_label"], "ordered": True}
+                        sample_info["spatial_label"] = goal["spatial_label"]
+                        sample_info["ordered"] = True
                 sample_data = SampleData(goal_pattern, goal_obj_id, goal["obj_ids"], {}, sample_info)
                 L.append(sample_data)
 
@@ -139,6 +141,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
             env.step(action)
 
         # Step 4. evaluate the result
+        action_step_count += len(action_list)
         exe_result = task.check_success(obj_poses=env.get_obj_poses())
         print(f"Success: {exe_result.success}")
         if exe_result.success:
@@ -147,8 +150,14 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         if debug:
             prompt_generator.render(append=" [succes]" if exe_result.success else " [fail]")
 
+        print("----------- Current Result -----------")
+        print(f"Success rate: {float(sucess_count) / float(i + 1)}")
+        print(f"Average action steps: {float(action_step_count) / float(i + 1)}")
+
     # average result
+    print("----------- Final Result -----------")
     print(f"Success rate: {float(sucess_count) / float(n_epoches)}")
+    print(f"Average action steps: {float(action_step_count) / float(n_epoches)}")
     # close
     env.close()
     prompt_generator.close()

@@ -801,7 +801,7 @@ def plot_3d(title: str, points, color, block: bool = True):
     plt.show(block=block)
 
 
-def plot_pcd_o3d(pcd_list, transform_list=None, show_origin: bool = True, color_dict=None):
+def plot_pcd_o3d(pcd_list, transform_list=None, show_origin: bool = True, color_list=None):
     """Plot point cloud with open3d."""
     vis = o3d.visualization.Visualizer()
     vis.create_window()
@@ -816,8 +816,8 @@ def plot_pcd_o3d(pcd_list, transform_list=None, show_origin: bool = True, color_
             raise TypeError("pcd must be numpy array or open3d point cloud")
         if transform_list is not None:
             pcd.transform(transform_list[i])
-        if color_dict is not None:
-            pcd.paint_uniform_color(color_dict[i])
+        if color_list is not None:
+            pcd.paint_uniform_color(color_list[i])
         vis.add_geometry(pcd)
     vis.run()
     vis.destroy_window()

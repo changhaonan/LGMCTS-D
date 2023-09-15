@@ -72,12 +72,15 @@ class RigidPattern(Pattern):
         Args: 
             rng: random generator
         """
-        pos_pix = kwargs.get("pos_pix", None)
+        sample_info = kwargs["sample_info"]
+        obj_id = kwargs["obj_id"]
         height, width = img_size[0], img_size[1]
         prior = np.zeros([height, width], dtype=np.float32)
-        if pos_pix is not None:
-            x0, y0 = pos_pix[1], pos_pix[0]
-            cv2.circle(prior, (x0, y0), 1, 1.0, -1)
+
+        # FIXME: currently only position is implemented
+        pos_pix = sample_info["pos_pix"][obj_id]
+        x0, y0 = pos_pix[1], pos_pix[0]
+        cv2.circle(prior, (x0, y0), 1, 1.0, -1)
 
         pattern_info = {}
         pattern_info["type"] = "pattern:rigid"

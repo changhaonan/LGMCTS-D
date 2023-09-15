@@ -93,16 +93,15 @@ class RigidPattern(RemappingPattern):
         region_sampler = kwargs["region_sampler"]
         env = kwargs["env"]
         region_sampler.load_env(mask_mode="convex_hull", env=env, obs=goal_spec[0]["obs"])
-        region_sampler.visualize()
         # parse goal with ground-truth pattern
         for goal in goals:
             goal["type"] = "pattern:rigid"
-            pattern_info = {}
-            pattern_info["gt_pose_pix"] = {}
+            sample_info = {}
+            sample_info["pos_pix"] = {}
             obj_ids = goal["obj_ids"]
             for obj_id in obj_ids:
-                pattern_info["gt_pose_pix"][obj_id] = region_sampler.objects[obj_id].pos[:2]
-            goal["pattern_info"] = pattern_info
+                sample_info["pos_pix"][obj_id] = region_sampler.objects[obj_id].pos[:2]
+            goal["sample_info"] = sample_info
         return goals
 
 
