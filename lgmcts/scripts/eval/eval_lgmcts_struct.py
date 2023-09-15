@@ -88,7 +88,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     end = len(h5_folders)
     mcts_success_result = dict()
     sformer_success_result = dict()
-    # h5_folders = ['data00067785.h5']
+    h5_folders = ['data00546186.h5']
     failures = []
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
@@ -129,14 +129,28 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         else:
             with open(f"{data_path}/{h5_folder}/goal_pose_0.pkl", "rb") as f:
                 goal_pose_sformer = pickle.load(f)
-
+    
         if use_sformer_result:
-            with open(f"{data_path}/{h5_folder}/goal_pose_0.pkl", "rb") as f:
-                goal_pose_sformer = pickle.load(f)
-            with open(f"{data_path}/{h5_folder}/current_pose_0.pkl", "rb") as f:
-                curr_pose_sformer = pickle.load(f)
+            if "-diffusion" in data_path:
+                with open(f"{data_path}/{h5_folder}/goal_pose.pkl", "rb") as f:
+                    goal_pose_sformer = pickle.load(f)
+                    assert len(goal_pose_sformer) == 8
+                    goal_pose_sformer = goal_pose_sformer[1:]  # First pose is the pose of the structure frame
+            else:
+                with open(f"{data_path}/{h5_folder}/goal_pose_0.pkl", "rb") as f:
+                    goal_pose_sformer = pickle.load(f)
+            # with open(f"{data_path}/{h5_folder}/current_pose_0.pkl", "rb") as f:
+            #     curr_pose_sformer = pickle.load(f)
             for index, id in enumerate(goals[0]["obj_ids"]):
                 sformer_action_list.append({"obj_id": id, "new_pose": goal_pose_sformer[index]})
+        mod_pcd_list = []
+        sort_name_ids = copy.deepcopy(name_ids)
+        sort_name_ids.sort(key=lambda x: x[1])
+        for obj_id in goals[0]["obj_ids"]:
+            for index, name_id in enumerate(sort_name_ids):
+                if name_id[1] == obj_id:
+                    mod_pcd_list.append(pcd_list[index])
+        pcd_list = mod_pcd_list
         # check semantic pattern
         new_goals = []
         for goal in goals:
@@ -158,7 +172,8 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         region_sampler = Region2DSamplerLGMCTS(resolution, pix_padding, bounds)
         region_sampler.load_from_pcds(pcd_list, name_ids, mask_mode="convex_hull")
         if debug:
-            region_sampler.visualize()
+            # region_sampler.visualize()
+            pass
         init_objects_poses = region_sampler.get_object_poses()
         sampled_ids = []
         L = []
@@ -187,7 +202,8 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             action_list = sformer_action_list  # Checking SFORMER action list
         region_sampler.set_object_poses(init_objects_poses)
         if debug:
-            region_sampler.visualize()
+            # region_sampler.visualize()
+            pass
 
         result_pcd_list = []
         new_name_ids = []
@@ -207,12 +223,13 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             else:
                 region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
                 if debug:
-                    region_sampler.visualize()
+                    region_sampler.visualize_3d()
+                    pass
         if use_sformer_result:
             region_sampler.reset()
             region_sampler.load_from_pcds(result_pcd_list, name_ids=new_name_ids, mask_mode="convex_hull")
             if debug:
-                region_sampler.visualize()
+                # region_sampler.visualize()
                 region_sampler.visualize_3d()
         # Step 4. Calculate Success Rate
         overall_status = True
@@ -235,7 +252,10 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 not_collision = True
             status = pattern_status and not_collision
             overall_status = overall_status and status
-            # print(f"Goal type: {goal['type']}, Pattern Status: {pattern_status}; Collision Status: {not not_collision}; Success: {status}")
+            print(f"Goal type: {goal['type']}, Pattern Status: {pattern_status}; Collision Status: {not not_collision}; Success: {status}")
+        if not overall_status:
+            # region_sampler.visualize_3d()
+            pass
         if overall_status:
             if use_sformer_result:
                 sformer_success_result[h5_folder] = {"success_rate": 1, "pattern_status": pattern_status, "not_collision": not_collision}
@@ -283,10 +303,9 @@ if __name__ == "__main__":
     parser.add_argument("--end", type=int, default=2, help="End index")
     args = parser.parse_args()
 
-    debug = False
+    debug = True
     args.method = "mcts"
-    args.pattern = "dinner"
-    args.end = -1  # -1 means all
+    args.pattern = "circle"
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
     args.data_path = os.path.join(root_path, f"output/eval_single_pattern/{args.pattern}-pcd-objs")
     args.res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{args.pattern}-pcd-objs")
