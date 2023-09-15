@@ -180,7 +180,7 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
         "exe_success_rate": float(exe_success_count) / float(n_epoches),
         "average_action_steps": float(action_step_count) / float(n_epoches),
     }
-    with open(os.path.join(dataset_path, f"{method}_{mask_mode}_{start}_{end}_result.json"), "w") as f:
+    with open(os.path.join(dataset_path, f"{method}_{mask_mode}_{start}_{end}_{str(use_gt_pose)}_result.json"), "w") as f:
         json.dump(result_dict, f)
     # close
     env.close()
