@@ -37,6 +37,8 @@ Point cloud & pose are all padded with zero. Their shape is of (max_num_obj * ma
 - Currently, the sequential sampling is not working. Need to be fixed.
 - Is the sampling repeatable??
 
+- Why do we need flip_xy in eval of mcts, but not in eval of mcts + GT?
+
 ## TODO:
 
 - [ ] Theoretically, the action part should have bug, but what kind of bug is still unknown.

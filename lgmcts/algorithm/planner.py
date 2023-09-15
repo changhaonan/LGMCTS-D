@@ -70,7 +70,7 @@ class SamplingPlanner:
                 if debug:
                     print(f"old: {action_list[-1]['old_pose'][:3]}, new: {action_list[-1]['new_pose'][:3]}")
                     self.sampler.visualize()  # show the new pose
-        return action_list
+        return True, action_list
 
     def plan_mcts(self, goals: list[SampleData], **kwargs):
         """
@@ -101,5 +101,5 @@ class SamplingPlanner:
             seed=seed,
         )
 
-        sampler_planner.search(max_iter=max_iter)
-        return sampler_planner.action_list
+        success = sampler_planner.search(max_iter=max_iter)
+        return success, sampler_planner.action_list

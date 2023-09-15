@@ -246,7 +246,8 @@ class StructRearrange(BaseTask):
             rearrange_obj_ids = []
             pattern_info = {}
             for i in range(max_try):
-                pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
+                # try to put the pattern in the center
+                pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng, try_center=True)
                 num_limit = PATTERN_DICT[pattern_type]._num_limit
                 rearrange_obj_ids, obj_status = self.add_objects_to_pattern(
                     env,
@@ -329,16 +330,15 @@ class StructRearrange(BaseTask):
         obs, _, _, _, _ = env.step()
         return obs
 
-    def check_success(self, *args, **kwargs) -> ResultTuple:
+    def check_success(self, obj_poses=None, **kwargs) -> ResultTuple:
         """Implementation of checking success"""
-        if "obj_poses" not in kwargs:
+        if obj_poses is None:
             return ResultTuple(success=False, failure=True, distance=None)
         else:
-            obj_poses = kwargs["obj_poses"]
             for goal in self.goals:
                 pattern_type = goal["type"].split(":")[-1]
                 if pattern_type in PATTERN_DICT:
-                    if not PATTERN_DICT[pattern_type].check(obj_poses, pattern_info=goal):
+                    if not PATTERN_DICT[pattern_type].check(obj_poses, pattern_info=goal, **kwargs):
                         return ResultTuple(success=False, failure=True, distance=None)
                 else:
                     warnings.warn(f"Pattern type {pattern_type} is not supported")

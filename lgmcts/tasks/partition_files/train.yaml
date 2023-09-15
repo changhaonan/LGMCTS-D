@@ -108,6 +108,6 @@ struct_rearrange_3:
 struct_rearrange_4:
   max_num_pattern: 2
   stack_prob: 0.0
-  pattern_types: ["line"]  # support: "line", "circle", "rectangle"
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
   obj_list: ${dragged_obj}
   color_list: ${color_set_1}
