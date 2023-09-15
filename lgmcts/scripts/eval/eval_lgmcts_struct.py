@@ -88,7 +88,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     end = len(h5_folders)
     mcts_success_result = dict()
     sformer_success_result = dict()
-    # h5_folders = ['data00553435.h5']
+    h5_folders = ['data00010813.h5']
     failures = []
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
@@ -215,14 +215,14 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         # Step 4. Calculate Success Rate
         overall_status = True
         for goal in goals:
-            obj_poses_pattern = []
+            obj_poses_pattern = {}
             for entry in action_list:
                 if entry["obj_id"] in goal["obj_ids"]:
                     if use_sformer_result:
-                        obj_poses_pattern.append(extract_euler_angles(entry["new_pose"]))
+                        obj_poses_pattern[entry['obj_id']] = (extract_euler_angles(entry["new_pose"]))
                     else:
-                        obj_poses_pattern.append(entry["new_pose"])
-            obj_poses_pattern = np.vstack(obj_poses_pattern)
+                        obj_poses_pattern[entry['obj_id']] = (entry["new_pose"])
+            obj_poses_pattern = np.vstack(list(obj_poses_pattern.values()))
             pattern_info = {"threshold": 0.05}
 
             pattern_status = PATTERN_DICT[goal["type"].split(
