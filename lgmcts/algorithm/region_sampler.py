@@ -550,8 +550,8 @@ class Region2DSampler():
         """Visualize the region and obj bbox in 3D"""
         show_color = kwargs.get("show_color", False)
         show_bbox = kwargs.get("show_bbox", True)
-        show_origin = kwargs.get("show_origin", False)
-        color_list = kwargs.get("color_list", None)
+        show_origin = kwargs.get("show_origin", True)
+        color_dict = kwargs.get("color_dict", None)
 
         vis_list = []
         if self.scene_pcd is not None:
