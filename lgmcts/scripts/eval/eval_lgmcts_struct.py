@@ -142,6 +142,9 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         for goal in goals:
             # pattern = goal["type"].split(":")[-1]
             pattern = pattern_name  # set it from the argument
+            if pattern == "dinner":
+                if not use_sformer_result:
+                    pattern = "dinner_v2"
             if pattern in SEMANTIC_PATTERN_DICT:
                 new_goal = SEMANTIC_PATTERN_DICT[pattern].parse_goal(name_ids)
                 new_goals += new_goal
@@ -211,7 +214,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             if debug:
                 region_sampler.visualize()
                 region_sampler.visualize_3d()
-
         # Step 4. Calculate Success Rate
         overall_status = True
         for goal in goals:

@@ -554,16 +554,17 @@ class Region2DSampler():
         # get obj bbox
         for obj_id, obj_data in self.objects.items():
             o3d_color = (obj_data.color[0] / 255.0, obj_data.color[1] / 255.0, obj_data.color[2] / 255.0)
-            bbox = o3d.geometry.AxisAlignedBoundingBox.create_from_points(
-                o3d.utility.Vector3dVector(obj_data.points)
-            )
-            bbox.color = o3d_color
             pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(obj_data.points))
             pcd.paint_uniform_color(o3d_color)
             # transform obj to global pos
             obj_pose = self.get_object_pose(obj_id)
             pcd.translate(obj_pose[:3])
-            bbox.translate(obj_pose[:3])
+            # rotate; rotation only along z-axis
+            rot_z = obj_pose[5]
+            rot_mat = R.from_euler("z", -rot_z).as_matrix()
+            pcd.rotate(rot_mat, pcd.get_center())
+            bbox = o3d.geometry.AxisAlignedBoundingBox.create_from_points(pcd.points)
+            bbox.color = o3d_color
             vis_list.append(bbox)
             vis_list.append(pcd)
         if show_origin:

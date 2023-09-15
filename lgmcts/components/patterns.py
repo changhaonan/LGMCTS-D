@@ -807,24 +807,32 @@ class SpatialPattern:
             anchor[0] = np.max([anchor[0] - 1, 0])
             prior[:, :int(anchor[0])] = 1.0
             spatial_str = "left"
+            range_x = 0.1
+            range_y = 0.01
             angle = 0
         elif spatial_label == [0, 1, 0, 0]:
             # right
             anchor[0] = np.min([anchor[0] + 1, width - 1])
             prior[:, int(anchor[0]):] = 1.0
             spatial_str = "right"
+            range_x = 0.1
+            range_y = 0.01
             angle = 0
         elif spatial_label == [0, 0, 1, 0]:
             # front
             anchor[1] = np.min([anchor[1] + 1, height - 1])
             prior[int(anchor[1]):, :] = 1.0
             spatial_str = "front"
+            range_x = 0.01
+            range_y = 0.1
             angle = np.pi / 2.0
         elif spatial_label == [0, 0, 0, 1]:
             # back
             anchor[1] = np.max([anchor[1] - 1, 0])
             prior[:int(anchor[1]), :] = 1.0
             spatial_str = "back"
+            range_x = 0.01
+            range_y = 0.1
             angle = np.pi / 2.0
         elif spatial_label == [1, 0, 1, 0]:
             # left & front
@@ -832,6 +840,8 @@ class SpatialPattern:
             anchor[1] = np.min([anchor[1] + 1, height - 1])
             prior[int(anchor[1]):, :int(anchor[0])] = 1.0
             spatial_str = "left & front"
+            range_x = 0.1
+            range_y = 0.1
             angle = np.pi / 4.0
         elif spatial_label == [1, 0, 0, 1]:
             # left & back
@@ -839,6 +849,8 @@ class SpatialPattern:
             anchor[1] = np.max([anchor[1] - 1, 0])
             prior[:int(anchor[1]), :int(anchor[0])] = 1.0
             spatial_str = "left & back"
+            range_x = 0.1
+            range_y = 0.1
             angle = -np.pi / 4.0
         elif spatial_label == [0, 1, 1, 0]:
             # right & front
@@ -846,6 +858,8 @@ class SpatialPattern:
             anchor[1] = np.min([anchor[1] + 1, height - 1])
             prior[int(anchor[1]):, int(anchor[0]):] = 1.0
             spatial_str = "right & front"
+            range_x = 0.1
+            range_y = 0.1
             angle = np.pi / 4.0
         elif spatial_label == [0, 1, 0, 1]:
             # right & back
@@ -853,20 +867,22 @@ class SpatialPattern:
             anchor[1] = np.max([anchor[1] - 1, 0])
             prior[:int(anchor[1]), int(anchor[0]):] = 1.0
             spatial_str = "right & back"
+            range_x = 0.1
+            range_y = 0.1
             angle = -np.pi / 4.0
         else:
             raise NotImplementedError("Spatial label {} not implemented!".format(spatial_label))
 
         force_close = kwargs.get("force_close", True)
         if force_close:
+            # small rectangle
             prior_close = np.zeros([height, width], dtype=np.float32)
-            close_range = kwargs.get("close_range", 0.2)
-            close_range = int(close_range * min(height, width))
-            cv2.circle(prior_close, (int(anchor[0]), int(anchor[1])), close_range, 1.0, -1)
+            min_size = min(height, width)
+            cv2.rectangle(prior_close, (int(anchor[0] - min_size * range_x), int(anchor[1] - min_size * range_y)),
+                          (int(anchor[0] + min_size * range_x), int(anchor[1] + min_size * range_y)), 1.0, -1)
             prior = prior * prior_close
-
-        # cv2.imshow("prior", prior)
-        # cv2.waitKey(0)
+        cv2.imshow("prior", prior)
+        cv2.waitKey(1)
 
         # Pattern info
         pattern_info = {}
@@ -926,42 +942,6 @@ class SpatialPattern:
                 print("Spatial check failed: back")
                 return False
         return True
-
-
-class CompositePattern:
-    name = "composite"
-
-    def gen_prior(cls, img_size, rng, **kwargs):
-        obj_poses_pix = kwargs.get("obj_poses_pix", {})
-        obj_id = kwargs.get("obj_id", -1)
-        obj_ids = kwargs.get("obj_ids", [])
-        sample_infos = kwargs.get("sample_infos", {"spatial_label": [0, 0, 0, 0]})
-        # extract relative obj & poses
-        rel_obj_ids = []
-        rel_obj_poses_pix = []
-
-        semantic_mappings = {
-            1: "fork",
-            2: "plate",
-            3: "knife",
-        }
-        pattern_descriptions = [
-            {
-                "type": "pattern:spatial",
-                "obj_names": ["fork", "plate"],
-                "spatial_relation": "left"
-            },
-            {
-                "type": "pattern:spatial",
-                "obj_names": ["plate", "knife"],
-                "spatial_relation": "right"
-            },
-            {
-                "type": "pattern:spatial",
-                "obj_names": ["bowl", "plate"],
-                "spatial_relation": "on"
-            },
-        ]
 
 # Example: structformer has a pattern called dinner
 
