@@ -32,6 +32,12 @@ def _generate_data_for_one_task(
     debug: bool,
     seed: int | None = None,
 ):
+    # build the dir
+    os.makedirs(os.path.join(save_path, task_name), exist_ok=True)
+    # copy all *.txt file
+    for file_name in os.listdir(os.path.join(save_path, "struct_rearrange")):
+        if file_name.endswith(".txt"):
+            os.system(f"cp {os.path.join(save_path, 'struct_rearrange', file_name)} {os.path.join(save_path, task_name)}")
     # init
     env = lgmcts.make(
         task_name=task_name,
@@ -108,6 +114,6 @@ if __name__ == '__main__':
         save_path=f"{root_path}/output",
         num_save_digits=6,
         debug=args.debug,
-        seed=0,
+        seed=4,
     )
     print("Saved to: ", f"{root_path}/output/{task_name}")

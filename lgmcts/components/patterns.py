@@ -318,6 +318,7 @@ class CirclePattern(Pattern):
             if id != obj_id and id in obj_poses_pix:
                 rel_obj_ids.append(id)
                 rel_obj_poses_pix.append(obj_poses_pix[id])
+        assert len(rel_obj_ids) == len(rel_obj_poses_pix), "Number of relative objects should be the same!"
 
         height, width = img_size[0], img_size[1]
         prior = np.zeros([height, width], dtype=np.float32)
@@ -373,7 +374,11 @@ class CirclePattern(Pattern):
                 radius = np.linalg.norm(points[0, :] - points[1, :]) / 2.0
             else:
                 # Find the minimum enclosing circle of first 3 points
-                center, radius = cls.cercle_circonscrit(points[:3, :])
+                try:
+                    points = points[:3, :]
+                except:
+                    print(points)
+                center, radius = cls.cercle_circonscrit(points)
                 center_x, center_y = center[0], center[1]
             # provides two candidates
             angle_circle = (2.0 * np.pi / segments) * (len(rel_obj_ids) // 2)

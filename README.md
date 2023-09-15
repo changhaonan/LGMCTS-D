@@ -32,6 +32,24 @@ obs:
 
 Point cloud & pose are all padded with zero. Their shape is of (max_num_obj * max_pcd_size, 3) and (max_num_obj, 7). 
 
+## Batch-level generation 
+
+```
+python lgmcts/scripts/data_generation/gen_lgmcts.py --num_episodes=100
+```
+
+## Eval
+
+Use without gt_pose.
+
+```
+python lgmcts/scripts/eval/eval_lgmcts.py --method=mcts --n_epoches=100 --mask_mode=raw_mask
+```
+
+Use with gt_pose
+```
+python lgmcts/scripts/eval/eval_lgmcts.py --method=mcts --n_epoches=100 --mask_mode=raw_mask --use_gt_pose
+```
 ## BUG
 
 - Currently, the sequential sampling is not working. Need to be fixed.
