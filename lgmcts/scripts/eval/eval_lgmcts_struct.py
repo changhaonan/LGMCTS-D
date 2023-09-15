@@ -111,7 +111,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         name_ids = None
         goals = []
         goal_pose_sformer = None
-        curr_pose_sformer = None
         sformer_action_list = []
 
         with open(f"{data_path}/{h5_folder}/name_ids.pkl", "rb") as f:
@@ -139,10 +138,20 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             else:
                 with open(f"{data_path}/{h5_folder}/goal_pose_0.pkl", "rb") as f:
                     goal_pose_sformer = pickle.load(f)
-            # with open(f"{data_path}/{h5_folder}/current_pose_0.pkl", "rb") as f:
-            #     curr_pose_sformer = pickle.load(f)
             for index, id in enumerate(goals[0]["obj_ids"]):
                 sformer_action_list.append({"obj_id": id, "new_pose": goal_pose_sformer[index]})
+        
+        # Color Dict and Vis list for visualization
+        vis_list = goals[0]["obj_ids"]
+        color_list = [None]*len(vis_list)
+        color_list[0] = (182, 215, 168)
+        color_list[1] = (255, 242, 204)
+        color_list[2] = (207,225,243)
+        color_list[3] = (252,229,205)
+        color_list[4] = (198,50,80)
+        color_list[5] = (177,194,191)
+        assert len(vis_list) == 6
+
         mod_pcd_list = []
         sort_name_ids = copy.deepcopy(name_ids)
         sort_name_ids.sort(key=lambda x: x[1])
@@ -150,7 +159,10 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             for index, name_id in enumerate(sort_name_ids):
                 if name_id[1] == obj_id:
                     mod_pcd_list.append(pcd_list[index])
+            
         pcd_list = mod_pcd_list
+
+        
         # check semantic pattern
         new_goals = []
         for goal in goals:
@@ -204,7 +216,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         if debug:
             # region_sampler.visualize()
             pass
-
         result_pcd_list = []
         new_name_ids = []
         for step in action_list:
@@ -223,7 +234,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             else:
                 region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
                 if debug:
-                    region_sampler.visualize_3d()
+                    region_sampler.visualize_3d(vis_list=vis_list, **{"show_color" : True, "show_bbox": True, "color_list" : color_list})
                     pass
         if use_sformer_result:
             region_sampler.reset()
