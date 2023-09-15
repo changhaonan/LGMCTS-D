@@ -329,16 +329,15 @@ class StructRearrange(BaseTask):
         obs, _, _, _, _ = env.step()
         return obs
 
-    def check_success(self, *args, **kwargs) -> ResultTuple:
+    def check_success(self, obj_poses=None, **kwargs) -> ResultTuple:
         """Implementation of checking success"""
-        if "obj_poses" not in kwargs:
+        if obj_poses is None:
             return ResultTuple(success=False, failure=True, distance=None)
         else:
-            obj_poses = kwargs["obj_poses"]
             for goal in self.goals:
                 pattern_type = goal["type"].split(":")[-1]
                 if pattern_type in PATTERN_DICT:
-                    if not PATTERN_DICT[pattern_type].check(obj_poses, pattern_info=goal):
+                    if not PATTERN_DICT[pattern_type].check(obj_poses, pattern_info=goal, **kwargs):
                         return ResultTuple(success=False, failure=True, distance=None)
                 else:
                     warnings.warn(f"Pattern type {pattern_type} is not supported")

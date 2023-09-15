@@ -72,8 +72,6 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         # load from dataset
         checkpoint_path = os.path.join(dataset_path, checkpoint_list[i])
         env.load_checkpoint(checkpoint_path)
-        with open(os.path.join(dataset_path, checkpoint_list[i].replace("checkpoint_", "goal_spec_")), "rb") as f:
-            goal_spec = pickle.load(f)
         prompt_generator.prompt = task.prompt
         region_sampler.load_env(mask_mode=mask_mode, env=env)
         init_pose = region_sampler.get_object_poses()
@@ -91,6 +89,8 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
             goals = prompt_goals[i]
         # pattern remapping
         if use_gt_pose:
+            with open(os.path.join(dataset_path, checkpoint_list[i].replace("checkpoint_", "goal_spec_")), "rb") as f:
+                goal_spec = pickle.load(f)
             goals = REMAPPING_PATTERN_DICT["rigid"].parse_goal(goals=goals, goal_spec=goal_spec, region_sampler=region_sampler, env=env)
             region_sampler.set_object_poses(init_pose)  # reset region sampler
         L = []
@@ -112,7 +112,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 L.append(sample_data)
 
         # Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=20000, seed=1)
         print("Plan finished!")
         env.prepare()
         for step in action_list:
@@ -142,7 +142,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
 
         # Step 4. evaluate the result
         action_step_count += len(action_list)
-        exe_result = task.check_success(obj_poses=env.get_obj_poses())
+        exe_result = task.check_success(obj_poses=env.get_obj_poses(), flip_xy=True)
         print(f"Success: {exe_result.success}")
         if exe_result.success:
             sucess_count += 1
