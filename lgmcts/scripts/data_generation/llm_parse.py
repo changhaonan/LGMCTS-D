@@ -5,7 +5,7 @@ import numpy as np
 import pickle
 import random
 from lgmcts.components.llm_chatgpt import ChatGPTAPI
-
+from lgmcts.env import seed
 
 def gen_prompt_goal_from_llm(prompt_path: str, n_epoches: int = 0, checkpoint_list: list = [], use_llm: bool = True, run_llm: bool = True, encode_ids_to_llm: bool = True, obj_id_reverse_mappings: list = None, num_save_digits: int = 6, debug: bool = False):
     prompt_goals = None
@@ -58,6 +58,7 @@ def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings
             if entry["pattern"] != "spatial":
                 goal_entry["type"] = f"pattern:{entry['pattern']}"
                 goal_entry["obj_ids"] = []
+                goal_entry["anchor_id"] = []    
                 anchor_color = None
                 for item in obj_id_reverse_mapping:
                     if obj_id_reverse_mapping[item]["obj_name"] == entry["anchor"]:
@@ -84,14 +85,15 @@ def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings
                             break
                 goal_entry["obj_ids"] = goal_entry["obj_ids"]
                 goal_entry["spatial_label"] = np.array([0, 0, 0, 0], dtype=np.int32)
-                if "left" in entry["spatial_label"]:
-                    goal_entry["spatial_label"][0] = 1
-                if "right" in entry["spatial_label"]:
-                    goal_entry["spatial_label"][1] = 1
-                if "front" in entry["spatial_label"]:
-                    goal_entry["spatial_label"][2] = 1
-                if "behind" in entry["spatial_label"]:
-                    goal_entry["spatial_label"][3] = 1
+                for sp_label in entry["spatial_label"]:
+                    if "left" in sp_label:
+                        goal_entry["spatial_label"][0] = 1
+                    if "right" in sp_label:
+                        goal_entry["spatial_label"][1] = 1
+                    if "front" in sp_label:
+                        goal_entry["spatial_label"][2] = 1
+                    if "behind" in sp_label:
+                        goal_entry["spatial_label"][3] = 1
                 goal_entry["spatial_str"] = entry["spatial_str"]
                 goal.append(goal_entry)
         goals.append(goal)
@@ -115,7 +117,7 @@ def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_exampl
                 prompt_prior = f"Please be mindful of the object ids, names, and their colors accordingly."
                 prompt_prior += f"There are {len(fp.readlines())} objects in the scene."
                 if obj_id_reverse_mappings is None:
-                    with open(f"{root_path}/output/struct_rearrange/checkpoint_{iter:0{num_save_digits}d}.pkl", "rb") as f:
+                    with open(f"{root_path}/output/struct_rearrange_{seed}/checkpoint_{iter:0{num_save_digits}d}.pkl", "rb") as f:
                         iter += 1
                         checkpoint = pickle.load(f)
                         ids = []

@@ -144,12 +144,12 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         # Color Dict and Vis list for visualization
         vis_list = goals[0]["obj_ids"]
         color_list = [None]*len(vis_list)
-        color_list[0] = (182, 215, 168)
-        color_list[1] = (255, 242, 204)
-        color_list[2] = (207,225,243)
-        color_list[3] = (252,229,205)
-        color_list[4] = (198,50,80)
-        color_list[5] = (177,194,191)
+        color_list[0] = (177/255., 194/255., 191/255.)
+        color_list[1] = (1/255., 255/255., 0/255.)
+        color_list[2] = (255/255., 171/255., 64/255.)
+        color_list[3] = (255/255., 0/255., 255/255.)
+        color_list[4] = (0/255., 151/255., 167/255.)
+        color_list[5] = (37/255., 0/255., 255/255.)
         assert len(vis_list) == 6
 
         mod_pcd_list = []
@@ -209,7 +209,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         # Step 3. generate & exectue plan
         sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
         if not use_sformer_result:
-            action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=1, is_virtual=False)
+            action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=0, is_virtual=False)
         else:
             action_list = sformer_action_list  # Checking SFORMER action list
         region_sampler.set_object_poses(init_objects_poses)
@@ -234,14 +234,15 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             else:
                 region_sampler.set_object_pose(step["obj_id"], step["new_pose"])
                 if debug:
-                    region_sampler.visualize_3d(vis_list=vis_list, **{"show_color" : True, "show_bbox": True, "color_list" : color_list})
+                    region_sampler.visualize_3d(vis_list=vis_list, **{"show_scene_pcd" : False, "show_color" : True, "show_bbox": True, "show_origin": False, "color_list" : color_list})
                     pass
         if use_sformer_result:
             region_sampler.reset()
             region_sampler.load_from_pcds(result_pcd_list, name_ids=new_name_ids, mask_mode="convex_hull")
             if debug:
+                region_sampler.visualize_3d(vis_list=vis_list, **{"show_scene_pcd" : False, "show_color" : True, "show_bbox": True, "show_origin": False, "color_list" : color_list})
                 # region_sampler.visualize()
-                region_sampler.visualize_3d()
+                # region_sampler.visualize_3d()
         # Step 4. Calculate Success Rate
         overall_status = True
         for goal in goals:
@@ -315,9 +316,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     debug = True
-    args.method = "mcts"
+    args.method = "sformer"
     args.pattern = "circle"
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-    args.data_path = os.path.join(root_path, f"output/eval_single_pattern/{args.pattern}-pcd-objs")
-    args.res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{args.pattern}-pcd-objs")
+    args.data_path = os.path.join(root_path, f"output/eval_single_pattern/{args.pattern}-pcd-objs-diffusion")
+    args.res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{args.pattern}-pcd-objs-diffusion")
     eval(args.data_path, args.res_path, args.method, args.mask_mode, args.n_samples, debug, args.start, args.end, pattern_name=args.pattern)

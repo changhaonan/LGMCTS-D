@@ -37,7 +37,11 @@ def _load_partition_file(file: str):
 # test
 TRAIN = _load_partition_file(file="train.yaml")
 ALL_PARTITIONS = [
-    "struct_rearrange"
+    "struct_rearrange_0",
+    "struct_rearrange_1",
+    "struct_rearrange_2",
+    "struct_rearrange_3",
+    "struct_rearrange_5",
 ]
 PARTITION_TO_SPECS = {
     "train": TRAIN,

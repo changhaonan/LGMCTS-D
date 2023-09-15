@@ -3,11 +3,11 @@ from __future__ import annotations
 import os
 import lgmcts
 from lgmcts.components.prompt import PromptGenerator
-
+from lgmcts.env import seed
 
 if __name__ == '__main__':
     # init
-    task_name = "struct_rearrange"
+    task_name = f"struct_rearrange_{seed}"
     resolution = 0.01
     n_samples = 1
     n_generate = 10

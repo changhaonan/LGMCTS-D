@@ -16,11 +16,11 @@ from lgmcts.components.prompt import PromptGenerator
 from lgmcts.components.obj_selector import ObjectSelector
 from lgmcts.components.patterns import PATTERN_DICT
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
-
+from lgmcts.env import seed
 
 def test_collision(dataset_path: str, method: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
     """Eval from newly generated scene"""
-    task_name = "struct_rearrange"
+    task_name = f"struct_rearrange_{seed}"
     resolution = 0.002
     n_samples = 5
     num_save_digits = 6
@@ -77,5 +77,5 @@ if __name__ == "__main__":
         dataset_path = args.dataset_path
     else:
         root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-        dataset_path = f"{root_path}/output/struct_rearrange"
+        dataset_path = f"{root_path}/output/struct_rearrange_{seed}"
     test_collision(dataset_path=dataset_path, method=args.method, n_samples=args.n_samples, n_epoches=args.n_epoches, debug=True)

@@ -18,7 +18,7 @@ import lgmcts.utils.file_utils as U
 from lgmcts import PARTITION_TO_SPECS
 from lgmcts.components.prompt import PromptGenerator
 from lgmcts.components.obj_selector import ObjectSelector
-
+from lgmcts.env import seed
 MAX_TRIES_PER_SEED = 999
 
 
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
-    task_name = args.task_name
+    task_name = args.task_name + "_" + str(seed)
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
     _generate_data_for_one_task(
         task_name,
@@ -110,3 +110,4 @@ if __name__ == '__main__':
         debug=args.debug,
         seed=0,
     )
+    print("Saved to: ", f"{root_path}/output/{task_name}")

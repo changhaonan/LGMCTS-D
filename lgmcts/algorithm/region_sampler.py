@@ -548,13 +548,14 @@ class Region2DSampler():
 
     def visualize_3d(self, obj_list: list[int] | None = None, **kwargs):
         """Visualize the region and obj bbox in 3D"""
+        show_scene_pcd = kwargs.get("show_scene_pcd", False)
         show_color = kwargs.get("show_color", False)
         show_bbox = kwargs.get("show_bbox", True)
         show_origin = kwargs.get("show_origin", True)
-        color_dict = kwargs.get("color_dict", None)
+        color_list = kwargs.get("color_list", None)
 
         vis_list = []
-        if self.scene_pcd is not None:
+        if show_scene_pcd and self.scene_pcd is not None:
             vis_list.append(self.scene_pcd)
         vis_obj_list = list(self.objects.keys()) if obj_list is None else obj_list
         # get obj bbox

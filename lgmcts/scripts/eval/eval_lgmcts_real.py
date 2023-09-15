@@ -11,7 +11,7 @@ from lgmcts.components.patterns import PATTERN_DICT
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
 import lgmcts.utils.misc_utils as utils
-
+from lgmcts.env import seed
 
 def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_samples: int = 10, debug: bool = True):
     # Step 1. load the scene
@@ -60,19 +60,20 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
     # Step 2. parse the goal using LLM
     # FIXME: manually set the goal for now
     use_llm = True
-    run_llm = True
-    # encode_ids_to_llm = True
-    # # Generate goals using llm and object selector
-    # prompt_goals = gen_prompt_goal_from_llm(prompt_path, use_llm=use_llm,
-    #                                         run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, obj_id_reverse_mappings=[obj_id_reverse_mapping], debug=debug)
+    run_llm = False
+    encode_ids_to_llm = True
+    # Generate goals using llm and object selector
+    prompt_goals = gen_prompt_goal_from_llm(prompt_path, use_llm=use_llm,
+                                            run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, obj_id_reverse_mappings=[obj_id_reverse_mapping], debug=debug)
 
-    # goals = prompt_goals[0]
-    goals = [
-        {"type": "pattern:uniform", "obj_ids": [1]},
-        {"type": "pattern:spatial", "obj_ids": [1, 2], "spatial_label": [1, 0, 0, 0]},
-        {"type": "pattern:spatial", "obj_ids": [1, 3], "spatial_label": [0, 1, 0, 0]},
-        # {"type": "pattern:tower", "obj_ids": [4, 1, 2, 5]},
-    ]
+    goals = prompt_goals
+    
+    # goals = [
+    #     {"type": "pattern:uniform", "obj_ids": [1]},
+    #     {"type": "pattern:spatial", "obj_ids": [1, 2], "spatial_label": [1, 0, 0, 0]},
+    #     {"type": "pattern:spatial", "obj_ids": [1, 3], "spatial_label": [0, 1, 0, 0]},
+    #     # {"type": "pattern:tower", "obj_ids": [4, 1, 2, 5]},
+    # ]
     sampled_ids = []
     L = []
     for goal in goals:
@@ -95,7 +96,7 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
 
     # Step 3. generate & exectue plan
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
-    action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=20000, seed=1)
+    action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=20000, seed=0)
     print("Plan finished!")
     region_sampler.set_object_poses(init_objects_poses)
     region_sampler.visualize()
@@ -135,5 +136,5 @@ if __name__ == "__main__":
 
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
     real_data_path = os.path.join(root_path, "test_data", "real_000001", "output")
-    prompt_path = f"{root_path}/output/struct_rearrange"
+    prompt_path = f"{root_path}/output/struct_rearrange_{seed}"
     eval_real(real_data_path, prompt_path, args.method, args.mask_mode, args.n_samples, args.debug)

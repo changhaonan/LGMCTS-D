@@ -15,7 +15,7 @@ from lgmcts.components.prompt import PromptGenerator
 from lgmcts.components.obj_selector import ObjectSelector
 from lgmcts.components.attribute import COMPARE_DICT, EqualRel, DifferentRel, SmallerRel, BiggerRel
 from lgmcts.components.patterns import PATTERN_DICT
-
+from lgmcts.env import seed
 
 class ResultTuple(NamedTuple):
     success: bool
@@ -25,7 +25,7 @@ class ResultTuple(NamedTuple):
 
 class StructRearrange(BaseTask):
     """Structured Rearrange Task"""
-    task_name = "struct_rearrange"
+    task_name = f"struct_rearrange_{seed}"
 
     def __init__(
         self,

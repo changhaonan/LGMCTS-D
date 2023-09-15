@@ -77,7 +77,35 @@ dragged_obj:
 
 
 # ==== structure rearrange ====
-struct_rearrange:
+struct_rearrange_0:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_1:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_2:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_3:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_4:
   max_num_pattern: 2
   stack_prob: 0.0
   pattern_types: ["line"]  # support: "line", "circle", "rectangle"

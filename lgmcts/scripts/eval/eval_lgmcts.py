@@ -21,7 +21,7 @@ from lgmcts.components.patterns import PATTERN_DICT
 from lgmcts.components.semantic_patterns import REMAPPING_PATTERN_DICT
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
-
+from lgmcts.env import seed
 # Rigid sample Data
 
 
@@ -29,7 +29,7 @@ from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
 
 def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
     """Eval from newly generated scene"""
-    task_name = "struct_rearrange"
+    task_name = f"struct_rearrange_{seed}"
     resolution = 0.01
     pix_padding = 1  # padding for clearance
     n_samples = 5
@@ -56,8 +56,8 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     checkpoint_list = list(filter(lambda f: f.endswith(".pkl"), os.listdir(dataset_path)))
     checkpoint_list.sort()
     n_epoches = min(n_epoches, len(checkpoint_list))
-    use_llm = False
-    run_llm = False
+    use_llm = True
+    run_llm = True
     encode_ids_to_llm = False
     # Generate goals using llm and object selector
     prompt_goals = gen_prompt_goal_from_llm(dataset_path, n_epoches, checkpoint_list, use_llm=use_llm,
@@ -177,6 +177,6 @@ if __name__ == "__main__":
         dataset_path = args.dataset_path
     else:
         root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-        dataset_path = f"{root_path}/output/struct_rearrange"
+        dataset_path = f"{root_path}/output/struct_rearrange_{seed}"
     eval_offline(dataset_path=dataset_path, method=args.method, mask_mode=args.mask_mode,
                  n_samples=args.n_samples, n_epoches=args.n_epoches, debug=args.debug)
