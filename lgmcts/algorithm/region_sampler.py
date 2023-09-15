@@ -551,7 +551,7 @@ class Region2DSampler():
         show_color = kwargs.get("show_color", False)
         show_bbox = kwargs.get("show_bbox", True)
         show_origin = kwargs.get("show_origin", True)
-        color_list = kwargs.get("color_dict", None)
+        color_dict = kwargs.get("color_dict", None)
 
         vis_list = []
         if self.scene_pcd is not None:
