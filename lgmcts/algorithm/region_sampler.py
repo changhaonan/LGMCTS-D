@@ -546,23 +546,28 @@ class Region2DSampler():
             cv2.waitKey(1)
         # cv2.destroyAllWindows()
 
-    def visualize_3d(self, obj_list: list[int] | None = None, **kwargs):
+    def visualize_3d(self, vis_list: list[int] | None = None, **kwargs):
         """Visualize the region and obj bbox in 3D"""
         show_color = kwargs.get("show_color", False)
         show_bbox = kwargs.get("show_bbox", True)
         show_origin = kwargs.get("show_origin", True)
+        color_dict = kwargs.get("color_dict", None)
 
         vis_list = []
         if self.scene_pcd is not None:
             vis_list.append(self.scene_pcd)
-        vis_obj_list = list(self.objects.keys()) if obj_list is None else obj_list
+        vis_obj_list = list(self.objects.keys()) if vis_list is None else vis_list
         # get obj bbox
+        counter = 0
         for obj_id, obj_data in self.objects.items():
             if obj_id not in vis_obj_list:
                 continue
-            o3d_color = (obj_data.color[0] / 255.0, obj_data.color[1] / 255.0, obj_data.color[2] / 255.0)
             pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(obj_data.points))
             if show_color:
+                if color_dict is not None:
+                    o3d_color = color_dict[counter]
+                else:
+                    o3d_color = (obj_data.color[0] / 255.0, obj_data.color[1] / 255.0, obj_data.color[2] / 255.0)
                 pcd.paint_uniform_color(o3d_color)
             # transform obj to global pos
             obj_pose = self.get_object_pose(obj_id)
@@ -576,6 +581,7 @@ class Region2DSampler():
                 bbox = o3d.geometry.AxisAlignedBoundingBox.create_from_points(pcd.points)
                 bbox.color = o3d_color
                 vis_list.append(bbox)
+            counter += 1
 
         if show_origin:
             origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0)
