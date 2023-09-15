@@ -263,9 +263,9 @@ class BaseEnv:
 
     def step(self, action=None):
         if action is not None:
-            assert self.action_space.contains(
-                action
-            ), f"got {action} instead, action space {self.action_space}"
+            # assert self.action_space.contains(
+            #     action
+            # ), f"got {action} instead, action space {self.action_space}"
 
             pose0 = (action["pose0_position"], action["pose0_rotation"])
             pose1 = (action["pose1_position"], action["pose1_rotation"])

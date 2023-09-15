@@ -1,18 +1,19 @@
 """Parse the semantic goal into id based"""
 
 
-class SemanticPattern:
+class RemappingPattern:
 
     @classmethod
-    def parse_goal(cls, name_ids):
-        """Parse the goal of dinner into id based"""
+    def parse_goal(cls, **kwargs):
+        """Remapping the current goals to a different goal"""
         raise NotImplementedError
 
 
-class DinnerPattern(SemanticPattern):
+class DinnerPattern(RemappingPattern):
     @classmethod
-    def parse_goal(cls, name_ids):
+    def parse_goal(cls, **kwargs):
         """Parse the goal of dinner into id based"""
+        name_ids = kwargs["name_ids"]
         # Step 1: get a name id dict first
         name_id_dict = {}
         for name_id in name_ids:
@@ -42,10 +43,11 @@ class DinnerPattern(SemanticPattern):
         return goals
 
 
-class DinnerV2Pattern(SemanticPattern):
+class DinnerV2Pattern(RemappingPattern):
     @classmethod
-    def parse_goal(cls, name_ids):
+    def parse_goal(cls, **kwargs):
         """Parse the goal of dinner into id based"""
+        name_ids = kwargs["name_ids"]
         # Step 1: get a name id dict first
         name_id_dict = {}
         for name_id in name_ids:
@@ -78,7 +80,14 @@ class DinnerV2Pattern(SemanticPattern):
         return goals
 
 
-SEMANTIC_PATTERN_DICT = {
+class RigidPattern(RemappingPattern):
+    @classmethod
+    def parse_goal(cls, **kwargs):
+        goal_config = kwargs["goal_config"]
+        pass
+
+
+REMAPPING_PATTERN_DICT = {
     "dinner": DinnerPattern,
     "dinner_v2": DinnerV2Pattern,
 }

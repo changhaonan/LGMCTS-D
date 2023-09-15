@@ -14,7 +14,7 @@ import tqdm
 from natsort import natsorted
 from scipy.spatial.transform import Rotation as R
 from lgmcts.components.patterns import PATTERN_DICT
-from lgmcts.components.semantic_patterns import SEMANTIC_PATTERN_DICT
+from lgmcts.components.semantic_patterns import REMAPPING_PATTERN_DICT
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
 import lgmcts.utils.misc_utils as utils
@@ -145,8 +145,8 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
             if pattern == "dinner":
                 if not use_sformer_result:
                     pattern = "dinner_v2"
-            if pattern in SEMANTIC_PATTERN_DICT:
-                new_goal = SEMANTIC_PATTERN_DICT[pattern].parse_goal(name_ids)
+            if pattern in REMAPPING_PATTERN_DICT:
+                new_goal = REMAPPING_PATTERN_DICT[pattern].parse_goal(name_ids=name_ids)
                 new_goals += new_goal
             else:
                 new_goals.append(goal)

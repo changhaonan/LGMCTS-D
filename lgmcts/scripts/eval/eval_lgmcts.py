@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import json
 import ast
+from scipy.spatial.transform import Rotation as R
 from lgmcts import PARTITION_TO_SPECS
 import lgmcts.utils.file_utils as U
 import lgmcts.utils.misc_utils as misc_utils
@@ -20,13 +21,15 @@ from lgmcts.components.patterns import PATTERN_DICT
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
 
+# Rigid sample Data
+
 
 # Eval method
 
 def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
-    resolution = 0.01
+    resolution = 0.002
     pix_padding = 1  # padding for clearance
     n_samples = 5
     num_save_digits = 6
@@ -66,11 +69,13 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         # load from dataset
         checkpoint_path = os.path.join(dataset_path, checkpoint_list[i])
         env.load_checkpoint(checkpoint_path)
+        with open(os.path.join(dataset_path, checkpoint_list[i].replace("checkpoint_", "goal_spec_")), "rb") as f:
+            goal_spec = pickle.load(f)
         prompt_generator.prompt = task.prompt
         region_sampler.load_env(env, mask_mode=mask_mode)
         # DEBUG
         if debug:
-            # region_sampler.visualize()
+            region_sampler.visualize()
             prompt_generator.render()
             ##
             print(env.obj_ids)
@@ -98,19 +103,30 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 L.append(sample_data)
 
         # Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, reward_mode='prop', debug=debug)
+        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug)
+        print("Plan finished!")
         env.prepare()
         for step in action_list:
             # assemble action
+            # position
             pose0_position = cam2world[:3, :3] @ step["old_pose"][:3] + cam2world[:3, 3]
             pose0_position[2] = 0.0
             pose1_position = cam2world[:3, :3] @ step["new_pose"][:3] + cam2world[:3, 3]
             pose1_position[2] = 0.05
+            # FIXME: rotation currently is not working
+            # rotation, only contains z
+            rot_z = R.from_euler("z", step["old_pose"][5]).as_matrix()
+            pose0_rotation = R.from_matrix(cam2world[:3, :3] @ rot_z).as_quat()
+            rot_z = R.from_euler("z", step["new_pose"][5]).as_matrix()
+            pose1_rotation = R.from_matrix(cam2world[:3, :3] @ rot_z).as_quat()
+            # DEBUG
+            pose0_rotation = np.array([0, 0, 0, 1])
+            pose1_rotation = np.array([0, 0, 0, 1])
             action = {
                 "pose0_position": pose0_position,
-                "pose0_rotation": step["old_pose"][3:],
+                "pose0_rotation": pose0_rotation,
                 "pose1_position": pose1_position,
-                "pose1_rotation": step["new_pose"][3:],
+                "pose1_rotation": pose1_rotation,
             }
             # execute action
             env.step(action)
@@ -140,6 +156,7 @@ if __name__ == "__main__":
     parser.add_argument("--mask_mode", type=str, default="convex_hull", help="Mask mode")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
     args = parser.parse_args()
+    args.debug = True
     if args.dataset_path is not None:
         dataset_path = args.dataset_path
     else:

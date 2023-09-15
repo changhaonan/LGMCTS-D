@@ -74,11 +74,14 @@ def _generate_data_for_one_task(
 
         # generate goal
         task.gen_goal_config(env, prompt_generator, obj_selector)
+        goal_spec = task.gen_goal_spec(env)
         task.gen_start_config(env)
 
         # save
         prompt_str_list.append(task.prompt)
         env.save_checkpoint(os.path.join(save_path, task_name, f"checkpoint_{i:0{num_save_digits}d}.pkl"))
+        with open(os.path.join(save_path, task_name, f"goal_spec_{i:0{num_save_digits}d}.pkl"), "wb") as f:
+            pickle.dump(goal_spec, f)
         tbar.update(1)
 
     tbar.close()

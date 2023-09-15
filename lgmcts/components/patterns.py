@@ -61,7 +61,38 @@ class Pattern(ABC):
         return True
 
 
+class RigidPattern(Pattern):
+    """Rigid pattern"""
+    name = "rigid"
+    _num_limit = [1, 1]
+
+    @classmethod
+    def gen_prior(cls, img_size, rng, **kwargs):
+        """Generate a pattern prior:
+        Args: 
+            rng: random generator
+        """
+        pos_pix = kwargs.get("pos_pix", None)
+        height, width = img_size[0], img_size[1]
+        prior = np.zeros([height, width], dtype=np.float32)
+        if pos_pix is not None:
+            x0, y0 = pos_pix[1], pos_pix[0]
+            cv2.circle(prior, (x0, y0), 1, 1.0, -1)
+
+        pattern_info = {}
+        pattern_info["type"] = "pattern:rigid"
+        pattern_info["angle"] = 0.0
+        pattern_info["disable_collision_check"] = False
+        return prior, pattern_info
+
+    @classmethod
+    def check(cls, obj_poses: dict[int, np.ndarray], **kwargs):
+        """Check if the object states meet the pattern requirement
+        """
+        return True
+
 # Implementation of patterns
+
 
 class LinePattern(Pattern):
     """Line pattern, obj poses should formulate a line"""
@@ -881,8 +912,8 @@ class SpatialPattern:
             cv2.rectangle(prior_close, (int(anchor[0] - min_size * range_x), int(anchor[1] - min_size * range_y)),
                           (int(anchor[0] + min_size * range_x), int(anchor[1] + min_size * range_y)), 1.0, -1)
             prior = prior * prior_close
-        cv2.imshow("prior", prior)
-        cv2.waitKey(1)
+        # cv2.imshow("prior", prior)
+        # cv2.waitKey(1)
 
         # Pattern info
         pattern_info = {}
@@ -962,6 +993,7 @@ class DataDrivenPattern:
 # PATTERN DICT
 PATTERN_DICT = {
     "uniform": Pattern,
+    "rigid": RigidPattern,
     "line": LinePattern,
     "circle": CirclePattern,
     "rectangle": RectanglePattern,
