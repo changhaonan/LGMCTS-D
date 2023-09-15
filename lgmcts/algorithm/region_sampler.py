@@ -546,16 +546,29 @@ class Region2DSampler():
             cv2.waitKey(1)
         # cv2.destroyAllWindows()
 
-    def visualize_3d(self, show_origin: bool = False, obj_center=None):
+    def visualize_3d(self, vis_list: list[int] | None = None, **kwargs):
         """Visualize the region and obj bbox in 3D"""
+        show_color = kwargs.get("show_color", False)
+        show_bbox = kwargs.get("show_bbox", True)
+        show_origin = kwargs.get("show_origin", True)
+        color_dict = kwargs.get("color_dict", None)
+
         vis_list = []
         if self.scene_pcd is not None:
             vis_list.append(self.scene_pcd)
+        vis_obj_list = list(self.objects.keys()) if vis_list is None else vis_list
         # get obj bbox
+        counter = 0
         for obj_id, obj_data in self.objects.items():
-            o3d_color = (obj_data.color[0] / 255.0, obj_data.color[1] / 255.0, obj_data.color[2] / 255.0)
+            if obj_id not in vis_obj_list:
+                continue
             pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(obj_data.points))
-            pcd.paint_uniform_color(o3d_color)
+            if show_color:
+                if color_dict is not None:
+                    o3d_color = color_dict[counter]
+                else:
+                    o3d_color = (obj_data.color[0] / 255.0, obj_data.color[1] / 255.0, obj_data.color[2] / 255.0)
+                pcd.paint_uniform_color(o3d_color)
             # transform obj to global pos
             obj_pose = self.get_object_pose(obj_id)
             pcd.translate(obj_pose[:3])
@@ -563,10 +576,13 @@ class Region2DSampler():
             rot_z = obj_pose[5]
             rot_mat = R.from_euler("z", -rot_z).as_matrix()
             pcd.rotate(rot_mat, pcd.get_center())
-            bbox = o3d.geometry.AxisAlignedBoundingBox.create_from_points(pcd.points)
-            bbox.color = o3d_color
-            vis_list.append(bbox)
             vis_list.append(pcd)
+            if show_bbox:
+                bbox = o3d.geometry.AxisAlignedBoundingBox.create_from_points(pcd.points)
+                bbox.color = o3d_color
+                vis_list.append(bbox)
+            counter += 1
+
         if show_origin:
             origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0)
             vis_list.append(origin)
@@ -603,10 +619,11 @@ class Region2DSamplerLGMCTS(Region2DSampler):
         super().__init__(resolution, grid_size, world2region=np.linalg.inv(
             region2world), pix_padding=pix_padding, pose_boundary=pose_boundary)
 
-    def load_env(self, env, mask_mode: str, **kwargs):
+    def load_env(self,  mask_mode: str, env, obs=None, **kwargs):
         """Load objects from observation"""
         # load objects
-        obs = env.get_obs()
+        if obs is None:
+            obs = env.get_obs()
         obj_pcds = obs["point_cloud"]["top"]
         obj_poses = obs["poses"]["top"]
         obj_lists = env.obj_ids["rigid"]

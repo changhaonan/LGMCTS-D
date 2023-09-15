@@ -838,7 +838,7 @@ class SpatialPattern:
             anchor[0] = np.max([anchor[0] - 1, 0])
             prior[:, :int(anchor[0])] = 1.0
             spatial_str = "left"
-            range_x = 0.1
+            range_x = 0.15
             range_y = 0.01
             angle = 0
         elif spatial_label == [0, 1, 0, 0]:
@@ -846,7 +846,7 @@ class SpatialPattern:
             anchor[0] = np.min([anchor[0] + 1, width - 1])
             prior[:, int(anchor[0]):] = 1.0
             spatial_str = "right"
-            range_x = 0.1
+            range_x = 0.15
             range_y = 0.01
             angle = 0
         elif spatial_label == [0, 0, 1, 0]:
@@ -855,7 +855,7 @@ class SpatialPattern:
             prior[int(anchor[1]):, :] = 1.0
             spatial_str = "front"
             range_x = 0.01
-            range_y = 0.1
+            range_y = 0.15
             angle = np.pi / 2.0
         elif spatial_label == [0, 0, 0, 1]:
             # back
@@ -863,7 +863,7 @@ class SpatialPattern:
             prior[:int(anchor[1]), :] = 1.0
             spatial_str = "back"
             range_x = 0.01
-            range_y = 0.1
+            range_y = 0.15
             angle = np.pi / 2.0
         elif spatial_label == [1, 0, 1, 0]:
             # left & front
@@ -931,7 +931,7 @@ class SpatialPattern:
     @classmethod
     def check(cls, obj_poses: dict[int, np.ndarray], pattern_info, **kwargs):
         """Check if obj poses meet the spatial pattern, spatial pattern is relevant with coordinate"""
-        coordinate = kwargs.get("coordinate", np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]]))
+        coordinate = kwargs.get("coordinate", np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]))
         x_axis = coordinate[0]
         y_axis = coordinate[1]
 

@@ -88,7 +88,11 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     end = len(h5_folders)
     mcts_success_result = dict()
     sformer_success_result = dict()
+<<<<<<< HEAD
     h5_folders = ['data00546186.h5']
+=======
+    # h5_folders = ['data00067785.h5']
+>>>>>>> bb0ac78451b59077e49a30e7093000dfbfbb9ddd
     failures = []
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
@@ -234,27 +238,32 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         # Step 4. Calculate Success Rate
         overall_status = True
         for goal in goals:
-            obj_poses_pattern = {}
+            obj_poses = {}
             for entry in action_list:
                 if entry["obj_id"] in goal["obj_ids"]:
                     if use_sformer_result:
-                        obj_poses_pattern[entry['obj_id']] = (extract_euler_angles(entry["new_pose"]))
+                        obj_poses[entry['obj_id']] = (extract_euler_angles(entry["new_pose"]))
                     else:
-                        obj_poses_pattern[entry['obj_id']] = (entry["new_pose"])
-            obj_poses_pattern = np.vstack(list(obj_poses_pattern.values()))
+                        obj_poses[entry['obj_id']] = (entry["new_pose"])
             pattern_info = {"threshold": 0.05}
-
+            pattern_info["obj_ids"] = goal["obj_ids"]
+            if "spatial_label" in goal:
+                pattern_info["spatial_label"] = goal["spatial_label"]
             pattern_status = PATTERN_DICT[goal["type"].split(
-                ":")[-1]].check(obj_poses_pattern=obj_poses_pattern, pattern_info=pattern_info)
+                ":")[-1]].check(obj_poses=obj_poses, pattern_info=pattern_info)
             not_collision = not region_sampler.check_collision(goal["obj_ids"])
             if goal["type"] == "pattern:tower":
                 not_collision = True
             status = pattern_status and not_collision
             overall_status = overall_status and status
+<<<<<<< HEAD
             print(f"Goal type: {goal['type']}, Pattern Status: {pattern_status}; Collision Status: {not not_collision}; Success: {status}")
         if not overall_status:
             # region_sampler.visualize_3d()
             pass
+=======
+            # print(f"Goal type: {goal['type']}, Pattern Status: {pattern_status}; Collision Status: {not not_collision}; Success: {status}")
+>>>>>>> bb0ac78451b59077e49a30e7093000dfbfbb9ddd
         if overall_status:
             if use_sformer_result:
                 sformer_success_result[h5_folder] = {"success_rate": 1, "pattern_status": pattern_status, "not_collision": not_collision}
@@ -304,7 +313,12 @@ if __name__ == "__main__":
 
     debug = True
     args.method = "mcts"
+<<<<<<< HEAD
     args.pattern = "circle"
+=======
+    args.pattern = "dinner"
+    args.end = -1  # -1 means all
+>>>>>>> bb0ac78451b59077e49a30e7093000dfbfbb9ddd
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
     args.data_path = os.path.join(root_path, f"output/eval_single_pattern/{args.pattern}-pcd-objs")
     args.res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{args.pattern}-pcd-objs")

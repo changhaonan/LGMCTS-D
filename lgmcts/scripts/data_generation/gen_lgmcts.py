@@ -75,6 +75,7 @@ def _generate_data_for_one_task(
         # generate goal
         task.gen_goal_config(env, prompt_generator, obj_selector)
         goal_spec = task.gen_goal_spec(env)
+        # generate start
         task.gen_start_config(env)
 
         # save
