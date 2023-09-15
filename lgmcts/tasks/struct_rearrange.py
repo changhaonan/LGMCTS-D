@@ -129,71 +129,75 @@ class StructRearrange(BaseTask):
         return added_obj_ids
 
     def gen_goal_spec(self, env):
-        """goal specification; used for StructDiffusion"""
-        # FIXME: what does these contents mean?
-        spec = super().gen_goal_spec(env)
-        goal = self.goals[0]
-        # anchor object
-        spec["anchor"] = {
-            "objects": [],
-            "features": [
-                {
-                    "comparator": None,
-                    "type": "color_d",
-                    "value": env.obj_id_reverse_mapping[goal["anchor_id"]]['texture_name']
-                }
-            ]
-        }
-        spec["anchor"]["objects"].append(
-            {
-                "obj_id": goal["anchor_id"],
-                "obj_name": env.obj_id_reverse_mapping[goal["anchor_id"]]["obj_name"],
-                "obj_assets": env.obj_id_reverse_mapping[goal["anchor_id"]]["obj_assets"],
+        """goal specification; used for StructDiffusion; Must be called imeediately after gen_goal_config"""
+        obs = env.get_obs()
+        specs = []
+        for goal in self.goals:
+            spec = {}
+            spec["obs"] = obs
+            # # anchor object
+            # spec["anchor"] = {
+            #     "objects": [],
+            #     "features": [
+            #         {
+            #             "comparator": None,
+            #             "type": "color_d",
+            #             "value": env.obj_id_reverse_mapping[goal["anchor_id"]]['texture_name']
+            #         }
+            #     ]
+            # }
+            # spec["anchor"]["objects"].append(
+            #     {
+            #         "obj_id": goal["anchor_id"],
+            #         "obj_name": env.obj_id_reverse_mapping[goal["anchor_id"]]["obj_name"],
+            #         "obj_assets": env.obj_id_reverse_mapping[goal["anchor_id"]]["obj_assets"],
+            #     }
+            # )
+            # rearrange object
+            spec["rearrange"] = {
+                "combine_features_logic": "None",
+                "count": "None",
+                "objects": [],
+                "features": [
+                    {
+                        "comparator": None,
+                        "type": "color_d",
+                        "value": env.obj_id_reverse_mapping[random.choice(goal["obj_ids"])]['texture_name']
+                    }
+                ]
             }
-        )
-        # rearrange object
-        spec["rearrange"] = {
-            "combine_features_logic": "None",
-            "count": "None",
-            "objects": [],
-            "features": [
-                {
-                    "comparator": None,
-                    "type": "color_d",
-                    "value": env.obj_id_reverse_mapping[random.choice(goal["obj_ids"])]['texture_name']
-                }
-            ]
-        }
-        for obj_id in goal["obj_ids"]:
-            obj_info = env.obj_id_reverse_mapping[obj_id]
-            spec["rearrange"]["objects"].append(
-                {
-                    "obj_id": obj_id,
-                    "obj_name": obj_info["obj_name"],
-                    "obj_assets": obj_info["obj_assets"],
-                }
-            )
+            for obj_id in goal["obj_ids"]:
+                obj_info = env.obj_id_reverse_mapping[obj_id]
+                # get pose
+                obj_position, obj_orientation = pybullet_utils.get_obj_pose(env, obj_id)
+                spec["rearrange"]["objects"].append(
+                    {
+                        "obj_id": obj_id,
+                        "obj_name": obj_info["obj_name"],
+                        "obj_assets": obj_info["obj_assets"],
+                        "pose": {
+                            "position": obj_position,
+                            "orientation": obj_orientation
+                        }
+                    }
+                )
 
-        # distract object
-        spec["distract"] = {
-            "objects": []
-        }
-        for obj_id in self.distract_obj_ids:
-            obj_info = env.obj_id_reverse_mapping[obj_id]
-            spec["distract"]["objects"].append(
-                {
-                    "obj_id": obj_id,
-                    "obj_name": obj_info["obj_name"],
-                    "obj_assets": obj_info["obj_assets"],
-                }
-            )
-
-        # shape information (pattern)
-        # append pattern information
-        goal = self.goals[0]  # FIXME: currently we only support one goal for struct_diffusion
-        spec["shape"] = goal
-
-        return spec
+            # distract object
+            spec["distract"] = {
+                "objects": []
+            }
+            for obj_id in self.distract_obj_ids:
+                obj_info = env.obj_id_reverse_mapping[obj_id]
+                spec["distract"]["objects"].append(
+                    {
+                        "obj_id": obj_id,
+                        "obj_name": obj_info["obj_name"],
+                        "obj_assets": obj_info["obj_assets"],
+                    }
+                )
+            spec["shape"] = goal
+            specs.append(spec)
+        return specs
 
     def gen_type_vocabs(self):
         type_vocabs = super().gen_type_vocabs()

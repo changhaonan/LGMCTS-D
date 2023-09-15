@@ -25,11 +25,11 @@ def test_collision(dataset_path: str, method: str, n_samples: int = 10, n_epoche
     n_samples = 5
     num_save_digits = 6
     env = lgmcts.make(
-        task_name=task_name, 
-        task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name], 
-        modalities=["rgb", "segm", "depth"], 
-        seed=0, 
-        debug=debug, 
+        task_name=task_name,
+        task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name],
+        modalities=["rgb", "segm", "depth"],
+        seed=0,
+        debug=debug,
         display_debug_window=debug,
         hide_arm_rgb=True)
     task = env.task
@@ -41,11 +41,11 @@ def test_collision(dataset_path: str, method: str, n_samples: int = 10, n_epoche
 
     checkpoint_list = list(filter(lambda f: f.endswith(".pkl"), os.listdir(dataset_path)))
     checkpoint_list.sort()
-    
-    ## Test the collision
+
+    # Test the collision
     i = 0
     print(f"==== Episode {i} ====")
-    ## Step 1. init the env from dataset
+    # Step 1. init the env from dataset
     env.reset()
     prompt_generator.reset()
     region_sampler.reset()
@@ -53,7 +53,7 @@ def test_collision(dataset_path: str, method: str, n_samples: int = 10, n_epoche
     checkpoint_path = os.path.join(dataset_path, checkpoint_list[i])
     env.load_checkpoint(checkpoint_path)
     prompt_generator.prompt = task.prompt
-    region_sampler.load_env(env, mask_mode="convex_hull")
+    region_sampler.load_env(mask_mode="convex_hull", env=env)
     # DEBUG
     # region_sampler.visualize()
     if debug:

@@ -18,6 +18,7 @@ from lgmcts.env.base import BaseEnv
 from lgmcts.components.prompt import PromptGenerator
 from lgmcts.components.obj_selector import ObjectSelector
 from lgmcts.components.patterns import PATTERN_DICT
+from lgmcts.components.semantic_patterns import REMAPPING_PATTERN_DICT
 from lgmcts.algorithm import SamplingPlanner, Region2DSamplerLGMCTS, SampleData
 from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
 
@@ -33,6 +34,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     pix_padding = 1  # padding for clearance
     n_samples = 5
     num_save_digits = 6
+    use_gt_pose = True  # if directly use the pose from dataset
     env = lgmcts.make(
         task_name=task_name,
         task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name],
@@ -72,7 +74,8 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         with open(os.path.join(dataset_path, checkpoint_list[i].replace("checkpoint_", "goal_spec_")), "rb") as f:
             goal_spec = pickle.load(f)
         prompt_generator.prompt = task.prompt
-        region_sampler.load_env(env, mask_mode=mask_mode)
+        region_sampler.load_env(mask_mode=mask_mode, env=env)
+        init_pose = region_sampler.get_object_poses()
         # DEBUG
         if debug:
             region_sampler.visualize()
@@ -85,6 +88,10 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
             goals = task.goals
         else:
             goals = prompt_goals[i]
+        # pattern remapping
+        if use_gt_pose:
+            goals = REMAPPING_PATTERN_DICT["rigid"].parse_goal(goals=goals, goal_spec=goal_spec, region_sampler=region_sampler, env=env)
+            region_sampler.set_object_poses(init_pose)  # reset region sampler
         L = []
         for goal in goals:
             goal_obj_ids = goal["obj_ids"]
