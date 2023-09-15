@@ -111,6 +111,7 @@ class LinePattern(Pattern):
         obj_id = kwargs.get("obj_id", -1)
         obj_ids = kwargs.get("obj_ids", [])
         thickness = kwargs.get("thickness", 1)
+        try_center = kwargs.get("try_center", False)
         assert len(obj_ids) == 0 or (len(obj_ids) >= cls._num_limit[0] and len(obj_ids)
                                      <= cls._num_limit[1]), "Number of objects should be within the limit!"
 
@@ -135,8 +136,12 @@ class LinePattern(Pattern):
         if len(rel_obj_ids) == 0:
             if len(obj_ids) == 0:
                 # pure pattern
-                x0 = rng.integers(0, width)
-                y0 = rng.integers(0, height)
+                if try_center:
+                    x0 = width // 2
+                    y0 = height // 2
+                else:
+                    x0 = rng.integers(0, width)
+                    y0 = rng.integers(0, height)
                 if rng.random() > 0.5:
                     # horizontal line
                     cv2.line(prior, (0, y0), (x0 + width, y0), 1.0, thickness)
@@ -292,7 +297,7 @@ class LinePattern(Pattern):
 class CirclePattern(Pattern):
     """Circle pattern, obj poses should formulate a circle"""
     name = "circle"
-    _num_limit = [3, 100]  # at least 3 points
+    _num_limit = [2, 100]  # at least 2 points
 
     @classmethod
     def gen_prior(cls, img_size, rng, **kwargs):
@@ -302,6 +307,7 @@ class CirclePattern(Pattern):
         obj_ids = kwargs.get("obj_ids", [])
         thickness = kwargs.get("thickness", 3)
         rel_size = kwargs.get("rel_size", "M")
+        try_center = kwargs.get("try_center", False)
         assert len(obj_ids) == 0 or (len(obj_ids) >= cls._num_limit[0] and len(obj_ids)
                                      <= cls._num_limit[1]), "Number of objects should be within the limit!"
 
@@ -322,6 +328,8 @@ class CirclePattern(Pattern):
         scale = rng.random() * (scale_max - scale_min) + scale_min
         radius = int(scale * (min(height, width)))
         segments = len(obj_ids) if len(obj_ids) % 2 == 0 else len(obj_ids) + 1
+        if segments <= 2:
+            segments = 8  # default
 
         block_vis = False
         enable_vis = False
@@ -329,8 +337,12 @@ class CirclePattern(Pattern):
             if len(obj_ids) == 0:
                 # FIXME: Currently, this doesn't support generate proper angle
                 # pure pattern
-                center_x = rng.integers(radius, width - radius)
-                center_y = rng.integers(radius, height - radius)
+                if try_center:
+                    center_x = width // 2
+                    center_y = height // 2
+                else:
+                    center_x = rng.integers(radius, width - radius)
+                    center_y = rng.integers(radius, height - radius)
                 cls.draw_seg_circle(prior, (center_x, center_y), radius, 1.0, thickness, segments)
                 angle = 0.0
             else:

@@ -246,7 +246,8 @@ class StructRearrange(BaseTask):
             rearrange_obj_ids = []
             pattern_info = {}
             for i in range(max_try):
-                pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng)
+                # try to put the pattern in the center
+                pattern_prior, pattern_info = PATTERN_DICT[pattern_type].gen_prior(env.ws_map_size, env.rng, try_center=True)
                 num_limit = PATTERN_DICT[pattern_type]._num_limit
                 rearrange_obj_ids, obj_status = self.add_objects_to_pattern(
                     env,

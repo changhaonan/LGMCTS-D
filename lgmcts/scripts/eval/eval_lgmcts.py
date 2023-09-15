@@ -1,6 +1,7 @@
 """Evaluate the performace of lgmcts system"""
 from __future__ import annotations
 import os
+import copy
 import time
 import pickle
 import lgmcts
@@ -27,14 +28,13 @@ from lgmcts.scripts.data_generation.llm_parse import gen_prompt_goal_from_llm
 
 # Eval method
 
-def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True):
+def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode: str, n_samples: int = 10, n_epoches: int = 10, debug: bool = True, use_gt_pose: bool = False):
     """Eval from newly generated scene"""
     task_name = "struct_rearrange"
     resolution = 0.01
     pix_padding = 1  # padding for clearance
     n_samples = 5
     num_save_digits = 6
-    use_gt_pose = False  # if directly use the pose from dataset
     env = lgmcts.make(
         task_name=task_name,
         task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name],
@@ -51,10 +51,13 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
     prompt_generator = PromptGenerator(env.rng)
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)  # bind sampler
     sucess_count = 0
+    plan_success_count = 0
+    exe_success_count = 0
     action_step_count = 0
     # LLM parsing
     checkpoint_list = list(filter(lambda f: f.endswith(".pkl"), os.listdir(dataset_path)))
     checkpoint_list.sort()
+    checkpoint_list = checkpoint_list[start:end]
     n_epoches = min(n_epoches, len(checkpoint_list))
     use_llm = False
     run_llm = False
@@ -84,7 +87,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
 
         # Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
         if prompt_goals is None:
-            goals = task.goals
+            goals = copy.deepcopy(task.goals)
         else:
             goals = prompt_goals[i]
         # pattern remapping
@@ -112,7 +115,7 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
                 L.append(sample_data)
 
         # Step 3. generate & exectue plan
-        action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=20000, seed=1)
+        plan_success, action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=1)
         print("Plan finished!")
         env.prepare()
         for step in action_list:
@@ -143,21 +146,42 @@ def eval_offline(dataset_path: str, method: str, mask_mode: str, n_samples: int 
         # Step 4. evaluate the result
         action_step_count += len(action_list)
         exe_result = task.check_success(obj_poses=env.get_obj_poses(), flip_xy=True)
-        print(f"Success: {exe_result.success}")
+        overall_success = exe_result.success and plan_success
+        print(f"Plan sucess: {plan_success}; Execute sucess: {exe_result.success}; Success: {overall_success}")
+        if plan_success:
+            plan_success_count += 1
         if exe_result.success:
+            exe_success_count += 1
+        if overall_success:
             sucess_count += 1
 
         if debug:
-            prompt_generator.render(append=" [succes]" if exe_result.success else " [fail]")
+            prompt_generator.render(append=" [succes]" if overall_success else " [fail]")
 
         print("----------- Current Result -----------")
+
         print(f"Success rate: {float(sucess_count) / float(i + 1)}")
+        print(f"Plan success rate: {float(plan_success_count) / float(i + 1)}")
+        print(f"Execute success rate: {float(exe_success_count) / float(i + 1)}")
         print(f"Average action steps: {float(action_step_count) / float(i + 1)}")
 
     # average result
     print("----------- Final Result -----------")
     print(f"Success rate: {float(sucess_count) / float(n_epoches)}")
+    print(f"Plan success rate: {float(plan_success_count) / float(n_epoches)}")
+    print(f"Execute success rate: {float(exe_success_count) / float(n_epoches)}")
     print(f"Average action steps: {float(action_step_count) / float(n_epoches)}")
+    # log result
+    result_dict = {
+        "start": start,
+        "end": end,
+        "success_rate": float(sucess_count) / float(n_epoches),
+        "plan_success_rate": float(plan_success_count) / float(n_epoches),
+        "exe_success_rate": float(exe_success_count) / float(n_epoches),
+        "average_action_steps": float(action_step_count) / float(n_epoches),
+    }
+    with open(os.path.join(dataset_path, f"{method}_{mask_mode}_{start}_{end}_result.json"), "w") as f:
+        json.dump(result_dict, f)
     # close
     env.close()
     prompt_generator.close()
@@ -171,12 +195,18 @@ if __name__ == "__main__":
     parser.add_argument("--n_epoches", type=int, default=10, help="Number of epoches")
     parser.add_argument("--mask_mode", type=str, default="convex_hull", help="Mask mode")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
+    parser.add_argument("--start", type=int, default=0, help="Start index")
+    parser.add_argument("--end", type=int, default=10, help="End index")
+    parser.add_argument("--use_gt_pose", action="store_true", help="Use gt pose")
     args = parser.parse_args()
+
+    # manually set
     args.debug = True
+    args.use_gt_pose = False
     if args.dataset_path is not None:
         dataset_path = args.dataset_path
     else:
         root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
         dataset_path = f"{root_path}/output/struct_rearrange"
-    eval_offline(dataset_path=dataset_path, method=args.method, mask_mode=args.mask_mode,
-                 n_samples=args.n_samples, n_epoches=args.n_epoches, debug=args.debug)
+    eval_offline(dataset_path=dataset_path, start=args.start, end=args.end, method=args.method, mask_mode=args.mask_mode,
+                 n_samples=args.n_samples, n_epoches=args.n_epoches, debug=args.debug, use_gt_pose=args.use_gt_pose)
