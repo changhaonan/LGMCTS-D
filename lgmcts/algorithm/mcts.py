@@ -150,20 +150,20 @@ class Node(object):
             moved_obj = self.rng.choice(leaf_nodes).name
             # add a sampler to move the obstacle away
             buffer_sampler = SampleData(
-                pattern="line", 
-                obj_id = moved_obj, 
-                obj_ids = [moved_obj], 
-                obj_poses_pix = {})
-            success, _, (moved_obj, new_position),_ = self.sampling_function(
+                pattern="line",
+                obj_id=moved_obj,
+                obj_ids=[moved_obj],
+                obj_poses_pix={})
+            success, _, (moved_obj, new_position), _ = self.sampling_function(
                 self.region_sampler,
                 self.object_states,
                 buffer_sampler
             )
             solved_sampler_obj_id = float('inf')
             return action, moved_obj, new_position, solved_sampler_obj_id, solution_quality
-            
+
         sampler = self.sampler_dict[action[0]]
-        success, obs, (moved_obj, new_position),solution_quality = self.sampling_function(
+        success, obs, (moved_obj, new_position), solution_quality = self.sampling_function(
             self.region_sampler,
             self.object_states,
             sampler,
@@ -177,11 +177,11 @@ class Node(object):
             else:
                 # add a sampler to move the obstacle away
                 buffer_sampler = SampleData(
-                    pattern="line", 
-                    obj_id = obs, 
-                    obj_ids = [obs], 
-                    obj_poses_pix = {})
-                success, _, (moved_obj, new_position),_ = self.sampling_function(
+                    pattern="line",
+                    obj_id=obs,
+                    obj_ids=[obs],
+                    obj_poses_pix={})
+                success, _, (moved_obj, new_position), _ = self.sampling_function(
                     self.region_sampler,
                     self.object_states,
                     buffer_sampler
@@ -257,7 +257,7 @@ class Node(object):
                 region.set_objects_as_real(objs_away_from_goal)
             if valid_pose.shape[0] > 0:
                 valid_pose = valid_pose.reshape(-1)
-                
+
                 if 'sample_probs' in sample_info:
                     sample_quality = sample_info['sample_probs']*sample_info['free_volume']/np.max(prior)
         else:
@@ -321,7 +321,7 @@ class MCTS(object):
         UCB_scalar=1.0,
         obj_support_tree: anytree.Node = None,
         prior_dict={},
-        reward_mode = 'same', # 'same' or 'prop'
+        reward_mode='same',  # 'same' or 'prop'
         n_samples=1,
         is_virtual=False,
         verbose: bool = False,
@@ -332,7 +332,7 @@ class MCTS(object):
             "UCB_scalar": UCB_scalar,
             "prior_dict": prior_dict,
             "rng": self.rng,
-            "num_sampling" : n_samples,
+            "num_sampling": n_samples,
             'reward_mode': reward_mode
         }
         self.region_sampler = region_sampler
@@ -395,9 +395,9 @@ class MCTS(object):
             current_node = self.selection()
             # an action in MCTS is represented by (sampler_id, trail_id),
             # the index is according to L and the num_sample children list
-            #TODO: do K sampling at the same time @KAI
+            # TODO: do K sampling at the same time @KAI
             action, moved_obj, new_position, solved_sampler_obj_id, solution_quality = current_node.expansion()
-            if (new_position.shape[0] > 0): # go to a new state
+            if (new_position.shape[0] > 0):  # go to a new state
                 new_node = self.move(
                     num_iter,
                     action,
@@ -417,7 +417,7 @@ class MCTS(object):
                     action_from_parent=action,
                     updated_obj_id=moved_obj,
                     obj_support_tree=copy_tree(current_node.obj_support_tree),
-                    reward_dict={k:v for k,v in current_node.reward_dict.items()},
+                    reward_dict={k: v for k, v in current_node.reward_dict.items()},
                     is_virtual=self.is_virtual,
                     verbose=self.verbose,
                     **self.settings,
@@ -465,14 +465,14 @@ class MCTS(object):
         }
         # print(f"id: {node_id}, obj_states: {new_object_states}, target: {target}")
 
-        new_sampler_dict = {obj_id:sampler for obj_id, sampler in current_node.sampler_dict.items() if obj_id != solved_sampler_obj_id}
-        
+        new_sampler_dict = {obj_id: sampler for obj_id, sampler in current_node.sampler_dict.items() if obj_id != solved_sampler_obj_id}
+
         # update reward dict
-        new_reward_dict = {obj_id:reward for obj_id, reward in current_node.reward_dict.items()}
+        new_reward_dict = {obj_id: reward for obj_id, reward in current_node.reward_dict.items()}
         if solved_sampler_obj_id != float("inf"):
             new_reward_dict[solved_sampler_obj_id] = solution_quality
 
-        # If we are moving an obstacle, the moved object may be an object moved to goal, 
+        # If we are moving an obstacle, the moved object may be an object moved to goal,
         # we need to retrive the sampler to indicate that this sampler needs to be solved again
         if solved_sampler_obj_id == float("inf"):
             backtracked_node = current_node

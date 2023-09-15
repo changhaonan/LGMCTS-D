@@ -68,7 +68,7 @@ def dist_p2l(p, o, k):
     return np.linalg.norm(op_ver, axis=-1)
 
 
-def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: int = 10, debug: bool = True, start: int = 0, end: int = 100):
+def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: int = 10, debug: bool = True, start: int = 0, end: int = 100, pattern_name: str = "line"):
     # Step 1. load the scene
     camera_pose = np.array([[-0.99874228,  0.00730198,  0.04960381,  0.428],
                             [-0.04565842,  0.27632073, -0.95998029,  0.988],
@@ -113,7 +113,6 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         goal_pose_sformer = None
         curr_pose_sformer = None
         sformer_action_list = []
-        obj_poses_pattern = []
 
         with open(f"{data_path}/{h5_folder}/name_ids.pkl", "rb") as f:
             name_ids = pickle.load(f)
@@ -138,17 +137,17 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 curr_pose_sformer = pickle.load(f)
             for index, id in enumerate(goals[0]["obj_ids"]):
                 sformer_action_list.append({"obj_id": id, "new_pose": goal_pose_sformer[index]})
-        else:
-            # check semantic pattern
-            new_goals = []
-            for goal in goals:
-                pattern = goal["type"].split(":")[-1]
-                if pattern in SEMANTIC_PATTERN_DICT:
-                    new_goal = SEMANTIC_PATTERN_DICT[pattern].parse_goal(name_ids)
-                    new_goals += new_goal
-                else:
-                    new_goals.append(goal)
-            goals = new_goals
+        # check semantic pattern
+        new_goals = []
+        for goal in goals:
+            # pattern = goal["type"].split(":")[-1]
+            pattern = pattern_name  # set it from the argument
+            if pattern in SEMANTIC_PATTERN_DICT:
+                new_goal = SEMANTIC_PATTERN_DICT[pattern].parse_goal(name_ids)
+                new_goals += new_goal
+            else:
+                new_goals.append(goal)
+        goals = new_goals
         # init region_sampler
         resolution = 0.002 if use_sformer_result else 0.01
         pix_padding = 1  # padding for clearance
@@ -178,18 +177,11 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 L.append(sample_data)
                 sampled_ids.append(goal_obj_id)
         # Step 3. generate & exectue plan
-        check_goal_idx = 0
         sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
         if not use_sformer_result:
             action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=1, is_virtual=False)
         else:
             action_list = sformer_action_list  # Checking SFORMER action list
-        for entry in action_list:
-            if use_sformer_result:
-                obj_poses_pattern.append(extract_euler_angles(entry["new_pose"]))
-            else:
-                if entry["obj_id"] in goals[check_goal_idx]["obj_ids"]:
-                    obj_poses_pattern.append(entry["new_pose"])
         region_sampler.set_object_poses(init_objects_poses)
         if debug:
             region_sampler.visualize()
@@ -221,15 +213,29 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 region_sampler.visualize_3d()
 
         # Step 4. Calculate Success Rate
-        obj_poses_pattern = np.vstack(obj_poses_pattern)
-        pattern_info = {"threshold": 0.05}
-        pattern_status = PATTERN_DICT[goals[check_goal_idx]["type"].split(
-            ":")[-1]].check(obj_poses_pattern=obj_poses_pattern, pattern_info=pattern_info)
-        not_collision = not region_sampler.check_collision(goals[check_goal_idx]["obj_ids"])
-        if goals[0]["type"] == "pattern:tower":
-            not_collision = True
-        status = pattern_status and not_collision
-        if status:
+        overall_status = True
+        for goal in goals:
+            obj_poses_pattern = []
+            for entry in action_list:
+                if entry["obj_id"] in goal["obj_ids"]:
+                    if use_sformer_result:
+                        obj_poses_pattern.append(extract_euler_angles(entry["new_pose"]))
+                    else:
+                        obj_poses_pattern.append(entry["new_pose"])
+            obj_poses_pattern = np.vstack(obj_poses_pattern)
+            pattern_info = {"threshold": 0.05}
+
+            pattern_status = PATTERN_DICT[goal["type"].split(
+                ":")[-1]].check(obj_poses_pattern=obj_poses_pattern, pattern_info=pattern_info)
+            not_collision = not region_sampler.check_collision(goal["obj_ids"])
+            if goal["type"] == "pattern:tower":
+                not_collision = True
+            status = pattern_status and not_collision
+            overall_status = overall_status and status
+            print(f"Goal type: {goal['type']}, Pattern Status: {pattern_status}; Collision Status: {not not_collision}; Success: {status}")
+        if not overall_status:
+            region_sampler.visualize_3d()
+        if overall_status:
             if use_sformer_result:
                 sformer_success_result[h5_folder] = {"success_rate": 1, "pattern_status": pattern_status, "not_collision": not_collision}
                 sformer_success_rate.append(1)
@@ -276,10 +282,10 @@ if __name__ == "__main__":
     parser.add_argument("--end", type=int, default=2, help="End index")
     args = parser.parse_args()
 
-    debug = True
-    args.method = "sformer"
-    pattern = "line"
+    debug = False
+    args.method = "mcts"
+    args.pattern = "dinner"
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
     args.data_path = os.path.join(root_path, f"output/eval_single_pattern/{args.pattern}-pcd-objs")
     args.res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{args.pattern}-pcd-objs")
-    eval(args.data_path, args.res_path, args.method, args.mask_mode, args.n_samples, debug, args.start, args.end)
+    eval(args.data_path, args.res_path, args.method, args.mask_mode, args.n_samples, debug, args.start, args.end, pattern_name=args.pattern)

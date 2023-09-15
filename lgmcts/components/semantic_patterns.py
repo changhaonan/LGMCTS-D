@@ -24,21 +24,18 @@ class DinnerPattern(SemanticPattern):
         goals = []
 
         # plates should be stacked
-        if "plate" in name_id_dict:
+        if "plate" in name_id_dict and len(name_id_dict["plate"]) > 1:
             goals.append({"type": "pattern:tower", "obj_ids": name_id_dict["plate"]})
 
-        # forks should be on the left of plates
-        if "fork" in name_id_dict and "plate" in name_id_dict:
-            goals.append({"type": "pattern:spatial", "obj_ids": [name_id_dict["fork"][0], name_id_dict["plate"][0]], "spatial_label": [1, 0, 0, 0]})
-        # knives should be on the right of plates
-        if "knife" in name_id_dict and "plate" in name_id_dict:
-            goals.append({"type": "pattern:spatial", "obj_ids": [name_id_dict["knife"][0], name_id_dict["plate"][0]], "spatial_label": [0, 1, 0, 0]})
-        # spoons should be on the right of plates
-        if "spoon" in name_id_dict and "plate" in name_id_dict:
-            goals.append({"type": "pattern:spatial", "obj_ids": [name_id_dict["spoon"][0], name_id_dict["plate"][0]], "spatial_label": [0, 1, 0, 0]})
-        # cups should be on the right of plates
-        if "cup" in name_id_dict and "plate" in name_id_dict:
-            goals.append({"type": "pattern:spatial", "obj_ids": [name_id_dict["cup"][0], name_id_dict["plate"][0]], "spatial_label": [0, 1, 0, 0]})
+        line_objs = [] if "plate" not in name_id_dict else [name_id_dict["plate"][0]]
+        if "fork" in name_id_dict:
+            line_objs += name_id_dict["fork"]
+        if "knife" in name_id_dict:
+            line_objs += name_id_dict["knife"]
+        if "spoon" in name_id_dict:
+            line_objs += name_id_dict["spoon"]
+        if len(line_objs) > 0:
+            goals.append({"type": "pattern:line", "obj_ids": line_objs})
         # bowls should be on the stack on plates
         if "bowl" in name_id_dict and "plate" in name_id_dict:
             goals.append({"type": "pattern:tower", "obj_ids": [name_id_dict["plate"][0]] + name_id_dict["bowl"]})
