@@ -88,11 +88,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
     end = len(h5_folders)
     mcts_success_result = dict()
     sformer_success_result = dict()
-<<<<<<< HEAD
     h5_folders = ['data00546186.h5']
-=======
-    # h5_folders = ['data00067785.h5']
->>>>>>> bb0ac78451b59077e49a30e7093000dfbfbb9ddd
     failures = []
     for iter in tqdm.tqdm(range(len(h5_folders[start:end]))):
         h5_folder = h5_folders[start:end][iter]
@@ -256,14 +252,10 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
                 not_collision = True
             status = pattern_status and not_collision
             overall_status = overall_status and status
-<<<<<<< HEAD
             print(f"Goal type: {goal['type']}, Pattern Status: {pattern_status}; Collision Status: {not not_collision}; Success: {status}")
         if not overall_status:
             # region_sampler.visualize_3d()
             pass
-=======
-            # print(f"Goal type: {goal['type']}, Pattern Status: {pattern_status}; Collision Status: {not not_collision}; Success: {status}")
->>>>>>> bb0ac78451b59077e49a30e7093000dfbfbb9ddd
         if overall_status:
             if use_sformer_result:
                 sformer_success_result[h5_folder] = {"success_rate": 1, "pattern_status": pattern_status, "not_collision": not_collision}
@@ -313,29 +305,8 @@ if __name__ == "__main__":
 
     debug = True
     args.method = "mcts"
-<<<<<<< HEAD
     args.pattern = "circle"
-=======
-    args.pattern = "dinner"
-    args.end = -1  # -1 means all
->>>>>>> bb0ac78451b59077e49a30e7093000dfbfbb9ddd
     root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
     args.data_path = os.path.join(root_path, f"output/eval_single_pattern/{args.pattern}-pcd-objs")
     args.res_path = os.path.join(root_path, f"output/eval_single_pattern/res-{args.pattern}-pcd-objs")
     eval(args.data_path, args.res_path, args.method, args.mask_mode, args.n_samples, debug, args.start, args.end, pattern_name=args.pattern)
-
-
-# h5 file: data00524847.h5
-# Goal: circle; [14, 13, 12, 11, 10]
-# Goal type: pattern:circle, Pattern Status: True; Collision Status: False; Success: True
-#   0%|                                                                                                                                                                                             | 2/3416 [00:02<1:12:36,  1.28s/it]h5 file: data00551640.h5
-# Goal: circle; [14, 13, 12, 11, 10]
-# Goal type: pattern:circle, Pattern Status: True; Collision Status: True; Success: False
-#   0%|▏                                                                                                                                                                                            | 3/3416 [00:04<1:28:50,  1.56s/it]h5 file: data00513804.h5
-# Goal: circle; [12, 11, 10]
-# Goal type: pattern:circle, Pattern Status: True; Collision Status: False; Success: True
-#   0%|▏                                                                                                                                                                                            | 4/3416 [00:05<1:14:57,  1.32s/it]h5 file: data00519084.h5
-# Goal: circle; [12, 11, 10]
-# Goal type: pattern:circle, Pattern Status: True; Collision Status: False; Success: True
-#   0%|▎                                                                                                                                                                                            | 5/3416 [00:06<1:03:52,  1.12s/it]h5 file: data00546186.h5
-# Goal: circle; [15, 14, 13, 12, 11, 10]
