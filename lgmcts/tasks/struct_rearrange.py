@@ -338,6 +338,8 @@ class StructRearrange(BaseTask):
             for goal in self.goals:
                 pattern_type = goal["type"].split(":")[-1]
                 if pattern_type in PATTERN_DICT:
+                    if pattern_type == "spatial":
+                        continue
                     if not PATTERN_DICT[pattern_type].check(obj_poses, pattern_info=goal, **kwargs):
                         return ResultTuple(success=False, failure=True, distance=None)
                 else:

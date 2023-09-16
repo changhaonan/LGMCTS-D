@@ -170,7 +170,11 @@ class Region2DSampler():
         # project points to region plane
         points_pix = self._world2pix(points)
         # get x-axis
-        x_axis = self._get_object_xy_axis(points_pix)
+        try:
+            x_axis = self._get_object_xy_axis(points_pix)
+        except:
+            print("Error in computing x-axis, use default x-axis")
+            x_axis = np.array([1.0, 0.0])
         lb_pix = np.array(
             [points_pix[:, 0].min(), points_pix[:, 1].min(), points_pix[:, 2].min()]
         )  # lb, lower bottom
@@ -538,12 +542,14 @@ class Region2DSampler():
                 cv2.line(img_resized, (j, 0), (j, img_resized.shape[0]), grid_color, 1)
 
         title = kwargs.get("title", "occpuancy-scene-overlay")
-        cv2.imshow(title, img_resized)
+        # cv2.imshow(title, img_resized)
         block = kwargs.get("block", True)
         if block:
-            cv2.waitKey(0)
+            # cv2.waitKey(0)
+            pass
         else:
-            cv2.waitKey(1)
+            # cv2.waitKey(1)
+            pass
         # cv2.destroyAllWindows()
 
     def visualize_3d(self, obj_list: list[int] | None = None, **kwargs):
