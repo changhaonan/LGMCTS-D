@@ -39,6 +39,8 @@ def gen_prompt_goal_from_llm(prompt_path: str, n_epoches: int = 0, checkpoint_li
             else:
                 with open(os.path.join(prompt_path, "goal.pkl"), "rb") as fp:
                     prompt_goals = pickle.load(fp)
+    print("LLM Goals:", prompt_goals)
+    print("====================================\n")
     return prompt_goals
 
 
@@ -53,6 +55,8 @@ def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings
     for ind, res in enumerate(llm_result):
         obj_id_reverse_mapping = obj_id_reverse_mappings[ind]
         goal = []
+        print("res:", res)
+        rearrange_ids = None
         for entry in res:
             goal_entry = dict()
             if entry["pattern"] != "spatial":
@@ -61,7 +65,7 @@ def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings
                 goal_entry["anchor_id"] = []    
                 anchor_color = None
                 for item in obj_id_reverse_mapping:
-                    if obj_id_reverse_mapping[item]["obj_name"] == entry["anchor"]:
+                    if obj_id_reverse_mapping[item]["obj_name"] in entry["anchor"]:
                         goal_entry["anchor_id"].append(item)
                         anchor_color = obj_id_reverse_mapping[item]["texture_name"]
                         break
@@ -74,28 +78,40 @@ def parse_llm_result(dataset_path: str, llm_result: str, obj_id_reverse_mappings
                     for item in obj_id_reverse_mapping:
                         if obj_id_reverse_mapping[item]["texture_name"] != anchor_color:
                             goal_entry["obj_ids"].append(item)
+                rearrange_ids = goal_entry["obj_ids"]
                 goal.append(goal_entry)
             else:
                 goal_entry["type"] = f"pattern:{entry['pattern']}"
                 goal_entry["obj_ids"] = []
                 for obj_name in entry["objects"]:
                     for item in obj_id_reverse_mapping:
-                        if obj_id_reverse_mapping[item]["obj_name"] == obj_name:
+                        if obj_id_reverse_mapping[item]["obj_name"] in obj_name:
                             goal_entry["obj_ids"].append(item)
                             break
                 goal_entry["obj_ids"] = goal_entry["obj_ids"]
                 goal_entry["spatial_label"] = np.array([0, 0, 0, 0], dtype=np.int32)
                 for sp_label in entry["spatial_label"]:
-                    if "left" in sp_label:
-                        goal_entry["spatial_label"][0] = 1
-                    if "right" in sp_label:
-                        goal_entry["spatial_label"][1] = 1
-                    if "front" in sp_label:
-                        goal_entry["spatial_label"][2] = 1
-                    if "behind" in sp_label:
-                        goal_entry["spatial_label"][3] = 1
-                goal_entry["spatial_str"] = entry["spatial_str"]
+                    if sp_label is not None:
+                        if "left" in sp_label:
+                            goal_entry["spatial_label"][0] = 1
+                        if "right" in sp_label:
+                            goal_entry["spatial_label"][1] = 1
+                        if "front" in sp_label:
+                            goal_entry["spatial_label"][2] = 1
+                        if "behind" in sp_label:
+                            goal_entry["spatial_label"][3] = 1
+                try:
+                    goal_entry["spatial_str"] = entry["spatial_str"]
+                except:
+                    goal_entry["spatial_str"] = ""
                 goal.append(goal_entry)
+        # Swapping spatial ids in wrong cases
+        print("Goal before swapping:", goal)
+        for index, entry in enumerate(goal):
+            if entry["type"] == "spatial":
+                if entry["obj_ids"][0] not in rearrange_ids:
+                    goal[index]["obj_ids"][0], goal[index]["obj_ids"][1] = goal[index]["obj_ids"][1], goal[index]["obj_ids"][0]
+        
         goals.append(goal)
     with open(f"{dataset_path}/goal.pkl", "wb") as fp:
         pickle.dump(goals, fp)
@@ -142,7 +158,7 @@ def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_exampl
             else:
                 prompts.append(line.strip())
     # gpt-3.5-turbo-16k-0613
-    chatgpt = ChatGPTAPI(model="gpt-4", api_key=api_key, db=prompt_db)
+    chatgpt = ChatGPTAPI(model="gpt-3.5-turbo-16k-0613", api_key=api_key, db=prompt_db)
     ret = chatgpt.chat(str_msg=prompts)
     # print(ret)
     return ret[0]

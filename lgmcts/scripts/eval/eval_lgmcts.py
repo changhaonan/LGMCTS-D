@@ -64,7 +64,7 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
     # Generate goals using llm and object selector
     prompt_goals = gen_prompt_goal_from_llm(dataset_path, n_epoches, checkpoint_list, use_llm=use_llm,
                                             run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, num_save_digits=num_save_digits, debug=debug)
-
+    task_goals = []
     for i in range(n_epoches):
         print(f"==== Episode {i} ====")
         try:
@@ -84,7 +84,7 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
                 prompt_generator.render()
                 ##
                 print(env.obj_ids)
-
+            print("====================================\n")
             # Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
             if prompt_goals is None:
                 goals = copy.deepcopy(task.goals)
@@ -97,6 +97,10 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
                 goals = REMAPPING_PATTERN_DICT["rigid"].parse_goal(goals=goals, goal_spec=goal_spec, region_sampler=region_sampler, env=env)
                 region_sampler.set_object_poses(init_pose)  # reset region sampler
             L = []
+
+            print("LLM Goals:", goals)
+            print("SYS Goals:", task.goals)
+            task_goals.append(task.goals)
             for goal in goals:
                 goal_obj_ids = goal["obj_ids"]
                 goal_pattern = goal["type"].split(":")[-1]
@@ -164,6 +168,7 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
             print(f"Plan success rate: {float(plan_success_count) / float(i + 1)}")
             print(f"Execute success rate: {float(exe_success_count) / float(i + 1)}")
             print(f"Average action steps: {float(action_step_count) / float(i + 1)}")
+            
         except:
             failed_count += 1
             print(f"Episode {i} failed!")
@@ -186,6 +191,9 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
     }
     with open(os.path.join(dataset_path, f"{method}_{mask_mode}_{start}_{end}_{str(use_gt_pose)}_result.json"), "w") as f:
         json.dump(result_dict, f)
+    with open(os.path.join(dataset_path, f"{method}_{mask_mode}_{start}_{end}_{str(use_gt_pose)}_goal_check.pkl"), "wb") as f:
+        pickle.dump({"llm" : prompt_goals, "sys" : task_goals}, f)
+    
     # close
     env.close()
     prompt_generator.close()
@@ -200,7 +208,7 @@ if __name__ == "__main__":
     parser.add_argument("--mask_mode", type=str, default="convex_hull", help="Mask mode")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
     parser.add_argument("--start", type=int, default=0, help="Start index")
-    parser.add_argument("--end", type=int, default=-1, help="End index")
+    parser.add_argument("--end", type=int, default=50, help="End index")
     parser.add_argument("--use_gt_pose", action="store_true", help="Use gt pose")
     parser.add_argument("--use_llm", action="store_true", help="Use llm")
     parser.add_argument("--run_llm", action="store_true", help="Run llm")
