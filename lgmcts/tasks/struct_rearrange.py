@@ -17,6 +17,7 @@ from lgmcts.components.attribute import COMPARE_DICT, EqualRel, DifferentRel, Sm
 from lgmcts.components.patterns import PATTERN_DICT
 from lgmcts.env import seed
 
+
 class ResultTuple(NamedTuple):
     success: bool
     failure: bool
@@ -339,6 +340,7 @@ class StructRearrange(BaseTask):
                 pattern_type = goal["type"].split(":")[-1]
                 if pattern_type in PATTERN_DICT:
                     if pattern_type == "spatial":
+                        # FIXME: currently there is a bug in the spatial pattern check
                         continue
                     if not PATTERN_DICT[pattern_type].check(obj_poses, pattern_info=goal, **kwargs):
                         return ResultTuple(success=False, failure=True, distance=None)

@@ -209,7 +209,7 @@ def eval(data_path: str, res_path: str, method: str, mask_mode: str, n_samples: 
         # Step 3. generate & exectue plan
         sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
         if not use_sformer_result:
-            action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=0, is_virtual=False)
+            action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=4, is_virtual=False)
         else:
             action_list = sformer_action_list  # Checking SFORMER action list
         region_sampler.set_object_poses(init_objects_poses)

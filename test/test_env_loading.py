@@ -17,7 +17,7 @@ if __name__ == '__main__':
         task_name=task_name, 
         task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name], 
         modalities=["rgb", "segm", "depth"], 
-        seed=0, 
+        seed=4, 
         debug=True, 
         display_debug_window=True,
         hide_arm_rgb=True,
