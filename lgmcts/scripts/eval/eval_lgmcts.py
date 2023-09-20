@@ -39,7 +39,7 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
         task_name=task_name,
         task_kwargs=lgmcts.PARTITION_TO_SPECS["train"][task_name],
         modalities=["rgb", "segm", "depth"],
-        seed=4,
+        seed=0,
         debug=debug,
         display_debug_window=debug,
         hide_arm_rgb=(not debug),
@@ -119,7 +119,7 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
                     L.append(sample_data)
 
             # Step 3. generate & exectue plan
-            plan_success, action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=4)
+            plan_success, action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=10000, seed=0)
             print("Plan finished!")
             env.prepare()
             for step in action_list:
@@ -207,8 +207,8 @@ if __name__ == "__main__":
     parser.add_argument("--n_epoches", type=int, default=10, help="Number of epoches")
     parser.add_argument("--mask_mode", type=str, default="convex_hull", help="Mask mode")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
-    parser.add_argument("--start", type=int, default=0, help="Start index")
-    parser.add_argument("--end", type=int, default=50, help="End index")
+    parser.add_argument("--start", type=int, default=50, help="Start index")
+    parser.add_argument("--end", type=int, default=100, help="End index")
     parser.add_argument("--use_gt_pose", action="store_true", help="Use gt pose")
     parser.add_argument("--use_llm", action="store_true", help="Use llm")
     parser.add_argument("--run_llm", action="store_true", help="Run llm")

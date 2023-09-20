@@ -325,7 +325,7 @@ class MCTS(object):
         n_samples=1,
         is_virtual=False,
         verbose: bool = False,
-        seed=4
+        seed=0
     ) -> None:
         self.rng = np.random.default_rng(seed=seed)
         self.settings = {

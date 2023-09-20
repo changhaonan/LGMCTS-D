@@ -200,5 +200,5 @@ if __name__ == '__main__':
         save_path=f"{root_path}/output/struct_diffusion",
         num_save_digits=8,
         debug=True,
-        seed=4,
+        seed=0,
     )

@@ -96,7 +96,7 @@ def eval_real(data_path: str, prompt_path: str, method: str, mask_mode: str, n_s
 
     # Step 3. generate & exectue plan
     sampling_planner = SamplingPlanner(region_sampler, n_samples=n_samples)
-    action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=20000, seed=4)
+    action_list = sampling_planner.plan(L, algo=method, prior_dict=PATTERN_DICT, debug=debug, max_iter=20000, seed=0)
     print("Plan finished!")
     region_sampler.set_object_poses(init_objects_poses)
     region_sampler.visualize()
