@@ -60,14 +60,16 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
     checkpoint_list.sort()
     checkpoint_list = checkpoint_list[start:end]
     n_epoches = min(n_epoches, len(checkpoint_list))
+    use_llm = False
+    run_llm = False
     encode_ids_to_llm = False
     # Generate goals using llm and object selector
     prompt_goals = gen_prompt_goal_from_llm(dataset_path, n_epoches, checkpoint_list, use_llm=use_llm,
                                             run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, num_save_digits=num_save_digits, debug=debug)
-    task_goals = []
+    task_failed = 0
     for i in range(n_epoches):
-        print(f"==== Episode {i} ====")
         try:
+            print(f"==== Episode {i} ====")
             # Step 1. init the env from dataset
             env.reset()
             prompt_generator.reset()
@@ -84,7 +86,7 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
                 prompt_generator.render()
                 ##
                 print(env.obj_ids)
-            print("====================================\n")
+
             # Step 2. build a sampler based on the goal (from goal is cheat, we want to from LLM in the future)
             if prompt_goals is None:
                 goals = copy.deepcopy(task.goals)
@@ -97,10 +99,6 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
                 goals = REMAPPING_PATTERN_DICT["rigid"].parse_goal(goals=goals, goal_spec=goal_spec, region_sampler=region_sampler, env=env)
                 region_sampler.set_object_poses(init_pose)  # reset region sampler
             L = []
-
-            print("LLM Goals:", goals)
-            print("SYS Goals:", task.goals)
-            task_goals.append(task.goals)
             for goal in goals:
                 goal_obj_ids = goal["obj_ids"]
                 goal_pattern = goal["type"].split(":")[-1]
@@ -168,18 +166,16 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
             print(f"Plan success rate: {float(plan_success_count) / float(i + 1)}")
             print(f"Execute success rate: {float(exe_success_count) / float(i + 1)}")
             print(f"Average action steps: {float(action_step_count) / float(i + 1)}")
-            
         except:
-            failed_count += 1
-            print(f"Episode {i} failed!")
-            continue
+            task_failed += 1    
+            print("Cannot solve this task!")
     # average result
     print("----------- Final Result -----------")
     print(f"Success rate: {float(sucess_count) / float(n_epoches)}")
     print(f"Plan success rate: {float(plan_success_count) / float(n_epoches)}")
     print(f"Execute success rate: {float(exe_success_count) / float(n_epoches)}")
     print(f"Average action steps: {float(action_step_count) / float(n_epoches)}")
-    print(f"Failed count: {failed_count}")
+    print(f"Task failed: {task_failed}")
     # log result
     result_dict = {
         "start": start,
@@ -188,6 +184,7 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
         "plan_success_rate": float(plan_success_count) / float(n_epoches),
         "exe_success_rate": float(exe_success_count) / float(n_epoches),
         "average_action_steps": float(action_step_count) / float(n_epoches),
+        "task_failed": task_failed,
     }
     with open(os.path.join(dataset_path, f"{method}_{mask_mode}_{start}_{end}_{str(use_gt_pose)}_result.json"), "w") as f:
         json.dump(result_dict, f)
@@ -215,6 +212,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # manually set
+    # args.debug = True
+    args.use_gt_pose = False
     if args.dataset_path is not None:
         dataset_path = args.dataset_path
     else:
