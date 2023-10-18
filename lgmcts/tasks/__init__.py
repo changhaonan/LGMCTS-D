@@ -4,12 +4,16 @@ import importlib_resources
 from lgmcts.tasks.base import BaseTask
 from lgmcts.tasks.partition_files import *
 from lgmcts.tasks.struct_rearrange import StructRearrange
+from lgmcts.tasks.push_object import PushObject
 
 __all__ = ["ALL_TASKS", "ALL_PARTITIONS", "PARTITION_TO_SPECS"]
 
 _ALL_TASKS = {
     "struct_rearrange": [
         StructRearrange
+    ],
+    "push_object": [
+        PushObject
     ],
 }
 ALL_TASKS = {
@@ -42,6 +46,7 @@ ALL_PARTITIONS = [
     "struct_rearrange_2",
     "struct_rearrange_3",
     "struct_rearrange_5",
+    "push_object_0",
 ]
 PARTITION_TO_SPECS = {
     "train": TRAIN,

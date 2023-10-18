@@ -61,3 +61,4 @@ python lgmcts/scripts/eval/eval_lgmcts.py --method=mcts --n_epoches=100 --mask_m
 
 - [ ] Theoretically, the action part should have bug, but what kind of bug is still unknown.
 - [ ] Include the spatial pattern into pipeline.
+- [ ] Change the seed structure.
