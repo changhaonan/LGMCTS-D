@@ -41,5 +41,4 @@ if __name__ == "__main__":
         front_rgb = cv2.cvtColor(front_rgb, cv2.COLOR_RGB2BGR)
         cv2.imshow("front_rgb", front_rgb)
         cv2.waitKey(1)
-        pass
     env.close()
