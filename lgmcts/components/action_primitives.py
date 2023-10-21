@@ -269,8 +269,8 @@ class Push:
         """
 
         # Adjust push start and end positions.
-        pos0 = np.float32((pose0[0][0], pose0[0][1], self._operation_height))
-        pos1 = np.float32((pose1[0][0], pose1[0][1], self._operation_height))
+        pos0 = np.float32((pose0[0][0], pose0[0][1], pose0[0][2]))
+        pos1 = np.float32((pose1[0][0], pose1[0][1], pose1[0][2]))
         vec = np.float32(pos1) - np.float32(pos0)
         length = np.linalg.norm(vec)
         vec = vec / length
@@ -281,8 +281,8 @@ class Push:
         theta = np.arctan2(vec[1], vec[0])
         rot = utils.eulerXYZ_to_quatXYZW((0, 0, theta))
 
-        over0 = (pos0[0], pos0[1], self._rest_height)
-        over1 = (pos1[0], pos1[1], self._rest_height)
+        over0 = (pos0[0], pos0[1], pos0[2])
+        over1 = (pos1[0], pos1[1], pos1[2])
 
         # Execute push.
         timeout = movep((over0, rot))

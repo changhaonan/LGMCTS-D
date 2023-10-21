@@ -21,24 +21,22 @@ if __name__ == "__main__":
         display_debug_window=debug,
         hide_arm_rgb=False,
     )
-    env.reset()
-
-    for i in range(100):
-        # random action
-        pose0_position = np.random.uniform(0.3, 0.5, size=3)
-        pose0_rotation = np.array([0, 0, 0, 1])
-        pose1_position = np.random.uniform(0.3, 0.5, size=3)
-        pose1_rotation = np.array([0, 0, 0, 1])
-        action = {
-            "pose0_position": pose0_position,
-            "pose0_rotation": pose0_rotation,
-            "pose1_position": pose1_position,
-            "pose1_rotation": pose1_rotation,
-        }
-        # execute action
-        obs, _, terminated, __, info = env.step(action)
-        front_rgb = obs["rgb"]["front"].copy().transpose(1, 2, 0)
-        front_rgb = cv2.cvtColor(front_rgb, cv2.COLOR_RGB2BGR)
-        cv2.imshow("front_rgb", front_rgb)
-        cv2.waitKey(1)
+    task = env.task
+    for i in range(10):
+        env.reset()
+        terminated = False
+        while True:
+            action_list = task.oracle_action(env=env)
+            for action in action_list:
+                # execute action
+                obs, reward, terminated, truncated, info = env.step(action)
+                front_rgb = obs["rgb"]["front"].copy().transpose(1, 2, 0)
+                front_rgb = cv2.cvtColor(front_rgb, cv2.COLOR_RGB2BGR)
+                cv2.imshow("front_rgb", front_rgb)
+                cv2.waitKey(1)
+                if terminated:
+                    break
+            if terminated:
+                break
+            print(action_list)
     env.close()

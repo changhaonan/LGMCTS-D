@@ -285,7 +285,7 @@ class BaseEnv:
             # so that we don't break the Gym API contract.
             if timeout:
                 obs = self.get_obs()
-                return obs, 0.0, True, self._get_info()
+                return obs, 0.0, True, True, self._get_info()
 
         # Step simulator asynchronously until objects settle.
         self.wait_until_settle()
@@ -297,7 +297,7 @@ class BaseEnv:
             else:
                 result_tuple = self.task.check_success(release_obj=False)
         elif isinstance(self.ee, Spatula):
-            result_tuple = self.task.check_success()
+            result_tuple = self.task.check_success(self)
         else:
             raise NotImplementedError()
         done = result_tuple.success
@@ -455,13 +455,7 @@ class BaseEnv:
         return cmap, hmap, mask
 
     def _get_info(self):
-        result_tuple = self.task.check_success()
-        info = {
-            "prompt": self.prompt,
-            "success": result_tuple.success,
-            "failure": result_tuple.failure,
-        }
-        return info
+        return {}
 
     def get_obs(self):
         obs = {f"{modality}": {} for modality in self.modalities}  # sensing
