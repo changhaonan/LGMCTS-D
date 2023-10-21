@@ -39,24 +39,29 @@ class BaseEnv:
 
     def __init__(
         self,
-        modalities: Literal["rgb", "depth", "segm"] | list[Literal["rgb", "depth", "segm"]] | None = None,
+        modalities: Literal["rgb", "depth", "segm"]
+        | list[Literal["rgb", "depth", "segm"]]
+        | None = None,
         task: BaseTask | str | None = None,
         task_kwargs: dict | None = None,
         obs_img_size: Tuple[int, int] = (256, 256),  # (height, width), (128, 256) or (256, 256)
         obs_img_views: List[str] = ["front", "top"],
-        seed:int = 0,
+        seed: int = 0,
         hz: int = 240,
         max_sim_steps_to_static: int = 1000,
         debug: bool = False,
-        display_debug_window: bool = False, 
+        display_debug_window: bool = False,
         hide_arm_rgb: bool = False,
-        ):
+    ):
         with importlib_resources.files("lgmcts.assets") as _path:
             self.assets_root = str(_path)
         self.global_scaling = 1.0
         # Obj infos
         self.obj_ids = {"fixed": [], "rigid": []}
-        self.obj_dyn_info = { "size": {}, "urdf_full_path": {} }  # obj dynamic info: size, urdf path, etc.
+        self.obj_dyn_info = {
+            "size": {},
+            "urdf_full_path": {},
+        }  # obj dynamic info: size, urdf path, etc.
         self.obj_id_reverse_mapping = {}
         ## obj_id_reverse_mapping: a reverse mapping dict that maps object unique id to:
         # 1. object_name appended with color name
@@ -141,30 +146,30 @@ class BaseEnv:
 
         # setup action space
         self.position_bounds = gym.spaces.Box(
-            low=np.array([self.bounds[0, 0], self.bounds[1, 0], self.bounds[2, 0]], dtype=np.float32),
-            high=np.array([self.bounds[0, 1], self.bounds[1, 1], self.bounds[2, 1]], dtype=np.float32),
+            low=np.array(
+                [self.bounds[0, 0], self.bounds[1, 0], self.bounds[2, 0]], dtype=np.float32
+            ),
+            high=np.array(
+                [self.bounds[0, 1], self.bounds[1, 1], self.bounds[2, 1]], dtype=np.float32
+            ),
             shape=(3,),
             dtype=np.float32,
         )
         self.action_space = gym.spaces.Dict(
             {
                 "pose0_position": self.position_bounds,
-                "pose0_rotation": gym.spaces.Box(
-                    -1.0, 1.0, shape=(4,), dtype=np.float32
-                ),
+                "pose0_rotation": gym.spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float32),
                 "pose1_position": self.position_bounds,
-                "pose1_rotation": gym.spaces.Box(
-                    -1.0, 1.0, shape=(4,), dtype=np.float32
-                ),
+                "pose1_rotation": gym.spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float32),
             }
         )
-    
+
     def connect_pybullet_hook(self, display_debug_window: bool):
         return p.connect(p.DIRECT if not display_debug_window else p.GUI)
 
     def reset(self):
         self.obj_ids = {"fixed": [], "rigid": []}
-        self.obj_dyn_info = { "size": {}, "urdf_full_path": {} }
+        self.obj_dyn_info = {"size": {}, "urdf_full_path": {}}
         self.obj_id_reverse_mapping = {}
         self.obj_support_tree = Node(-1)
         self.meta_info = {}
@@ -174,10 +179,8 @@ class BaseEnv:
 
         # Temporarily disable rendering to load scene faster.
         if self._display_debug_window:
-            p.configureDebugVisualizer(
-                p.COV_ENABLE_RENDERING, 0, physicsClientId=self.client_id
-            )
-        
+            p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0, physicsClientId=self.client_id)
+
         pybullet_utils.load_urdf(
             p,
             os.path.join(self.assets_root, PLANE_URDF_PATH),
@@ -201,8 +204,7 @@ class BaseEnv:
         # Get revolute joint indices of robot (skip fixed joints).
         n_joints = p.getNumJoints(self.ur5, physicsClientId=self.client_id)
         joints = [
-            p.getJointInfo(self.ur5, i, physicsClientId=self.client_id)
-            for i in range(n_joints)
+            p.getJointInfo(self.ur5, i, physicsClientId=self.client_id) for i in range(n_joints)
         ]
         self.joints = [j[0] for j in joints if j[2] == p.JOINT_REVOLUTE]
 
@@ -211,11 +213,11 @@ class BaseEnv:
             p.resetJointState(
                 self.ur5, self.joints[i], self.homej[i], physicsClientId=self.client_id
             )
-        
+
         if self._hide_arm_rgb:
             pybullet_utils.set_visibility_bullet(
                 self.client_id, self.ur5, pybullet_utils.INVISIBLE_ALPHA
-            )  #FIXME: this hidden will still shown in segm image
+            )  # FIXME: this hidden will still shown in segm image
         self.ee = self.task.ee(
             self.assets_root,
             self.ur5,
@@ -228,15 +230,13 @@ class BaseEnv:
 
         # Reset end effector.
         self.ee.release()
-        
+
         # reset task
         self.task.reset(self)
 
         # Re-enable rendering.
         if self._display_debug_window:
-            p.configureDebugVisualizer(
-                p.COV_ENABLE_RENDERING, 1, physicsClientId=self.client_id
-            )
+            p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1, physicsClientId=self.client_id)
 
         # Generate meta info
         self.meta_info["n_objects"] = sum(len(v) for v in self.obj_ids.values())
@@ -275,9 +275,7 @@ class BaseEnv:
                     self.movej, self.movep, self.ee, pose0, pose1
                 )
             elif isinstance(self.ee, Spatula):
-                timeout = self.task.primitive(
-                    self.movej, self.movep, self.ee, pose0, pose1
-                )
+                timeout = self.task.primitive(self.movej, self.movep, self.ee, pose0, pose1)
             else:
                 raise ValueError("Unknown end effector type")
 
@@ -303,11 +301,11 @@ class BaseEnv:
         done = result_tuple.success
         obs = self.get_obs()
         return obs, 0, done, None, self._get_info()
-    
+
     def step_simulation(self):
         p.stepSimulation(physicsClientId=self.client_id)
         self.step_counter += 1
-    
+
     def wait_until_settle(self):
         counter = 0
         while not self.is_static:
@@ -368,9 +366,7 @@ class BaseEnv:
         # OpenGL camera settings.
         lookdir = np.float32([0, 0, 1]).reshape(3, 1)
         updir = np.float32([0, -1, 0]).reshape(3, 1)
-        rotation = p.getMatrixFromQuaternion(
-            config["rotation"], physicsClientId=self.client_id
-        )
+        rotation = p.getMatrixFromQuaternion(config["rotation"], physicsClientId=self.client_id)
         rotm = np.float32(rotation).reshape(3, 3)
         lookdir = (rotm @ lookdir).reshape(-1)
         updir = (rotm @ updir).reshape(-1)
@@ -463,13 +459,17 @@ class BaseEnv:
         obs["point_cloud"] = {}  # point cloud
         obs["scene_point_cloud"] = {}  # scene point cloud
         obs["poses"] = {}  # object poses
+        # robot state
+        obs["robot_joints"] = np.array([
+            p.getJointState(self.ur5, i, physicsClientId=self.client_id)[0] for i in self.joints
+        ])
         # Sensing
         for view, config in self.agent_cams.items():
             color, depth, segm = self.render_camera(config)
             render_result = {"rgb": color, "depth": depth, "segm": segm}
             for modality in self.modalities:
                 obs[modality][view] = render_result[modality]
-            
+
             # Pointcloud (from top view)
             intrinsic_mat = np.array(config["intrinsics"]).reshape(3, 3)
             # Notice: convert depth back to mm
@@ -488,7 +488,7 @@ class BaseEnv:
                 # misc_utils.plot_3d(f"{view}-{obj_id}", obj_pcd, color='blue')
                 # assert obj_pcd.shape[0] > 0, f"obj_id {obj_id} has no point cloud"
                 offset = counter * max_pcd_size
-                obj_pcds[offset:offset+obj_pcd.shape[0], :] = obj_pcd
+                obj_pcds[offset : offset + obj_pcd.shape[0], :] = obj_pcd
 
                 # object pose
                 position, orientation = pybullet_utils.get_obj_pose(self, obj_id)
@@ -517,7 +517,7 @@ class BaseEnv:
             if isinstance(scalar, float)
             else tuple([sc * s for sc, s in zip(scalar, size)])
         )
-    
+
     def get_random_pose(self, obj_size, prior=None, stack_prob=0.0):
         """Get random collision-free object pose within workspace bounds.
         Object has a chance of stack_prob to be stacked upon other objects.
@@ -528,7 +528,11 @@ class BaseEnv:
         _, hmap, obj_mask = self.get_true_image()
 
         obj_stack_id = -1  # -1 is the base
-        if self.rng.random() < stack_prob and len(self.obj_support_tree.leaves) > 1 and (len(self.obj_ids["rigid"]) > 0):
+        if (
+            self.rng.random() < stack_prob
+            and len(self.obj_support_tree.leaves) > 1
+            and (len(self.obj_ids["rigid"]) > 0)
+        ):
             leaf_nodes = self.obj_support_tree.leaves
             leaf_obj_ids = [leaf_node.name for leaf_node in leaf_nodes]
             obj_stack_id = self.rng.choice(leaf_obj_ids)
@@ -536,7 +540,9 @@ class BaseEnv:
             pos_stack, _ = pybullet_utils.get_obj_pose(self, obj_stack_id)
             obj_stack_size = self.obj_dyn_info["size"][obj_stack_id]
             obj_stack_base = np.array(pos_stack) + np.array([0, 0, obj_stack_size[2] / 2])
-            pos = obj_stack_base + np.array([0, 0, obj_size[2] / 2]) + np.array([0, 0, 0.01])  # 1cm above
+            pos = (
+                obj_stack_base + np.array([0, 0, obj_size[2] / 2]) + np.array([0, 0, 0.01])
+            )  # 1cm above
         else:
             # Randomly sample an object pose within free-space pixels.
             free = np.ones(obj_mask.shape, dtype=np.uint8)
@@ -546,7 +552,7 @@ class BaseEnv:
             free[0, :], free[:, 0], free[-1, :], free[:, -1] = 0, 0, 0, 0
             free = cv2.erode(free, np.ones((erode_size, erode_size), np.uint8))
             free = free.astype(np.float32)
-            # print(f"No free; erode_size: {erode_size}, free_size: {free.shape}, obj_size: {obj_size}") 
+            # print(f"No free; erode_size: {erode_size}, free_size: {free.shape}, obj_size: {obj_size}")
             # Get the probability union
             if prior is not None:
                 assert prior.shape == free.shape, "prior shape must be the same as free shape"
@@ -580,13 +586,15 @@ class BaseEnv:
             return None, None, None
         scaled_size = self._scale_size(size, scalar)
         if pose is None:
-            pose, obj_stack_id = self.get_random_pose(scaled_size, prior=prior, stack_prob=stack_prob)
+            pose, obj_stack_id = self.get_random_pose(
+                scaled_size, prior=prior, stack_prob=stack_prob
+            )
         if pose[0] is None or pose[1] is None:
             # reject sample because of no extra space to use (obj type & size) sampled outside this helper function
             return None, None, None
         else:
             obj_stack_id = None
-        
+
         obj_id, urdf_full_path = pybullet_utils.add_any_object(
             env=self,
             obj_entry=obj_entry,
@@ -658,7 +666,7 @@ class BaseEnv:
             # update support tree, objects moved to buffer will be detached from the tree
         self.obj_support_tree.children = []
 
-    def move_object_to_random(self, obj_id: int, prior=None, stack_prob:float=0.0):
+    def move_object_to_random(self, obj_id: int, prior=None, stack_prob: float = 0.0):
         """Move object to a random, free pose inside workspace bounds."""
         obj_size = self.obj_dyn_info["size"][obj_id]
         pose, obj_stack_id = self.get_random_pose(obj_size, prior, stack_prob=stack_prob)
@@ -713,13 +721,9 @@ class BaseEnv:
         self.action_space = gym.spaces.Dict(
             {
                 "pose0_position": self.position_bounds,
-                "pose0_rotation": gym.spaces.Box(
-                    -1.0, 1.0, shape=(4,), dtype=np.float32
-                ),
+                "pose0_rotation": gym.spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float32),
                 "pose1_position": self.position_bounds,
-                "pose1_rotation": gym.spaces.Box(
-                    -1.0, 1.0, shape=(4,), dtype=np.float32
-                ),
+                "pose1_rotation": gym.spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float32),
             }
         )
 
@@ -767,17 +771,26 @@ class BaseEnv:
         obj_id_reverse_mapping = env_state["obj_id_reverse_mapping"]
         obj_poses = env_state["obj_poses"]
         for obj_id in obj_ids["rigid"]:
-            obj_entry, color_entry = pybullet_utils.recover_obj_and_texture_from_mapping_info(obj_id_reverse_mapping, obj_id)
+            obj_entry, color_entry = pybullet_utils.recover_obj_and_texture_from_mapping_info(
+                obj_id_reverse_mapping, obj_id
+            )
             obj_size = obj_dyn_info["size"][obj_id]
             obj_pose = (obj_poses[obj_id][:3], obj_poses[obj_id][3:7])  # tuple: (pos, rot)
-            self.add_object_to_env(obj_entry, color=color_entry, size=obj_size, pose=obj_pose, category="rigid", retain_temp=False, scalar=self.global_scaling)
+            self.add_object_to_env(
+                obj_entry,
+                color=color_entry,
+                size=obj_size,
+                pose=obj_pose,
+                category="rigid",
+                retain_temp=False,
+                scalar=self.global_scaling,
+            )
             # pybullet_utils.p_change_texture(obj_id, color_entry, self.client_id)
         # support tree
         self.obj_support_tree = JsonImporter().import_(env_state["obj_support_tree"])
         # load task
         task_state = env_state["task_state"]
         self.task.set_state(task_state)
-        
 
     # ---------------------------------------------------------------------------
     # Robot Movement Functions
@@ -788,8 +801,7 @@ class BaseEnv:
         t0 = time.time()
         while (time.time() - t0) < timeout:
             currj = [
-                p.getJointState(self.ur5, i, physicsClientId=self.client_id)[0]
-                for i in self.joints
+                p.getJointState(self.ur5, i, physicsClientId=self.client_id)[0] for i in self.joints
             ]
             currj = np.array(currj)
             diffj = targj - currj
@@ -840,11 +852,11 @@ class BaseEnv:
         return joints
 
 
-if __name__ == '__main__':
-    assets_root = os.path.join(os.path.dirname(__file__), 'assets')
-    scene = BaseEnv(modalities=['rgb'], display_debug_window=True)
+if __name__ == "__main__":
+    assets_root = os.path.join(os.path.dirname(__file__), "assets")
+    scene = BaseEnv(modalities=["rgb"], display_debug_window=True)
     scene.reset()
-    
+
     for i in range(1000):
         scene.step_simulation()
     # Check
@@ -852,7 +864,7 @@ if __name__ == '__main__':
     # cv2.imshow('color', color)
     # cv2.waitKey(0)
 
-    # Test object adding 
+    # Test object adding
     obj_lists = [ObjPedia.BOWL, ObjPedia.BLOCK, ObjPedia.CAPITAL_LETTER_A]
     color_lists = [TexturePedia.RED, TexturePedia.GREEN, TexturePedia.BLUE, TexturePedia.YELLOW]
     for i in range(5):
