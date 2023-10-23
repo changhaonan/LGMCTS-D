@@ -250,8 +250,8 @@ class BaseEnv:
         }
 
         # return observation
-        obs, _, _, _, _ = self.step()
-
+        # obs, _, _, _, _ = self.step()
+        obs = self.get_obs()
         return obs
 
     def prepare(self):
@@ -316,6 +316,17 @@ class BaseEnv:
                 )
                 break
             counter += 1
+
+    def render(self, mode: str = "rgb_array"):
+        """Render visualization"""
+        obs = self.get_obs()
+        assert "rgb" in obs, "rgb image is required for rendering"
+        if "front" in obs["rgb"]:
+            return obs["rgb"]["front"]
+        elif "top" in obs["rgb"]:
+            return obs["rgb"]["top"]
+        else:
+            raise ValueError("No avaliable view")
 
     @property
     def task(self) -> BaseTask:

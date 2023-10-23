@@ -140,6 +140,6 @@ struct_rearrange_4:
 
 push_object_0:
   obj_list: ["small block"]
-  color_list: ${color_set_1}
+  color_list: ["red"]
   base_obj_list: ["square"]
-  base_color_list: ${color_set_2}
+  base_color_list: ["green"]
