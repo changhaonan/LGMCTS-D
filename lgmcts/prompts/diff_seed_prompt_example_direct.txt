@@ -1,0 +1,78 @@
+<root>
+<round>
+Assume you are a language-based task planner. Follow the examples we provide. You should strictly adhere to our format.
+Object_id of the objects in the scene are: [5, 6, 7, 8, 9, 10, 11, 12, 13] for ["heart", "flower", "letter M", "pentagon", "letter E", "pentagon", "letter E", "pentagon", "letter A"].
+And correspondingly colors of the objects in the scene are:  ["red and green polka dot", "red and green polka dot", "red and green polka dot", "yellow paisley", "yellow paisley", "yellow paisley", "yellow paisley", "yellow paisley", "yellow paisley"]. 
+And correspondingly initial poses of the objects in the scene are:  [[-0.2, -0.01, 999.98, 0.0, 0.0, 0.0], [-0.36, 0.06, 999.98, 0.0, 0.0, 0.0], [0.23, 0.0, 999.98, 0.0, 0.0, 0.0], [0.15, 0.13, 999.98, 0.0, 0.0, 0.0], [0.1, -0.13, 999.98, 0.0, 0.0, 0.0], [0.04, 0.08, 999.98, 0.0, 0.0, 0.0], [-0.25, -0.1, 999.98, 0.0, 0.0, 0.0], [0.1, 0.01, 999.98, 0.0, 0.0, 0.0], [0.19, -0.17, 999.98, 0.0, 0.0, 0.0]]. Poses are in the form [tx, ty, tz, rx, ry, rz]. First three indices correspond to translation and rest three to rotation.
+Based on the given scene, you should plan the sequence of objects like this to make the rearrangement.
+The rearrangement when executing will be performed in the order in which you list each obj_id and its corresponding goal pose.
+The initial pose you are provided with and goal pose you need to predict are both specified in camera coordinates.
+The region bounds (min-max X,Y,Z) for the rearrangement are [[-0.2, 0.2], [-0.4, 0.4], [0.0, 0.5]], again in camera coordinates only.
+<user>
+Query1: "Place yellow paisley pentagon left behind of red and green polka dot heart; Place a circle pattern using objects whose color is equal to heart".
+<assistant>
+Answer1: {"obj_ids": [5, 7, 9, 6], "goal_poses": [[-0.11, 0.08, 0.0, 0.0, 0.0, 1.0296], [-0.12, -0.1, 0.0, 0.0, 0.0, 1.0439], [-0.28, 0.02, 0.0, 0.0, 0.0, 0.3854], [0.1, -0.11, 0.0, 0.0, 0.0, 2.0125]]}
+</assistant>
+</round>
+<round>
+Assume you are a language-based task planner. Follow the examples we provide. You should strictly adhere to our format.
+Object_id of the objects in the scene are: [5, 6, 7, 8, 9, 10, 11, 12, 13] for ["triangle", "letter T", "letter M", "letter A", "flower", "L-shaped block", "heart", "flower", "heart"].
+And correspondingly colors of the objects in the scene are:  ["red and green polka dot", "red and green polka dot", "red and green polka dot", "red and green polka dot", "red swirl", "red swirl", "red swirl", "red swirl", "red swirl"]. 
+And correspondingly initial poses of the objects in the scene are:  [[0.11, 0.03, 999.98, 0.0, 0.0, 0.0], [-0.13, 0.01, 999.98, 0.0, 0.0, 0.0], [0.33, -0.07, 999.98, 0.0, 0.0, 0.0], [-0.12, -0.11, 999.98, 0.0, 0.0, 0.0], [0.13, 0.13, 999.98, 0.0, 0.0, 0.0], [-0.1, 0.1, 999.98, 0.0, 0.0, 0.0], [-0.34, -0.02, 999.98, 0.0, 0.0, 0.0], [0.06, -0.1, 999.98, 0.0, 0.0, 0.0], [0.17, -0.08, 999.98, 0.0, 0.0, 0.0]]. Poses are in the form [tx, ty, tz, rx, ry, rz]. First three indices correspond to translation and rest three to rotation.
+Based on the given scene, you should plan the sequence of objects like this to make the rearrangement.
+The rearrangement when executing will be performed in the order in which you list each obj_id and its corresponding goal pose.
+The initial pose you are provided with and goal pose you need to predict are both specified in camera coordinates.
+The region bounds (min-max X,Y,Z) for the rearrangement are [[-0.2, 0.2], [-0.4, 0.4], [0.0, 0.5]], again in camera coordinates only.
+<user>
+Query1: "Put red swirl flower left and behind of red and green polka dot letter A; then Place objects whose color is same as triangle in a line pattern".
+<assistant>
+Answer1: {"obj_ids": [5, 9, 8, 6, 7], "goal_poses": [[0.01, 0.07, 0.0, 0.0, 0.0, 1.845], [0.26, -0.07, 0.0, 0.0, 0.0, 1.6227], [-0.01, -0.02, 0.0, 0.0, 0.0, 0.3413], [-0.01, 0.14, 0.0, 0.0, 0.0, 1.3806], [-0.01, -0.13, 0.0, 0.0, 0.0, 1.6675]]}
+</assistant>
+</round>
+<round>
+Assume you are a language-based task planner. Follow the examples we provide. You should strictly adhere to our format.
+Object_id of the objects in the scene are: [5, 6, 7, 8, 9, 10, 11, 12, 13] for ["heart", "triangle", "letter A", "letter T", "letter T", "letter T", "cross", "cross", "cross"].
+And correspondingly colors of the objects in the scene are:  ["yellow and blue polka dot", "yellow and blue polka dot", "yellow and blue polka dot", "yellow paisley", "yellow paisley", "yellow paisley", "yellow paisley", "yellow paisley", "yellow paisley"]. 
+And correspondingly initial poses of the objects in the scene are:  [[0.09, -0.08, 999.98, 0.0, 0.0, 0.0], [0.24, -0.01, 999.98, 0.0, 0.0, 0.0], [-0.09, 0.11, 999.98, 0.0, 0.0, 0.0], [0.3, -0.14, 999.98, 0.0, 0.0, 0.0], [-0.36, 0.07, 999.98, 0.0, 0.0, 0.0], [0.35, 0.07, 999.98, 0.0, 0.0, 0.0], [-0.28, 0.05, 999.98, 0.0, 0.0, 0.0], [-0.3, -0.11, 999.98, 0.0, 0.0, 0.0], [-0.01, -0.04, 999.98, 0.0, 0.0, 0.0]]. Poses are in the form [tx, ty, tz, rx, ry, rz]. First three indices correspond to translation and rest three to rotation.
+Based on the given scene, you should plan the sequence of objects like this to make the rearrangement.
+The rearrangement when executing will be performed in the order in which you list each obj_id and its corresponding goal pose.
+The initial pose you are provided with and goal pose you need to predict are both specified in camera coordinates.
+The region bounds (min-max X,Y,Z) for the rearrangement are [[-0.2, 0.2], [-0.4, 0.4], [0.0, 0.5]], again in camera coordinates only.
+<user>
+Query1: "Put yellow paisley cross right and behind of yellow and blue polka dot heart; and Place objects whose color is equivalent to heart on a line pattern".
+<assistant>
+Answer1: {"obj_ids": [5, 7, 11, 6], "goal_poses": [[0.01, -0.13, 0.0, 0.0, 0.0, 0.4877], [0.01, 0.1, 0.0, 0.0, 0.0, 1.8326], [0.13, 0.15, 0.0, 0.0, 0.0, 0.071], [0.01, -0.01, 0.0, 0.0, 0.0, 2.235]]}
+</assistant>
+</round>
+<round>
+Assume you are a language-based task planner. Follow the examples we provide. You should strictly adhere to our format.
+Object_id of the objects in the scene are: [5, 6, 7, 8, 9, 10, 11, 12, 13] for ["flower", "letter E", "pentagon", "letter V", "letter G", "letter M", "letter M", "ring", "letter G"].
+And correspondingly colors of the objects in the scene are:  ["yellow", "yellow", "yellow", "red and green polka dot", "red and green polka dot", "red and green polka dot", "red and green polka dot", "red and green polka dot", "red and green polka dot"]. 
+And correspondingly initial poses of the objects in the scene are:  [[-0.08, 0.01, 999.98, 0.0, 0.0, 0.0], [-0.03, 0.11, 999.98, 0.0, 0.0, 0.0], [0.29, -0.15, 999.98, 0.0, 0.0, 0.0], [0.09, 0.12, 999.98, 0.0, 0.0, 0.0], [0.22, 0.05, 999.98, 0.0, 0.0, 0.0], [0.27, -0.03, 999.98, 0.0, 0.0, 0.0], [0.0, -0.09, 999.98, 0.0, 0.0, 0.0], [0.3, 0.07, 999.98, 0.0, 0.0, 0.0], [-0.31, -0.15, 999.98, 0.0, 0.0, 0.0]]. Poses are in the form [tx, ty, tz, rx, ry, rz]. First three indices correspond to translation and rest three to rotation.
+Based on the given scene, you should plan the sequence of objects like this to make the rearrangement.
+The rearrangement when executing will be performed in the order in which you list each obj_id and its corresponding goal pose.
+The initial pose you are provided with and goal pose you need to predict are both specified in camera coordinates.
+The region bounds (min-max X,Y,Z) for the rearrangement are [[-0.2, 0.2], [-0.4, 0.4], [0.0, 0.5]], again in camera coordinates only.
+<user>
+Query1: "Leave red and green polka dot letter M in front left of yellow letter E; so Leave a circle pattern using objects whose color is equal to flower".
+<assistant>
+Answer1: {"obj_ids": [5, 7, 11, 6], "goal_poses": [[-0.04, -0.06, 0.0, 0.0, 0.0, 0.8605], [-0.05, 0.03, 0.0, 0.0, 0.0, 1.0107], [-0.09, -0.13, 0.0, 0.0, 0.0, 0.2066], [0.05, 0.0, 0.0, 0.0, 0.0, 1.0875]]}
+</assistant>
+</round>
+<round>
+Assume you are a language-based task planner. Follow the examples we provide. You should strictly adhere to our format.
+Object_id of the objects in the scene are: [5, 6, 7, 8, 9, 10, 11, 12, 13] for ["letter E", "letter A", "letter G", "triangle", "letter V", "letter V", "letter M", "pentagon", "heart"].
+And correspondingly colors of the objects in the scene are:  ["granite", "granite", "granite", "granite", "red and blue polka dot", "red and blue polka dot", "red and blue polka dot", "red and blue polka dot", "red and blue polka dot"]. 
+And correspondingly initial poses of the objects in the scene are:  [[0.04, 0.11, 999.98, 0.0, 0.0, 0.0], [0.31, -0.01, 999.98, 0.0, 0.0, 0.0], [0.14, -0.05, 999.98, 0.0, 0.0, 0.0], [-0.23, 0.14, 999.98, 0.0, 0.0, 0.0], [-0.2, -0.02, 999.98, 0.0, 0.0, 0.0], [-0.12, -0.07, 999.98, 0.0, 0.0, 0.0], [-0.06, 0.07, 999.98, 0.0, 0.0, 0.0], [0.04, -0.03, 999.98, 0.0, 0.0, 0.0], [-0.37, 0.12, 999.98, 0.0, 0.0, 0.0]]. Poses are in the form [tx, ty, tz, rx, ry, rz]. First three indices correspond to translation and rest three to rotation.
+Based on the given scene, you should plan the sequence of objects like this to make the rearrangement.
+The rearrangement when executing will be performed in the order in which you list each obj_id and its corresponding goal pose.
+The initial pose you are provided with and goal pose you need to predict are both specified in camera coordinates.
+The region bounds (min-max X,Y,Z) for the rearrangement are [[-0.2, 0.2], [-0.4, 0.4], [0.0, 0.5]], again in camera coordinates only.
+<user>
+Query1: "Place a circle pattern using objects whose color is alike letter E; Put red and blue polka dot letter M right and front of granite letter A".
+<assistant>
+Answer1: {"obj_ids": [5, 7, 6, 8], "goal_poses": [[0.13, -0.01, 0.0, 0.0, 0.0, 2.1316], [-0.01, 0.14, 0.0, 0.0, 0.0, 1.6269], [0.01, -0.14, 0.0, 0.0, 0.0, 2.3555], [-0.12, 0.09, 0.0, 0.0, 0.0, 1.6018]]}
+</assistant>
+</round>
+
+</root>

@@ -95,15 +95,13 @@ def eval_offline(dataset_path: str, start: int, end: int, mask_mode: str, debug:
         prompt_init += "The region bounds (min-max X,Y,Z) for the rearrangement are [[-0.2, 0.2], [-0.4, 0.4], [0.0, 0.5]], again in camera coordinates only.\n"
         
         prompt_init += "<user>\nQuery1: '" + task.prompt + "'."
-        prompts.append(prompt_init)
-        # print(prompt_init)       
+        prompts.append(prompt_init)      
 
-
-    prompt_db = open(f"{dataset_path.replace('/lfsp', '').replace(f'_{seed}', '_5')}/prompt_example_direct.txt", "r").read()
+    prompt_db = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(dataset_path))), "lgmcts", "prompts", "diff_seed_prompt_example_direct.txt"), "r").read()
     with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(dataset_path))), "lgmcts", "conf", "api_key.pkl"), "rb") as fp:
         api_keys = pickle.load(fp)
     api_key = random.choice(api_keys)  
-    # gpt-3.5-turbo-16k-0613 
+    # gpt-3.5-turbo-16k-0613 or gpt-4
     chatgpt = ChatGPTAPI(model="gpt-4", api_key=api_key, db=prompt_db)
     ret = chatgpt.chat(str_msg=prompts)
     llm_result = ret[0]
@@ -157,8 +155,6 @@ if __name__ == "__main__":
         dataset_path = args.dataset_path
     else:
         root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-        dataset_path = f"{root_path}/output/lfsp/struct_rearrange_{seed}"
-        # root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-        # dataset_path = f"{root_path}/output/struct_rearrange_{seed}"
+        dataset_path = f"{root_path}/output/lfsp/elgr/struct_rearrange_{seed}"
     eval_offline(dataset_path=dataset_path, start=args.start, end=args.end, mask_mode=args.mask_mode,
                  debug=args.debug, seed=seed)

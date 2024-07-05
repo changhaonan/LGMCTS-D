@@ -143,7 +143,7 @@ def eval(data_path: str, pattern_name: str = "line", start: int=0, end: int = 25
         api_keys = pickle.load(fp)
     api_key = random.choice(api_keys)  
     # gpt-3.5-turbo-16k-0613 or gpt-4
-    chatgpt = ChatGPTAPI(model="gpt-4", api_key="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", db=prompt_db)
+    chatgpt = ChatGPTAPI(model="gpt-4", api_key=api_key, db=prompt_db)
     ret = chatgpt.chat(str_msg=prompts)
     llm_result = ret[0]
     action_lists = []
@@ -152,7 +152,6 @@ def eval(data_path: str, pattern_name: str = "line", start: int=0, end: int = 25
         pickle.dump(llm_result, fp)
     for scene_id, entry in enumerate(llm_result):
         try:
-            # \n</assistant>*/\n
             entry = entry.replace("Answer: ", "").replace("\n","").replace("<","").replace("/","").replace(">", "").replace("assistant", "")
             import json 
             entry = json.loads(entry)

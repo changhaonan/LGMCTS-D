@@ -24,4 +24,8 @@ lgmcts/conf/
 
 # prompt
 lgmcts/prompts/*.txt
+!lgmcts/prompts/diff_seed_prompt_example_direct.txt
 
+# additional
+lgmcts/scripts/eval/gens_cop.py
+lgmcts/scripts/eval/cop_llm_res_copy.py

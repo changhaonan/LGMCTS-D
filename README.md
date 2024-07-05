@@ -51,30 +51,50 @@ Use with gt_pose
 python lgmcts/scripts/eval/eval_lgmcts.py --method=mcts --n_epoches=100 --mask_mode=raw_mask --use_gt_pose
 ```
 
-## Evaluating LLMs as Few Shot Planners (LFSP)  - Progprompt and Code as Policies
+## Evaluating LLMs as Few Shot Planners (LFSP)  - Progprompt and Code as policies
 
-### Dataset preparation
-Download the [Structformer dataset](https://drive.google.com/drive/folders/19k2ZTlgC0itD-BLl22J0AkN8Ej8UMWnX?usp=sharing) for each of the four patterns (line, circle, dinner, and tower). Extract and place them inside the folder `output/lfsp/eval_single_pattern/`
-### Generating the files for few-shot prompting
-For Line Pattern
+### Evaluation on the Structformer dataset
+
+#### Dataset preparation
+Download the [Structformer dataset](https://drive.google.com/drive/folders/19k2ZTlgC0itD-BLl22J0AkN8Ej8UMWnX?usp=sharing) for each of the four patterns (line, circle, dinner, and tower). Extract them to the folder `output/lfsp/eval_single_pattern/`
+
+
+#### Generating the files for few-shot prompting
+For `Line` Pattern
 ```
 python lgmcts/scripts/eval/lfsp_prompt.py --pattern=line
 ```
-Similarly generate the files for the other 3 patterns by replacing the command line argument 'pattern' with 'circle', 'dinner' and 'tower' respectively. 
+Similarly generate the files for the other 3 patterns by replacing the command line argument `pattern` with `circle`, `dinner` and `tower` respectively. 
 
-### Generating LFSP's TAMP solution on the Structformer dataset
-For Line Pattern
+#### Automated Evaluation on the full dataset
+For `Line` Pattern
+> Step 1:
 ```
-python lgmcts/scripts/eval/lfsp_res.py --pattern=line
+python lfsp_sformer.py --pattern=line
 ```
-Similarly generate the files for the other 3 patterns by replacing the command line argument 'pattern' with 'circle', 'dinner' and 'tower' respectively. 
+> Step 2:
+```
+chmod +x lfsp_sformer_line.sh
+./lfsp_sformer_line.sh
+```
+Results can be generated for the rest of the patterns similarly. 
 
-### Evaluate the LFSP's TAMP solution on the Structformer dataset
-For Line Pattern
+
+### Evaluation on the ELGR Bench
+
+#### Dataset preparation
+Download the [ELGR Bench](https://drive.google.com/drive/folders/1QiwUofPF8rGkcZIraJ1WRBE0zHf4rjXV?usp=sharing). Extract them to the folder `output/lfsp/elgr/`
+
+#### Automated Evaluation on the full dataset
+> Step 1:
 ```
-python lgmcts/scripts/eval/lfsp_eval.py --pattern=line
+python lfsp_elgr.py
 ```
-Similarly generate the files for the other 3 patterns by replacing the command line argument 'pattern' with 'circle', 'dinner' and 'tower' respectively. 
+> Step 2:
+```
+chmod +x lfsp_elgr.sh
+./lfsp_elgr.sh
+``` 
 
 ## BUG
 
