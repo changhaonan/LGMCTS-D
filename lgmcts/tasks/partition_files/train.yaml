@@ -138,6 +138,110 @@ struct_rearrange_4:
   obj_list: ${dragged_obj}
   color_list: ${color_set_1}
 
+struct_rearrange_5:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_6:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_7:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_8:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_9:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_10:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_11:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_12:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_13:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_14:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_15:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_16:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_17:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_18:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
+
+struct_rearrange_19:
+  max_num_pattern: 2
+  stack_prob: 0.0
+  pattern_types: ["line", "circle"]  # support: "line", "circle", "rectangle"
+  obj_list: ${dragged_obj}
+  color_list: ${color_set_1}
 push_object_0:
   obj_list: ["small block"]
   color_list: ["red"]

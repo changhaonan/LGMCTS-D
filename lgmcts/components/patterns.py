@@ -970,7 +970,10 @@ class SpatialPattern:
 
         obj_id = pattern_info["obj_ids"][-1]  # the second one is to be checked
         obj_ids = pattern_info["obj_ids"]
-        spatial_str = pattern_info["spatial_str"]
+        if "spatial_str" in pattern_info:
+            spatial_str = pattern_info["spatial_str"]
+        else:
+            spatial_str = ""
         # extract relative obj & poses
         rel_obj_ids = []
         rel_obj_poses = []

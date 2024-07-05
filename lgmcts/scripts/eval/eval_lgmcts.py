@@ -60,9 +60,9 @@ def eval_offline(dataset_path: str, start: int, end: int, method: str, mask_mode
     checkpoint_list.sort()
     checkpoint_list = checkpoint_list[start:end]
     n_epoches = min(n_epoches, len(checkpoint_list))
-    use_llm = False
-    run_llm = False
-    encode_ids_to_llm = False
+    # use_llm = False
+    # run_llm = False
+    encode_ids_to_llm = True
     # Generate goals using llm and object selector
     prompt_goals = gen_prompt_goal_from_llm(dataset_path, n_epoches, checkpoint_list, use_llm=use_llm,
                                             run_llm=run_llm, encode_ids_to_llm=encode_ids_to_llm, num_save_digits=num_save_digits, debug=debug)
@@ -204,8 +204,8 @@ if __name__ == "__main__":
     parser.add_argument("--n_epoches", type=int, default=10, help="Number of epoches")
     parser.add_argument("--mask_mode", type=str, default="convex_hull", help="Mask mode")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
-    parser.add_argument("--start", type=int, default=50, help="Start index")
-    parser.add_argument("--end", type=int, default=100, help="End index")
+    parser.add_argument("--start", type=int, default=0, help="Start index")
+    parser.add_argument("--end", type=int, default=-1, help="End index")
     parser.add_argument("--use_gt_pose", action="store_true", help="Use gt pose")
     parser.add_argument("--use_llm", action="store_true", help="Use llm")
     parser.add_argument("--run_llm", action="store_true", help="Run llm")
@@ -213,11 +213,13 @@ if __name__ == "__main__":
 
     # manually set
     # args.debug = True
-    args.use_gt_pose = False
+    # args.use_gt_pose = True
+    args.use_llm = True 
+    args.run_llm = True
     if args.dataset_path is not None:
         dataset_path = args.dataset_path
     else:
         root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-        dataset_path = f"{root_path}/output/struct_rearrange_{seed}"
+        dataset_path = f"{root_path}/output/struct_rearrange_{0}"
     eval_offline(dataset_path=dataset_path, start=args.start, end=args.end, method=args.method, mask_mode=args.mask_mode,
                  n_samples=args.n_samples, n_epoches=args.n_epoches, debug=args.debug, use_llm=args.use_llm, run_llm=args.run_llm, use_gt_pose=args.use_gt_pose)

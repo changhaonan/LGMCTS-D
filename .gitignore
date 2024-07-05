@@ -1,3 +1,4 @@
+*.ipynb
 *.pyc
 *.egg-info
 !output/struct_rearrange/prompt_bg.txt
@@ -13,8 +14,14 @@ test_data/
 
 # itermidate data
 *.mtl
+# misc
+*.sh
+
+
 
 # GPT API keys
 lgmcts/conf/
 
 # prompt
+lgmcts/prompts/*.txt
+

@@ -114,6 +114,6 @@ if __name__ == '__main__':
         save_path=f"{root_path}/output",
         num_save_digits=6,
         debug=args.debug,
-        seed=0,
+        seed=5,
     )
     print("Saved to: ", f"{root_path}/output/{task_name}")
