@@ -5,8 +5,6 @@ import multiprocessing
 import os
 import pickle
 from math import ceil
-import h5py
-import hydra
 import numpy as np
 from PIL import Image
 from einops import rearrange

@@ -157,8 +157,8 @@ def perform_llm_parsing(prompt_bg_file: str, prompt_str_file: str, prompt_exampl
                 prompts.append(prompt_prior + "<user>\n" + line.strip() + "\n</user>")
             else:
                 prompts.append(line.strip())
-    # gpt-3.5-turbo-16k-0613
-    chatgpt = ChatGPTAPI(model="gpt-3.5-turbo-16k-0613", api_key=api_key, db=prompt_db)
+    # gpt-3.5-turbo-0125
+    chatgpt = ChatGPTAPI(model="gpt-3.5-turbo-0125", api_key=api_key, db=prompt_db)
     ret = chatgpt.chat(str_msg=prompts)
     # print(ret)
     return ret[0]

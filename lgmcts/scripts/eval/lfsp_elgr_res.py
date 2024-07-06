@@ -97,11 +97,10 @@ def eval_offline(dataset_path: str, start: int, end: int, mask_mode: str, debug:
         prompt_init += "<user>\nQuery1: '" + task.prompt + "'."
         prompts.append(prompt_init)      
 
-    prompt_db = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(dataset_path))), "lgmcts", "prompts", "diff_seed_prompt_example_direct.txt"), "r").read()
-    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(dataset_path))), "lgmcts", "conf", "api_key.pkl"), "rb") as fp:
+    prompt_db = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(dataset_path)))), "lgmcts", "prompts", "diff_seed_prompt_example_direct.txt"), "r").read()
+    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(dataset_path)))), "lgmcts", "conf", "api_key.pkl"), "rb") as fp:
         api_keys = pickle.load(fp)
     api_key = random.choice(api_keys)  
-    # gpt-3.5-turbo-16k-0613 or gpt-4
     chatgpt = ChatGPTAPI(model="gpt-4", api_key=api_key, db=prompt_db)
     ret = chatgpt.chat(str_msg=prompts)
     llm_result = ret[0]

@@ -160,5 +160,5 @@ if __name__ == "__main__":
         dataset_path = args.dataset_path
     else:
         root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-        dataset_path = f"{root_path}/output/lfsp/struct_rearrange_{seed}"
+        dataset_path = f"{root_path}/output/lfsp/elgr/struct_rearrange_{seed}"
     eval_offline(dataset_path=dataset_path, start=args.start, end=args.end, mask_mode=args.mask_mode, debug=args.debug)

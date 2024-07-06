@@ -165,7 +165,7 @@ if __name__ == "__main__":
     parser.add_argument("--end", type=int, default=5, help="End index")
     args = parser.parse_args()
 
-    root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+    root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     args.data_path = os.path.join(root_path, f"output/lfsp/eval_single_pattern/{args.pattern}-pcd-objs")
     args.res_path = os.path.join(root_path, f"output/lfsp/eval_single_pattern/res-{args.pattern}-pcd-objs")
     eval(args.data_path, pattern_name=args.pattern, start=args.start, end=args.end)

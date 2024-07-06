@@ -142,7 +142,6 @@ def eval(data_path: str, pattern_name: str = "line", start: int=0, end: int = 25
     with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(data_path)))), "lgmcts", "conf", "api_key.pkl"), "rb") as fp:
         api_keys = pickle.load(fp)
     api_key = random.choice(api_keys)  
-    # gpt-3.5-turbo-16k-0613 or gpt-4
     chatgpt = ChatGPTAPI(model="gpt-4", api_key=api_key, db=prompt_db)
     ret = chatgpt.chat(str_msg=prompts)
     llm_result = ret[0]
@@ -180,7 +179,7 @@ if __name__ == "__main__":
     parser.add_argument("--end", type=int, default=5, help="End index")
     args = parser.parse_args()
 
-    root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+    root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     args.data_path = os.path.join(root_path, f"output/lfsp/eval_single_pattern/{args.pattern}-pcd-objs")
     args.res_path = os.path.join(root_path, f"output/lfsp/eval_single_pattern/res-{args.pattern}-pcd-objs")
     eval(args.data_path, pattern_name=args.pattern, start=args.start, end=args.end)
