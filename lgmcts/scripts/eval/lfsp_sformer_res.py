@@ -125,8 +125,9 @@ def eval(data_path: str, pattern_name: str = "line", start: int=0, end: int = 25
         prompt_init += "The rearrangement when executing will be performed in the order in which you list each obj_id and its corresponding goal pose.\n"
         prompt_init += "The initial pose you are provided with and goal pose you need to predict are both specified in camera coordinates.\n"
         prompt_init += "The region bounds (min-max X,Y,Z) for the rearrangement are [[-0.2, 0.2], [-0.4, 0.4], [0.0, 0.5]], again in camera coordinates only.\n"
-        prompt_init += "Observe that the user query here is about performing a dinner rearrangement which is a composition of two or three sub rearrangements (uniform, tower, spatial).\n"
-        prompt_init += "Hence, your answer needs to have all the object ids and their goal_poses from the given two or three sub rearrangement goals in the user query.\n"
+        if pattern == "dinner":
+            prompt_init += "Observe that the user query here is about performing a dinner rearrangement which is a composition of two or three sub rearrangements (uniform, tower, spatial).\n"
+            prompt_init += "Hence, your answer needs to have all the object ids and their goal_poses from the given two or three sub rearrangement goals in the user query.\n"
         # prompt_init += "Make sure that obj_ids in the user query and your answer are same. Your job is find the order for the action sequence as I mentioned before.\n"
         # prompt_init += f"You are making a {pattern_name} pattern rearrangement here.\n"
         llm_goal = copy.deepcopy(goals)
